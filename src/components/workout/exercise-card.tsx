@@ -95,7 +95,7 @@ export function ExerciseCard({
         <PreviousResults exerciseId={exercise.exerciseId} />
 
         {!collapsed && (
-          <div className={cn("space-y-2", exercise.sets.some((s) => s.completed) && "opacity-90")}>
+          <div className="space-y-2">
             <div className="grid grid-cols-[12px_24px_auto_1fr_32px] gap-2 px-1 text-[10px] text-muted-foreground font-medium">
               <span />
               <span>#</span>

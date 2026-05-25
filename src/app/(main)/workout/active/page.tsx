@@ -49,10 +49,17 @@ export default function ActiveWorkoutPage() {
     return () => clearInterval(interval);
   }, [store.startedAt, isPaused]);
 
-  // Auto-start workout
+  // Auto-start workout with 6 default exercises × 3 sets
   useEffect(() => {
     if (!store.activeWorkoutId) {
-      store.startWorkout();
+      store.startWorkout(undefined, [
+        { exerciseId: "ex1", sets: 3 },
+        { exerciseId: "ex12", sets: 3 },
+        { exerciseId: "ex6", sets: 3 },
+        { exerciseId: "ex19", sets: 3 },
+        { exerciseId: "ex22", sets: 3 },
+        { exerciseId: "ex29", sets: 3 },
+      ]);
     }
   }, []);
 
@@ -63,6 +70,14 @@ export default function ActiveWorkoutPage() {
   );
   const minutes = Math.floor(elapsed / 60);
   const seconds = elapsed % 60;
+
+  const hasNoData = !store.exercises.some((ex) =>
+    ex.sets.some((s) => s.weight > 0)
+  );
+  const hasEmptyComplete = store.exercises.some((ex) =>
+    ex.sets.some((s) => s.completed && s.weight === 0)
+  );
+  const disableFinish = hasNoData || hasEmptyComplete;
 
   // PR detection
   const [newRecords, setNewRecords] = useState<PersonalRecord[]>([]);
@@ -120,9 +135,9 @@ export default function ActiveWorkoutPage() {
   );
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur-sm px-4 py-3">
+    <>
+      {/* Fixed header */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-background/95 backdrop-blur-sm border-b px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Timer className="h-4 w-4 text-muted-foreground" />
@@ -145,6 +160,7 @@ export default function ActiveWorkoutPage() {
               size="sm"
               className="gap-1"
               onClick={handleFinish}
+              disabled={disableFinish}
             >
               <StopCircle className="h-4 w-4" />
               Finish
@@ -169,8 +185,27 @@ export default function ActiveWorkoutPage() {
         </div>
       </div>
 
-      {/* Exercise list */}
-      <ScrollArea className="flex-1 px-4 py-3 pb-28">
+      {/* Fixed bottom bar */}
+      <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-background/95 backdrop-blur-sm border-t px-4 py-2">
+        <div className="flex items-center justify-center">
+          <div className="flex items-center gap-2 text-sm">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <span>
+              {store.exercises.reduce(
+                (sum, e) => sum + e.sets.filter((s) => s.completed).length,
+                0
+              )}{" "}
+              sets completed
+            </span>
+            <span className="text-muted-foreground">
+              · {totalVolume.toLocaleString()} kg
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Scrollable content */}
+      <div className="pt-20 pb-20 px-4">
         <AnimatePresence>
           {store.exercises.map((ex) => {
             const exercise = exerciseMap.get(ex.exerciseId);
@@ -253,7 +288,7 @@ export default function ActiveWorkoutPage() {
             </ScrollArea>
           </DialogContent>
         </Dialog>
-      </ScrollArea>
+      </div>
 
       {/* Rest Timer */}
       <AnimatePresence>
@@ -263,33 +298,6 @@ export default function ActiveWorkoutPage() {
           onStop={store.stopRestTimer}
         />
       </AnimatePresence>
-
-      {/* Bottom bar with volume */}
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur-sm px-4 py-2">
-        <div className="mx-auto max-w-lg flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <span>
-              {store.exercises.reduce(
-                (sum, e) => sum + e.sets.filter((s) => s.completed).length,
-                0
-              )}{" "}
-              sets
-            </span>
-            <span className="text-muted-foreground">
-              · {totalVolume.toLocaleString()} kg
-            </span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground"
-            onClick={handleFinish}
-          >
-            End Workout
-          </Button>
-        </div>
-      </div>
 
       {/* Triumph screen */}
       <AnimatePresence>
@@ -302,6 +310,6 @@ export default function ActiveWorkoutPage() {
           />
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }

@@ -45,8 +45,7 @@ export function SetRow({ set, setNumber, onUpdate, onRemove, onComplete }: SetRo
       >
         <div
           className={cn(
-            "flex items-center gap-2 rounded-xl border bg-card p-3 transition-colors w-full",
-            set.completed && "bg-muted/30"
+            "flex items-center gap-2 rounded-xl border bg-card p-3 transition-colors w-full"
           )}
         >
           <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -68,8 +67,7 @@ export function SetRow({ set, setNumber, onUpdate, onRemove, onComplete }: SetRo
               onChange={(e) => onUpdate({ weight: parseFloat(e.target.value) || 0 })}
               className="h-8 w-16 text-center text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               placeholder="kg"
-              disabled={set.completed}
-            />
+              />
             <span className="text-xs text-muted-foreground">×</span>
             <Input
               type="number"
@@ -77,7 +75,6 @@ export function SetRow({ set, setNumber, onUpdate, onRemove, onComplete }: SetRo
               onChange={(e) => onUpdate({ reps: parseInt(e.target.value) || 0 })}
               className="h-8 w-14 text-center text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               placeholder="reps"
-              disabled={set.completed}
             />
           </div>
 
@@ -86,7 +83,7 @@ export function SetRow({ set, setNumber, onUpdate, onRemove, onComplete }: SetRo
             className={cn(
               "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-all",
               set.completed
-                ? "border-primary bg-primary text-primary-foreground"
+                ? "border-primary text-primary"
                 : "border-muted-foreground/30 hover:border-primary/50"
             )}
           >

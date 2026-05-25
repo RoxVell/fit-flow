@@ -20,7 +20,7 @@ interface WorkoutStore {
   restTimer: RestTimerState;
 
   // Actions
-  startWorkout: (sessionId?: string) => void;
+  startWorkout: (sessionId?: string, exercises?: { exerciseId: string; sets: number }[]) => void;
   addExercise: (exerciseId: string) => void;
   removeExercise: (loggedExerciseId: string) => void;
   swapExercise: (loggedExerciseId: string, newExerciseId: string) => void;
@@ -48,11 +48,29 @@ export const useWorkoutStore = create<WorkoutStore>()(
       isOfflineDirty: false,
       restTimer: { endTime: null, duration: 60, isRunning: false },
 
-      startWorkout: (sessionId?: string) => {
+      startWorkout: (sessionId?: string, initialExercises?: { exerciseId: string; sets: number }[]) => {
         const id = sessionId || generateId();
+        const exercises: LoggedExercise[] = (initialExercises || []).map((e, idx) => {
+          const leId = generateId();
+          return {
+            id: leId,
+            exerciseId: e.exerciseId,
+            workoutLogId: id,
+            sortOrder: idx,
+            sets: Array.from({ length: e.sets }, (_, si) => ({
+              id: generateId(),
+              loggedExerciseId: leId,
+              type: si === 0 ? ("warmup" as const) : ("working" as const),
+              setOrder: si,
+              reps: 10,
+              weight: si === 0 ? 0 : 0,
+              completed: false,
+            })),
+          };
+        });
         set({
           activeWorkoutId: id,
-          exercises: [],
+          exercises,
           startedAt: new Date().toISOString(),
           isOfflineDirty: false,
         });
