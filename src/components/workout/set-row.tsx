@@ -17,9 +17,9 @@ interface SetRowProps {
 }
 
 const setTypeConfig: Record<SetType, { label: string; color: string }> = {
-  working: { label: "Work", color: "bg-primary/10 text-primary border-primary/20" },
-  warmup: { label: "Warm", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
-  dropset: { label: "Drop", color: "bg-red-500/10 text-red-600 border-red-500/20" },
+  working: { label: "W", color: "bg-primary/15 text-primary border-primary/25" },
+  warmup: { label: "U", color: "bg-blue-500/15 text-blue-500 border-blue-500/25" },
+  dropset: { label: "D", color: "bg-red-500/15 text-red-500 border-red-500/25" },
 };
 
 export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComplete }: SetRowProps) {
@@ -45,22 +45,22 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
         whileTap={{ scale: 0.98 }}
       >
         <div className="flex items-center gap-1.5 rounded-xl border bg-card p-2.5 transition-colors w-full">
-          <span className="w-5 shrink-0 text-center text-xs font-medium text-muted-foreground">
+          <span className="w-5 shrink-0 text-center text-sm font-medium text-muted-foreground/50">
             {setNumber}
           </span>
 
-          <button onClick={cycleType} className="w-12 shrink-0">
-            <Badge variant="outline" className={cn("w-full text-center text-[10px] px-1 py-0.5", config.color)}>
+          <button onClick={cycleType} className="w-7 shrink-0">
+            <Badge variant="outline" className={cn("w-full text-center text-[11px] px-0 py-0.5 font-medium", config.color)}>
               {config.label}
             </Badge>
           </button>
 
           {previousSet ? (
-            <span className="text-xs text-muted-foreground tabular-nums w-20 shrink-0 text-left">
+            <span className="text-sm text-muted-foreground/80 tabular-nums w-20 shrink-0 text-right">
               {previousSet.weight}×{previousSet.reps}
             </span>
           ) : (
-            <span className="text-xs text-muted-foreground/40 w-20 shrink-0 text-left">—</span>
+            <span className="text-sm text-muted-foreground/50 w-20 shrink-0 text-right">—</span>
           )}
 
           <div className="flex-1" />
@@ -73,7 +73,7 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
             placeholder="kg"
           />
 
-          <span className="w-3 shrink-0 text-center text-xs text-muted-foreground">×</span>
+          <span className="w-3 shrink-0 text-center text-sm text-muted-foreground/40">×</span>
 
           <Input
             type="number"

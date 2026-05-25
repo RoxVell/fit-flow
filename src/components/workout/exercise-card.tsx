@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AiAdvisor } from "@/components/ai/ai-advisor";
 
 interface ExerciseCardProps {
   exercise: LoggedExercise;
@@ -59,50 +58,49 @@ export function ExerciseCard({
 
   return (
     <>
-      <div className="rounded-2xl border bg-card p-3 space-y-3">
+      <div className="rounded-2xl border bg-card p-2.5 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <p className="font-semibold text-sm truncate">{exerciseName}</p>
+              <p className="font-medium text-sm truncate">{exerciseName}</p>
               <Badge variant="secondary" className="text-[10px] shrink-0">
                 {MUSCLE_GROUP_LABELS[muscleGroup as keyof typeof MUSCLE_GROUP_LABELS] || muscleGroup}
               </Badge>
             </div>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <AiAdvisor exerciseId={exercise.exerciseId} exerciseName={exerciseName} />
+          <div className="flex items-center gap-0.5 shrink-0">
             <button
               onClick={() => setShowSwap(true)}
-              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted transition-colors"
+              className="rounded-lg p-1.5 text-muted-foreground/50 hover:bg-muted transition-colors"
             >
               <Shuffle className="h-4 w-4" />
             </button>
             <button
               onClick={onRemove}
-              className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+              className="rounded-lg p-1.5 text-muted-foreground/50 hover:bg-destructive/10 hover:text-destructive transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted transition-colors"
+              className="rounded-lg p-1 text-muted-foreground/50 hover:bg-muted transition-colors"
             >
-              {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+              {collapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
             </button>
           </div>
         </div>
 
         {!collapsed && (
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5 px-1 text-xs text-muted-foreground/50 font-medium">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1 px-1 text-sm text-muted-foreground/35 font-medium">
               <span className="w-5 shrink-0 text-center">Set</span>
-              <span className="w-12 shrink-0 text-center">Type</span>
-              <span className="w-20 shrink-0">Previous</span>
+              <span className="w-7 shrink-0 text-center">T</span>
+              <span className="w-20 shrink-0 text-right">Previous</span>
               <span className="flex-1" />
-              <span className="w-16 shrink-0 text-center">Kg</span>
+              <span className="w-14 shrink-0 text-center">Kg</span>
               <span className="w-3 shrink-0 text-center" />
-              <span className="w-12 shrink-0 text-center">Reps</span>
-              <span className="w-7 shrink-0 ml-1.5" />
+              <span className="w-10 shrink-0 text-center">Reps</span>
+              <span className="w-7 shrink-0 ml-1" />
             </div>
             {exercise.sets.map((set, idx) => (
               <SetRow

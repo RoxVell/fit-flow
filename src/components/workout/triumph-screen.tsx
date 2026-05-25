@@ -17,7 +17,7 @@ export function TriumphScreen({ records, volume, duration, onClose }: TriumphScr
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-lg"
     >
       <div className="relative flex flex-col items-center gap-6 px-8 text-center">
         <motion.div
@@ -54,7 +54,7 @@ export function TriumphScreen({ records, volume, duration, onClose }: TriumphScr
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.4 + i * 0.1 }}
-                className="flex items-center justify-between rounded-xl border bg-card p-3"
+                className="flex items-center justify-between gap-3 rounded-xl border bg-card p-3"
               >
                 <div className="flex items-center gap-2">
                   <Dumbbell className="h-4 w-4 text-muted-foreground" />
