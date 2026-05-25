@@ -25,14 +25,24 @@ export function WeightChart() {
           <CardTitle className="text-sm font-medium">Body Weight</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-48">
+          <div className="h-48 outline-none">
             {chartData && chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
+                <LineChart data={chartData} margin={{ top: 5, right: 0, left: -15, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-muted)" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="var(--color-muted-foreground)" />
                   <YAxis tick={{ fontSize: 10 }} stroke="var(--color-muted-foreground)" domain={["dataMin - 2", "dataMax + 2"]} />
-                  <Tooltip wrapperClassName="rounded-lg border bg-card text-card-foreground shadow-sm" />
+                  <Tooltip
+                    wrapperStyle={{ outline: "none" }}
+                    contentStyle={{
+                      backgroundColor: "#1f1f1f",
+                      border: "1px solid #333",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      color: "#eee",
+                    }}
+                    cursor={{ stroke: "#444", strokeWidth: 1 }}
+                  />
                   <Line
                     type="monotone"
                     dataKey="weight"

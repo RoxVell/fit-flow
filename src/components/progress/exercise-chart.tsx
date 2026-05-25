@@ -60,15 +60,25 @@ export function ExerciseChart() {
             <TabsTrigger value="volume" className="text-xs">Volume</TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="h-48">
+        <div className="h-48 outline-none">
           {chartData && chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               {chartType === "1rm" ? (
-                <LineChart data={chartData}>
+                <LineChart data={chartData} margin={{ top: 5, right: 0, left: -15, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-muted)" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="var(--color-muted-foreground)" />
                   <YAxis tick={{ fontSize: 10 }} stroke="var(--color-muted-foreground)" />
-                  <Tooltip wrapperClassName="rounded-lg border bg-card text-card-foreground shadow-sm" />
+                  <Tooltip
+                    wrapperStyle={{ outline: "none" }}
+                    contentStyle={{
+                      backgroundColor: "#1f1f1f",
+                      border: "1px solid #333",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      color: "#eee",
+                    }}
+                    cursor={{ stroke: "#444", strokeWidth: 1 }}
+                  />
                   <Line
                     type="monotone"
                     dataKey="estimated1RM"
@@ -78,11 +88,21 @@ export function ExerciseChart() {
                   />
                 </LineChart>
               ) : (
-                <BarChart data={chartData}>
+                <BarChart data={chartData} margin={{ top: 5, right: 0, left: -15, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-muted)" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="var(--color-muted-foreground)" />
                   <YAxis tick={{ fontSize: 10 }} stroke="var(--color-muted-foreground)" />
-                  <Tooltip wrapperClassName="rounded-lg border bg-card text-card-foreground shadow-sm" />
+                  <Tooltip
+                    wrapperStyle={{ outline: "none" }}
+                    contentStyle={{
+                      backgroundColor: "#1f1f1f",
+                      border: "1px solid #333",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      color: "#eee",
+                    }}
+                    cursor={{ fill: "#333" }}
+                  />
                   <Bar dataKey="volume" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               )}

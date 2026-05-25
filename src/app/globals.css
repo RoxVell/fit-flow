@@ -124,6 +124,10 @@
   * {
     @apply border-border outline-ring/50;
   }
+  .recharts-wrapper,
+  .recharts-surface {
+    outline: none !important;
+  }
   body {
     @apply bg-background text-foreground;
   }
