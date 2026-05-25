@@ -1,0 +1,166 @@
+export type MuscleGroup =
+  | "chest"
+  | "back"
+  | "shoulders"
+  | "biceps"
+  | "triceps"
+  | "forearms"
+  | "quads"
+  | "hamstrings"
+  | "glutes"
+  | "calves"
+  | "abs"
+  | "traps"
+  | "hip_flexors"
+  | "full_body";
+
+export type Equipment =
+  | "barbell"
+  | "dumbbell"
+  | "kettlebell"
+  | "cable"
+  | "machine"
+  | "smith_machine"
+  | "ez_bar"
+  | "bodyweight"
+  | "band"
+  | "plate"
+  | "step"
+  | "bench"
+  | "foam_roller";
+
+export type SetType = "working" | "warmup" | "dropset";
+
+export type CardioType = "run" | "cycle" | "elliptical" | "row";
+
+export type PRType = "volume" | "weight" | "estimated_1rm";
+
+export interface Exercise {
+  id: string;
+  name: string;
+  muscleGroup: MuscleGroup;
+  secondaryMuscles: MuscleGroup[];
+  equipment: Equipment;
+  unilateral: boolean;
+  category: "compound" | "isolation" | "cardio";
+  description: string;
+  imageUrl?: string;
+  videoUrl?: string;
+}
+
+export interface WorkoutProgram {
+  id: string;
+  name: string;
+  description: string;
+  daysPerWeek: number;
+  sessions: WorkoutSession[];
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface WorkoutSession {
+  id: string;
+  name: string;
+  dayOfWeek: number;
+  programId: string;
+  sortOrder: number;
+  exercises: SessionExercise[];
+}
+
+export interface SessionExercise {
+  id: string;
+  exerciseId: string;
+  sessionId: string;
+  exercise?: Exercise;
+  sortOrder: number;
+  supersetGroupId?: string;
+  targetSets: number;
+  targetReps: string;
+  notes?: string;
+}
+
+export interface WorkoutLog {
+  id: string;
+  startedAt: string;
+  endedAt?: string;
+  programId?: string;
+  sessionId?: string;
+  programName?: string;
+  sessionName?: string;
+  notes?: string;
+  exercises: LoggedExercise[];
+}
+
+export interface LoggedExercise {
+  id: string;
+  exerciseId: string;
+  exercise?: Exercise;
+  workoutLogId: string;
+  sortOrder: number;
+  supersetGroupId?: string;
+  notes?: string;
+  sets: LoggedSet[];
+}
+
+export interface LoggedSet {
+  id: string;
+  loggedExerciseId: string;
+  type: SetType;
+  setOrder: number;
+  reps: number;
+  weight: number;
+  rir?: number;
+  completed: boolean;
+}
+
+export interface CardioSession {
+  id: string;
+  type: CardioType;
+  distance: number;
+  duration: number;
+  avgHeartRate?: number;
+  workoutLogId?: string;
+  date: string;
+}
+
+export interface BodyMeasurement {
+  id: string;
+  date: string;
+  weight: number;
+  bodyFat?: number;
+  chest?: number;
+  waist?: number;
+  arms?: number;
+  thighs?: number;
+  calves?: number;
+}
+
+export interface PersonalRecord {
+  id: string;
+  exerciseId: string;
+  exerciseName: string;
+  type: PRType;
+  value: number;
+  date: string;
+  workoutLogId?: string;
+}
+
+export interface DashboardStats {
+  weeklyWorkouts: number;
+  weeklyVolume: number;
+  currentWeight: number;
+  weightTrend: "up" | "down" | "stable";
+  steps: number;
+  calories: number;
+  activeDays: number;
+  nextSession?: WorkoutSession;
+  heatmapData: Record<MuscleGroup, number>;
+}
+
+export interface ExerciseFilters {
+  muscleGroup?: MuscleGroup;
+  equipment?: Equipment;
+  search?: string;
+  unilateral?: boolean;
+  category?: "compound" | "isolation" | "cardio";
+}
