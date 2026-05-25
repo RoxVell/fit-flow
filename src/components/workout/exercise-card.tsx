@@ -121,7 +121,7 @@ export function ExerciseCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full gap-1 text-xs h-9 rounded-none border-t border-border/80 hover:bg-accent/50 text-muted-foreground/60 hover:text-foreground"
+                  className="w-full gap-1 text-xs h-9 rounded-xl border-t border-border/80 hover:bg-accent/50 text-muted-foreground/60 hover:text-foreground"
                   onClick={onAddSet}
                 >
                   <Plus className="h-3.5 w-3.5" /> Add Set
