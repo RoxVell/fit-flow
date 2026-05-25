@@ -32,7 +32,7 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
   const config = setTypeConfig[set.type];
 
   return (
-    <div className="relative overflow-hidden rounded-xl">
+    <div className="relative overflow-hidden">
       <motion.div
         drag="x"
         dragConstraints={{ left: -72, right: 0 }}
@@ -41,10 +41,9 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
         onDragEnd={(_, info) => {
           if (info.offset.x < -50) onRemove();
         }}
-        className="relative z-10 w-full"
-        whileTap={{ scale: 0.98 }}
+        className="flex w-[calc(100%+72px)]"
       >
-        <div className="flex items-center gap-1.5 rounded-xl border bg-card p-2.5 transition-colors w-full">
+        <div className="flex items-center gap-1 border-t border-border/80 bg-card p-2 transition-colors w-[calc(100%-72px)] shrink-0">
           <span className="w-5 shrink-0 text-center text-sm font-medium text-muted-foreground/50">
             {setNumber}
           </span>
@@ -56,7 +55,7 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
           </button>
 
           {previousSet ? (
-            <span className="text-sm text-muted-foreground/80 tabular-nums w-20 shrink-0 text-right">
+            <span className="text-sm text-foreground tabular-nums w-20 shrink-0 text-right">
               {previousSet.weight}×{previousSet.reps}
             </span>
           ) : (
@@ -101,11 +100,11 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
             )}
           </button>
         </div>
-      </motion.div>
 
-      <div className="absolute right-0 top-px bottom-px flex w-[72px] items-center justify-center rounded-r-xl bg-destructive pointer-events-none">
-        <Trash2 className="h-5 w-5 text-destructive-foreground" />
-      </div>
+        <div className="w-[72px] shrink-0 flex items-center justify-center bg-destructive">
+          <Trash2 className="h-5 w-5 text-destructive-foreground" />
+        </div>
+      </motion.div>
     </div>
   );
 }

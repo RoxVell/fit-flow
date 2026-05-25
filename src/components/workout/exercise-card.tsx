@@ -91,8 +91,8 @@ export function ExerciseCard({
         </div>
 
         {!collapsed && (
-          <div className="space-y-1">
-            <div className="flex items-center gap-1 px-1 text-sm text-muted-foreground/35 font-medium">
+          <div>
+            <div className="flex items-center gap-1 border-t border-border/80 px-2 pt-1.5 pb-0.5 text-sm text-muted-foreground/50 font-medium">
               <span className="w-5 shrink-0 text-center">Set</span>
               <span className="w-7 shrink-0 text-center">T</span>
               <span className="w-20 shrink-0 text-right">Previous</span>
@@ -114,12 +114,12 @@ export function ExerciseCard({
               />
             ))}
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="w-full gap-1 text-xs"
+              className="w-full gap-1 text-xs h-9 rounded-none border-t border-border/80 hover:bg-accent/50 text-muted-foreground/60 hover:text-foreground"
               onClick={onAddSet}
             >
-              <Plus className="h-3 w-3" /> Add Set
+              <Plus className="h-3.5 w-3.5" /> Add Set
             </Button>
           </div>
         )}

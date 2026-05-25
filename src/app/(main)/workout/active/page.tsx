@@ -154,7 +154,7 @@ export default function ActiveWorkoutPage() {
   return (
     <>
       {/* Fixed header */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-background/95 backdrop-blur-sm border-b px-4 py-3">
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-background/95 backdrop-blur-sm border-b px-4 pb-3 pt-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Timer className="h-4 w-4 text-muted-foreground" />
@@ -184,22 +184,6 @@ export default function ActiveWorkoutPage() {
             </Button>
           </div>
         </div>
-        <div className="mt-1 h-1 rounded-full bg-muted overflow-hidden">
-          <div
-            className="h-full rounded-full bg-primary transition-all duration-500"
-            style={{
-              width: `${
-                store.exercises.length > 0
-                  ? (store.exercises.filter((e) =>
-                      e.sets.every((s) => s.completed)
-                    ).length /
-                      store.exercises.length) *
-                    100
-                  : 0
-              }%`,
-            }}
-          />
-        </div>
       </div>
 
       {/* Fixed bottom bar */}
@@ -222,7 +206,7 @@ export default function ActiveWorkoutPage() {
       </div>
 
       {/* Scrollable content */}
-      <div className="pt-20 pb-20 px-4">
+      <div className="pt-[calc(env(safe-area-inset-top)+4rem)] pb-20 px-4">
         <AnimatePresence>
           {store.exercises.map((ex) => {
             const exercise = exerciseMap.get(ex.exerciseId);
