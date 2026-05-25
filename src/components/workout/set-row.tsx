@@ -55,7 +55,7 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
           </button>
 
           {previousSet ? (
-            <span className="text-sm text-foreground tabular-nums w-20 shrink-0 text-right">
+            <span className="text-sm text-foreground tabular-nums w-20 shrink-0 text-right text-muted-foreground/80">
               {previousSet.weight}×{previousSet.reps}
             </span>
           ) : (

@@ -40,21 +40,21 @@ export function RestTimer({ endTime, isRunning, onStop }: RestTimerProps) {
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
   const progress = remaining / 90;
-  const circumference = 2 * Math.PI * 36;
+  const circumference = 2 * Math.PI * 42;
 
   return (
     <motion.div
       initial={{ y: 50, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 50, opacity: 0 }}
-      className="fixed bottom-20 left-4 right-4 z-50 max-w-lg mx-auto"
+      className="fixed bottom-32 left-4 right-4 z-50 max-w-lg mx-auto"
     >
       <div className="flex items-center gap-4 rounded-2xl bg-card p-4 shadow-lg border">
         <div className="relative flex items-center justify-center">
-          <svg width="80" height="80" className="-rotate-90">
-            <circle cx="40" cy="40" r="36" fill="none" stroke="var(--color-muted)" strokeWidth="6" />
+          <svg width="96" height="96" className="-rotate-90">
+            <circle cx="48" cy="48" r="42" fill="none" stroke="var(--color-muted)" strokeWidth="6" />
             <circle
-              cx="40" cy="40" r="36"
+              cx="48" cy="48" r="42"
               fill="none"
               stroke="var(--color-primary)"
               strokeWidth="6"
@@ -64,16 +64,16 @@ export function RestTimer({ endTime, isRunning, onStop }: RestTimerProps) {
               className="transition-all duration-200"
             />
           </svg>
-          <span className="absolute text-lg font-bold tabular-nums">
+          <span className="absolute text-3xl font-bold tabular-nums">
             {minutes}:{seconds.toString().padStart(2, "0")}
           </span>
         </div>
         <div className="flex-1">
-          <p className="text-sm font-medium flex items-center gap-1">
-            <Clock className="h-4 w-4" />
+          <p className="text-base font-medium flex items-center gap-1">
+            <Clock className="h-5 w-5" />
             Rest
           </p>
-          <p className="text-xs text-muted-foreground">Next set ready when timer ends</p>
+          <p className="text-sm text-muted-foreground">Next set ready when timer ends</p>
         </div>
         <Button variant="ghost" size="icon" onClick={onStop}>
           <SkipForward className="h-5 w-5" />

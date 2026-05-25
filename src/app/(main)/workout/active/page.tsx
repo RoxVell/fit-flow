@@ -225,7 +225,7 @@ export default function ActiveWorkoutPage() {
       </div>
 
       {/* Scrollable content */}
-      <div className="pt-[calc(env(safe-area-inset-top)+4rem)] pb-20 px-4">
+      <div className="pt-[calc(env(safe-area-inset-top)+4rem)] pb-36 px-4">
         <AnimatePresence>
           {store.exercises.map((ex) => {
             const exercise = exerciseMap.get(ex.exerciseId);
