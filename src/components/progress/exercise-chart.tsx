@@ -36,17 +36,19 @@ export function ExerciseChart() {
     volume: Math.round(h.volume),
   }));
 
+  const selectedExercise = allExercises?.find((e) => e.id === selectedId);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium">Exercise Progress</CardTitle>
         <Select value={selectedId} onValueChange={(v) => v && setSelectedId(v)}>
           <SelectTrigger className="w-40 h-7 text-xs">
-            <SelectValue />
+            <SelectValue>{selectedExercise?.name}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {allExercises?.slice(0, 20).map((ex) => (
-              <SelectItem key={ex.id} value={ex.id} className="text-xs">
+              <SelectItem key={ex.id} value={ex.id} className="text-sm">
                 {ex.name}
               </SelectItem>
             ))}
