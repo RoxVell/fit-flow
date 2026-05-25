@@ -36,9 +36,11 @@ export default function ActiveWorkoutPage() {
   const { data: allExercises } = useExercises();
   const [elapsed, setElapsed] = useState(0);
   const [showTriumph, setShowTriumph] = useState(false);
+  const [showConfirmFinish, setShowConfirmFinish] = useState(false);
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [addSearch, setAddSearch] = useState("");
   const [isPaused, setIsPaused] = useState(false);
+  const [newRecords, setNewRecords] = useState<PersonalRecord[]>([]);
 
   // Timer effect
   useEffect(() => {
@@ -80,6 +82,10 @@ export default function ActiveWorkoutPage() {
   );
   const disableFinish = hasNoData || hasEmptyComplete;
 
+  const incompleteExists = store.exercises.some((ex) =>
+    ex.sets.some((s) => !s.completed && s.weight > 0)
+  );
+
   const previousSetsMap = useMemo(() => {
     const map = new Map<string, ({ weight: number; reps: number } | null)[]>();
     if (!workoutLogs) return map;
@@ -96,10 +102,7 @@ export default function ActiveWorkoutPage() {
     return map;
   }, [workoutLogs, store.exercises]);
 
-  // PR detection
-  const [newRecords, setNewRecords] = useState<PersonalRecord[]>([]);
-
-  const handleFinish = () => {
+  const finishWorkout = () => {
     store.finishWorkout();
     const records: PersonalRecord[] = [];
     for (const ex of store.exercises) {
@@ -108,7 +111,7 @@ export default function ActiveWorkoutPage() {
       const completed = ex.sets.filter((s) => s.completed);
       if (completed.length === 0) continue;
       const maxWeight = Math.max(...completed.map((s) => s.weight));
-      const vol = calculateVolume(completed);
+      const vol = completed.reduce((sum, s) => sum + s.weight * s.reps, 0);
       if (maxWeight > 0) {
         records.push({
           id: `pr-${ex.id}-w`,
@@ -132,6 +135,22 @@ export default function ActiveWorkoutPage() {
     }
     setNewRecords(records);
     setShowTriumph(true);
+  };
+
+  const handleFinish = () => {
+    const hasIncomplete = store.exercises.some((ex) =>
+      ex.sets.some((s) => !s.completed && s.weight > 0)
+    );
+    if (hasIncomplete) {
+      setShowConfirmFinish(true);
+      return;
+    }
+    finishWorkout();
+  };
+
+  const confirmFinish = () => {
+    setShowConfirmFinish(false);
+    finishWorkout();
   };
 
   const handleCloseTriumph = () => {
@@ -300,6 +319,26 @@ export default function ActiveWorkoutPage() {
           onStop={store.stopRestTimer}
         />
       </AnimatePresence>
+
+      {/* Confirm finish dialog */}
+      {showConfirmFinish && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-xs rounded-xl bg-popover p-4 shadow-lg">
+            <h3 className="text-lg font-medium mb-2">Incomplete Sets</h3>
+            <p className="text-base text-muted-foreground mb-5">
+              You have sets with weight entered but not marked as complete. Finish anyway?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setShowConfirmFinish(false)}>
+                Cancel
+              </Button>
+              <Button onClick={confirmFinish}>
+                Finish Anyway
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Triumph screen */}
       <AnimatePresence>

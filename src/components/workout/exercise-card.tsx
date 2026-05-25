@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Plus,
-  X,
   Shuffle,
   ChevronDown,
   ChevronUp,
-  Sparkles,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -58,71 +58,82 @@ export function ExerciseCard({
 
   return (
     <>
-      <div className="rounded-2xl border bg-card p-2.5 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="font-medium text-sm truncate">{exerciseName}</p>
-              <Badge variant="secondary" className="text-[10px] shrink-0">
-                {MUSCLE_GROUP_LABELS[muscleGroup as keyof typeof MUSCLE_GROUP_LABELS] || muscleGroup}
-              </Badge>
+      <div className="relative overflow-hidden rounded-2xl border bg-card">
+        <motion.div
+          drag="x"
+          dragConstraints={{ left: -72, right: 0 }}
+          dragElastic={0.1}
+          dragSnapToOrigin
+          onDragEnd={(_, info) => {
+            if (info.offset.x < -50) onRemove();
+          }}
+          className="flex w-[calc(100%+72px)]"
+        >
+          <div className="w-[calc(100%-72px)] shrink-0 bg-card p-2.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-sm truncate">{exerciseName}</p>
+                  <Badge variant="secondary" className="text-[10px] shrink-0">
+                    {MUSCLE_GROUP_LABELS[muscleGroup as keyof typeof MUSCLE_GROUP_LABELS] || muscleGroup}
+                  </Badge>
+                </div>
+              </div>
+              <div className="flex items-center gap-0.5 shrink-0">
+                <button
+                  onClick={() => setShowSwap(true)}
+                  className="rounded-lg p-1.5 text-muted-foreground/50 hover:bg-muted transition-colors"
+                >
+                  <Shuffle className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setCollapsed(!collapsed)}
+                  className="rounded-lg p-1 text-muted-foreground/50 hover:bg-muted transition-colors"
+                >
+                  {collapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-0.5 shrink-0">
-            <button
-              onClick={() => setShowSwap(true)}
-              className="rounded-lg p-1.5 text-muted-foreground/50 hover:bg-muted transition-colors"
-            >
-              <Shuffle className="h-4 w-4" />
-            </button>
-            <button
-              onClick={onRemove}
-              className="rounded-lg p-1.5 text-muted-foreground/50 hover:bg-destructive/10 hover:text-destructive transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className="rounded-lg p-1 text-muted-foreground/50 hover:bg-muted transition-colors"
-            >
-              {collapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-            </button>
-          </div>
-        </div>
 
-        {!collapsed && (
-          <div>
-            <div className="flex items-center gap-1 border-t border-border/80 px-2 pt-1.5 pb-0.5 text-sm text-muted-foreground/50 font-medium">
-              <span className="w-5 shrink-0 text-center">Set</span>
-              <span className="w-7 shrink-0 text-center">T</span>
-              <span className="w-20 shrink-0 text-right">Previous</span>
-              <span className="flex-1" />
-              <span className="w-14 shrink-0 text-center">Kg</span>
-              <span className="w-3 shrink-0 text-center" />
-              <span className="w-10 shrink-0 text-center">Reps</span>
-              <span className="w-7 shrink-0 ml-1" />
-            </div>
-            {exercise.sets.map((set, idx) => (
-              <SetRow
-                key={set.id}
-                set={set}
-                setNumber={idx + 1}
-                previousSet={previousSets[idx] || null}
-                onUpdate={(data) => onUpdateSet(idx, data)}
-                onRemove={() => onRemoveSet(idx)}
-                onComplete={() => onCompleteSet(idx)}
-              />
-            ))}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full gap-1 text-xs h-9 rounded-none border-t border-border/80 hover:bg-accent/50 text-muted-foreground/60 hover:text-foreground"
-              onClick={onAddSet}
-            >
-              <Plus className="h-3.5 w-3.5" /> Add Set
-            </Button>
+            {!collapsed && (
+              <div>
+                <div className="flex items-center gap-1 border-t border-border/80 px-2 pt-1.5 pb-0.5 text-sm text-muted-foreground/50 font-medium">
+                  <span className="w-5 shrink-0 text-center">Set</span>
+                  <span className="w-7 shrink-0 text-center">T</span>
+                  <span className="w-20 shrink-0 text-right">Previous</span>
+                  <span className="flex-1" />
+                  <span className="w-14 shrink-0 text-center">Kg</span>
+                  <span className="w-3 shrink-0 text-center" />
+                  <span className="w-10 shrink-0 text-center">Reps</span>
+                  <span className="w-7 shrink-0 ml-1" />
+                </div>
+                {exercise.sets.map((set, idx) => (
+                  <SetRow
+                    key={set.id}
+                    set={set}
+                    setNumber={idx + 1}
+                    previousSet={previousSets[idx] || null}
+                    onUpdate={(data) => onUpdateSet(idx, data)}
+                    onRemove={() => onRemoveSet(idx)}
+                    onComplete={() => onCompleteSet(idx)}
+                  />
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full gap-1 text-xs h-9 rounded-none border-t border-border/80 hover:bg-accent/50 text-muted-foreground/60 hover:text-foreground"
+                  onClick={onAddSet}
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add Set
+                </Button>
+              </div>
+            )}
           </div>
-        )}
+
+          <div className="w-[72px] shrink-0 flex items-center justify-center bg-destructive">
+            <Trash2 className="h-5 w-5 text-destructive-foreground" />
+          </div>
+        </motion.div>
       </div>
 
       <Dialog open={showSwap} onOpenChange={setShowSwap}>
