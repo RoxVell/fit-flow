@@ -12,8 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SetRow } from "./set-row";
-import { PreviousResults } from "./previous-results";
-import { cn } from "@/lib/utils";
 import type { LoggedExercise } from "@/lib/db/types";
 import { MUSCLE_GROUP_LABELS } from "@/lib/utils/constants";
 import { useExercises } from "@/lib/hooks/use-queries";
@@ -31,6 +29,7 @@ interface ExerciseCardProps {
   exercise: LoggedExercise;
   exerciseName: string;
   muscleGroup: string;
+  previousSets: ({ weight: number; reps: number } | null)[];
   onAddSet: () => void;
   onRemoveSet: (index: number) => void;
   onUpdateSet: (index: number, data: any) => void;
@@ -43,6 +42,7 @@ export function ExerciseCard({
   exercise,
   exerciseName,
   muscleGroup,
+  previousSets,
   onAddSet,
   onRemoveSet,
   onUpdateSet,
@@ -92,22 +92,24 @@ export function ExerciseCard({
           </div>
         </div>
 
-        <PreviousResults exerciseId={exercise.exerciseId} />
-
         {!collapsed && (
-          <div className="space-y-2">
-            <div className="grid grid-cols-[12px_24px_auto_1fr_32px] gap-2 px-1 text-[10px] text-muted-foreground font-medium">
-              <span />
-              <span>#</span>
-              <span>Type</span>
-              <span className="text-center">Weight × Reps</span>
-              <span />
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 px-1 text-xs text-muted-foreground/50 font-medium">
+              <span className="w-5 shrink-0 text-center">Set</span>
+              <span className="w-12 shrink-0 text-center">Type</span>
+              <span className="w-20 shrink-0">Previous</span>
+              <span className="flex-1" />
+              <span className="w-16 shrink-0 text-center">Kg</span>
+              <span className="w-3 shrink-0 text-center" />
+              <span className="w-12 shrink-0 text-center">Reps</span>
+              <span className="w-7 shrink-0 ml-1.5" />
             </div>
             {exercise.sets.map((set, idx) => (
               <SetRow
                 key={set.id}
                 set={set}
                 setNumber={idx + 1}
+                previousSet={previousSets[idx] || null}
                 onUpdate={(data) => onUpdateSet(idx, data)}
                 onRemove={() => onRemoveSet(idx)}
                 onComplete={() => onCompleteSet(idx)}

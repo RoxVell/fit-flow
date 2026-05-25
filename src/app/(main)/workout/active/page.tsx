@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWorkoutStore } from "@/lib/store/workout-store";
-import { useExercises } from "@/lib/hooks/use-queries";
+import { useExercises, useWorkoutLogs } from "@/lib/hooks/use-queries";
 import { ExerciseCard } from "@/components/workout/exercise-card";
 import { RestTimer } from "@/components/workout/rest-timer";
 import { TriumphScreen } from "@/components/workout/triumph-screen";
@@ -64,6 +64,7 @@ export default function ActiveWorkoutPage() {
   }, []);
 
   const exerciseMap = new Map(allExercises?.map((e) => [e.id, e]));
+  const { data: workoutLogs } = useWorkoutLogs(10);
 
   const totalVolume = calculateVolume(
     store.exercises.flatMap((e) => e.sets.filter((s) => s.completed))
@@ -78,6 +79,22 @@ export default function ActiveWorkoutPage() {
     ex.sets.some((s) => s.completed && s.weight === 0)
   );
   const disableFinish = hasNoData || hasEmptyComplete;
+
+  const previousSetsMap = useMemo(() => {
+    const map = new Map<string, ({ weight: number; reps: number } | null)[]>();
+    if (!workoutLogs) return map;
+    for (const ex of store.exercises) {
+      for (const log of workoutLogs) {
+        const loggedEx = log.exercises.find((e) => e.exerciseId === ex.exerciseId);
+        if (loggedEx) {
+          const completed = [...loggedEx.sets].sort((a, b) => a.setOrder - b.setOrder);
+          map.set(ex.id, completed.map((s) => ({ weight: s.weight, reps: s.reps })));
+          break;
+        }
+      }
+    }
+    return map;
+  }, [workoutLogs, store.exercises]);
 
   // PR detection
   const [newRecords, setNewRecords] = useState<PersonalRecord[]>([]);
@@ -222,6 +239,7 @@ export default function ActiveWorkoutPage() {
                   exercise={ex}
                   exerciseName={exercise?.name || "Unknown"}
                   muscleGroup={exercise?.muscleGroup || "chest"}
+                  previousSets={previousSetsMap.get(ex.id) || []}
                   onAddSet={() => store.addSet(ex.id)}
                   onRemoveSet={(idx) => store.removeSet(ex.id, idx)}
                   onUpdateSet={(idx, data) => store.updateSet(ex.id, idx, data)}
