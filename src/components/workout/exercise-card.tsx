@@ -2,13 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Plus,
-  Shuffle,
-  ChevronDown,
-  ChevronUp,
-  Trash2,
-} from "lucide-react";
+import { Plus, Shuffle, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SetRow } from "./set-row";
@@ -29,6 +23,7 @@ interface ExerciseCardProps {
   exerciseName: string;
   muscleGroup: string;
   previousSets: ({ weight: number; reps: number } | null)[];
+  isActive?: boolean;
   onAddSet: () => void;
   onRemoveSet: (index: number) => void;
   onUpdateSet: (index: number, data: any) => void;
@@ -42,6 +37,7 @@ export function ExerciseCard({
   exerciseName,
   muscleGroup,
   previousSets,
+  isActive,
   onAddSet,
   onRemoveSet,
   onUpdateSet,
@@ -59,6 +55,9 @@ export function ExerciseCard({
   return (
     <>
       <div className="relative overflow-hidden rounded-2xl border bg-card">
+        {isActive && (
+          <div className="absolute left-0 top-1 bottom-1 w-[2px] rounded-full bg-primary/80 shadow-[0_0_12px_2px] shadow-primary/25" />
+        )}
         <motion.div
           drag="x"
           dragConstraints={{ left: -72, right: 0 }}
@@ -75,11 +74,13 @@ export function ExerciseCard({
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-sm truncate">{exerciseName}</p>
                   <Badge variant="secondary" className="text-[10px] shrink-0">
-                    {MUSCLE_GROUP_LABELS[muscleGroup as keyof typeof MUSCLE_GROUP_LABELS] || muscleGroup}
+                    {MUSCLE_GROUP_LABELS[
+                      muscleGroup as keyof typeof MUSCLE_GROUP_LABELS
+                    ] || muscleGroup}
                   </Badge>
                 </div>
               </div>
-              <div className="flex items-center gap-0.5 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => setShowSwap(true)}
                   className="rounded-lg p-1.5 text-muted-foreground/50 hover:bg-muted transition-colors"
@@ -88,16 +89,20 @@ export function ExerciseCard({
                 </button>
                 <button
                   onClick={() => setCollapsed(!collapsed)}
-                  className="rounded-lg p-1 text-muted-foreground/50 hover:bg-muted transition-colors"
+                  className="rounded-lg p-1.5 text-muted-foreground/50 hover:bg-muted transition-colors"
                 >
-                  {collapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+                  {collapsed ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
 
             {!collapsed && (
               <div>
-                <div className="flex items-center gap-1 border-t border-border/80 px-2 pt-1.5 pb-0.5 text-sm text-muted-foreground/50 font-medium">
+                <div className="flex items-center gap-1 px-2 pt-1.5 pb-0.5 text-sm text-muted-foreground/50 font-medium">
                   <span className="w-5 shrink-0 text-center">Set</span>
                   <span className="w-7 shrink-0 text-center">T</span>
                   <span className="w-20 shrink-0 text-right">Previous</span>

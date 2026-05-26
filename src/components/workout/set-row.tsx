@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,17 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
   };
 
   const config = setTypeConfig[set.type];
+  const hasPrefilled = useRef(false);
+
+  useEffect(() => {
+    if (!hasPrefilled.current && set.weight === 0 && set.reps === 0 && previousSet) {
+      onUpdate({ weight: previousSet.weight, reps: previousSet.reps });
+      hasPrefilled.current = true;
+    }
+  }, [previousSet]);
+
+  const displayWeight = set.weight || (previousSet ? previousSet.weight : "");
+  const displayReps = set.reps || (previousSet ? previousSet.reps : "");
 
   return (
     <div className="relative overflow-hidden">
@@ -43,7 +55,7 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
         }}
         className="flex w-[calc(100%+72px)]"
       >
-        <div className="flex items-center gap-1 border-t border-border/80 bg-card p-2 transition-colors w-[calc(100%-72px)] shrink-0">
+        <div className="flex items-center gap-1 border-t border-border/50 p-2 transition-colors w-[calc(100%-72px)] shrink-0">
           <span className="w-5 shrink-0 text-center text-sm font-medium text-muted-foreground/50">
             {setNumber}
           </span>
@@ -66,31 +78,32 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
 
           <Input
             type="number"
-            value={set.weight || ""}
+            inputMode="decimal"
+            value={displayWeight}
             onChange={(e) => onUpdate({ weight: parseFloat(e.target.value) || 0 })}
-            className="h-8 w-16 shrink-0 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            placeholder="kg"
+            className="h-8 w-16 shrink-0 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-muted-foreground/30"
+            placeholder={previousSet ? "" : "kg"}
           />
 
           <span className="w-3 shrink-0 text-center text-sm text-muted-foreground/40">×</span>
 
           <Input
             type="number"
-            value={set.reps || ""}
+            inputMode="numeric"
+            value={displayReps}
             onChange={(e) => onUpdate({ reps: parseInt(e.target.value) || 0 })}
-            className="h-8 w-12 shrink-0 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            placeholder="r"
+            className="h-8 w-12 shrink-0 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-muted-foreground/30"
+            placeholder={previousSet ? "" : "r"}
           />
 
           <button
             onClick={onComplete}
-            disabled={set.completed || set.weight === 0 || set.reps === 0}
+            disabled={set.completed}
             className={cn(
               "ml-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-all",
               set.completed
                 ? "border-primary text-primary"
-                : "border-muted-foreground/30 hover:border-primary/50",
-              (set.weight === 0 || set.reps === 0) && !set.completed && "opacity-30"
+                : "border-muted-foreground/30 hover:border-primary/50"
             )}
           >
             {set.completed && (

@@ -40,6 +40,7 @@ export default function ActiveWorkoutPage() {
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [addSearch, setAddSearch] = useState("");
   const [isPaused, setIsPaused] = useState(false);
+  const [lastActiveExerciseId, setLastActiveExerciseId] = useState<string | null>(null);
   const [newRecords, setNewRecords] = useState<PersonalRecord[]>([]);
 
   // Timer effect
@@ -83,8 +84,18 @@ export default function ActiveWorkoutPage() {
   const disableFinish = hasNoData || hasEmptyComplete;
 
   const incompleteExists = store.exercises.some((ex) =>
-    ex.sets.some((s) => !s.completed && s.weight > 0)
+    ex.sets.some((s) => !s.completed)
   );
+
+  const lastEx = lastActiveExerciseId
+    ? store.exercises.find(e => e.id === lastActiveExerciseId)
+    : null;
+
+  const activeExerciseId = lastEx && lastEx.sets.some(s => !s.completed)
+    ? lastEx.id
+    : (store.exercises.find((ex) =>
+        ex.sets.some((s) => !s.completed)
+      )?.id || store.exercises[store.exercises.length - 1]?.id);
 
   const previousSetsMap = useMemo(() => {
     const map = new Map<string, ({ weight: number; reps: number } | null)[]>();
@@ -138,10 +149,7 @@ export default function ActiveWorkoutPage() {
   };
 
   const handleFinish = () => {
-    const hasIncomplete = store.exercises.some((ex) =>
-      ex.sets.some((s) => !s.completed && s.weight > 0)
-    );
-    if (hasIncomplete) {
+    if (incompleteExists) {
       setShowConfirmFinish(true);
       return;
     }
@@ -173,7 +181,7 @@ export default function ActiveWorkoutPage() {
   return (
     <>
       {/* Fixed header */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-background/95 backdrop-blur-sm border-b px-4 pb-3 pt-3">
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Timer className="h-4 w-4 text-muted-foreground" />
@@ -188,9 +196,21 @@ export default function ActiveWorkoutPage() {
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              {store.exercises.length} exercises
-            </span>
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+              <span className="tabular-nums text-foreground">
+                {store.exercises.reduce(
+                  (sum, e) => sum + e.sets.filter((s) => s.completed).length,
+                  0
+                )}
+              </span>
+              <span className="text-muted-foreground/60">/</span>
+              <span className="tabular-nums text-foreground">{store.exercises.reduce((sum, e) => sum + e.sets.length, 0)}</span>
+              {/*<span>sets</span>*/}
+              <span className="text-muted-foreground/60">·</span>
+              <span className="tabular-nums">{totalVolume.toLocaleString()}</span>
+              <span>kg</span>
+            </div>
             <Button
               variant="default"
               size="sm"
@@ -205,27 +225,8 @@ export default function ActiveWorkoutPage() {
         </div>
       </div>
 
-      {/* Fixed bottom bar */}
-      <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-background/95 backdrop-blur-sm border-t px-4 py-2">
-        <div className="flex items-center justify-center">
-          <div className="flex items-center gap-2 text-sm">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <span>
-              {store.exercises.reduce(
-                (sum, e) => sum + e.sets.filter((s) => s.completed).length,
-                0
-              )}{" "}
-              sets completed
-            </span>
-            <span className="text-muted-foreground">
-              · {totalVolume.toLocaleString()} kg
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Scrollable content */}
-      <div className="pt-[calc(env(safe-area-inset-top)+4rem)] pb-36 px-4">
+      <div className="pt-[calc(env(safe-area-inset-top)+4rem)] pb-20 px-4">
         <AnimatePresence>
           {store.exercises.map((ex) => {
             const exercise = exerciseMap.get(ex.exerciseId);
@@ -243,10 +244,14 @@ export default function ActiveWorkoutPage() {
                   exerciseName={exercise?.name || "Unknown"}
                   muscleGroup={exercise?.muscleGroup || "chest"}
                   previousSets={previousSetsMap.get(ex.id) || []}
+                  isActive={ex.id === activeExerciseId}
                   onAddSet={() => store.addSet(ex.id)}
                   onRemoveSet={(idx) => store.removeSet(ex.id, idx)}
                   onUpdateSet={(idx, data) => store.updateSet(ex.id, idx, data)}
-                  onCompleteSet={(idx) => store.markSetCompleted(ex.id, idx)}
+                  onCompleteSet={(idx) => {
+                    store.markSetCompleted(ex.id, idx);
+                    setLastActiveExerciseId(ex.id);
+                  }}
                   onRemove={() => store.removeExercise(ex.id)}
                   onSwap={(newId) => store.swapExercise(ex.id, newId)}
                 />
