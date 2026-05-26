@@ -1,7 +1,7 @@
-const CACHE = "fitflow-v3";
+const CACHE = "fitflow-v5";
 const ORIGIN = self.location.origin;
 
-const PRECACHE = [
+const PAGES = [
   "/dashboard",
   "/workout/active",
   "/workout/cardio",
@@ -13,50 +13,51 @@ const PRECACHE = [
   "/icons/icon-192.png",
 ];
 
-async function precacheWithChunks() {
+async function install() {
   const cache = await caches.open(CACHE);
 
+  // Step 1: Cache all HTML pages and static assets
   await Promise.all(
-    PRECACHE.map((url) =>
-      fetch(url)
-        .then((r) => { if (r.ok) cache.put(url, r); })
-        .catch(() => {})
+    PAGES.map((url) =>
+      fetch(url).then((r) => {
+        if (r.ok) cache.put(url, r);
+      }).catch(() => {})
     )
   );
 
+  // Step 2: From each HTML page, extract and cache all referenced chunks
   const urls = new Set();
-
-  for (const page of PRECACHE) {
+  for (const page of PAGES) {
     const res = await cache.match(page);
     if (!res) continue;
-    const html = await res.text();
 
-    const scriptRe = /<script[^>]+src=["']([^"']+)["']/g;
-    let m;
-    while ((m = scriptRe.exec(html))) {
-      const src = m[1];
-      if (src.startsWith("/")) urls.add(ORIGIN + src);
-    }
-
-    const linkRe = /<link[^>]+href=["']([^"']+)["']/g;
-    while ((m = linkRe.exec(html))) {
-      const href = m[1];
-      if (href.startsWith("/") && href.includes("static")) urls.add(ORIGIN + href);
+    try {
+      const html = await res.text();
+      const re = /(?:src|href)="(https?:\/\/[^"]+|\/[^"]+)"/g;
+      let m;
+      while ((m = re.exec(html))) {
+        const u = m[1];
+        if (u.startsWith("/")) urls.add(ORIGIN + u);
+        else if (u.startsWith(ORIGIN)) urls.add(u);
+      }
+    } catch (e) {
+      // skip pages that fail to parse
     }
   }
 
+  // Cache all extracted URLs
   await Promise.all(
     Array.from(urls).map((url) =>
-      fetch(url)
-        .then((r) => { if (r.ok) cache.put(url, r); })
-        .catch(() => {})
+      fetch(url).then((r) => {
+        if (r.ok) cache.put(url, r);
+      }).catch(() => {})
     )
   );
 }
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
-  event.waitUntil(precacheWithChunks());
+  event.waitUntil(install());
 });
 
 self.addEventListener("activate", (event) => {
@@ -69,33 +70,16 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/static/")) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return fetch(request)
-          .then((res) => {
-            if (res.ok) caches.open(CACHE).then((cache) => cache.put(request, res.clone()));
-            return res;
-          })
-          .catch(() => {
-            // Try fallback to dashboard HTML as last resort
-            return caches.match("/dashboard").then((d) => d || new Response(null, { status: 408 }));
-          });
-      })
-    );
-    return;
-  }
+  // Cache same-origin responses for future offline use
+  const save = (res) => {
+    if (res.ok) caches.open(CACHE).then((c) => c.put(request, res.clone()));
+  };
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((res) => {
-          caches.open(CACHE).then((cache) => cache.put(request, res.clone()));
-          return res;
-        })
+      fetch(request).then((r) => { save(r); return r; })
         .catch(() =>
-          caches.match(request).then((cached) => cached || caches.match("/dashboard"))
+          caches.match(request).then((c) => c || caches.match("/dashboard"))
         )
     );
     return;
@@ -104,14 +88,10 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
-      return fetch(request)
-        .then((res) => {
-          if (res.ok && url.origin === ORIGIN) {
-            caches.open(CACHE).then((cache) => cache.put(request, res.clone()));
-          }
-          return res;
-        })
-        .catch(() => new Response("Offline", { status: 503 }));
+      return fetch(request).then((r) => {
+        if (r.ok && url.origin === ORIGIN) save(r);
+        return r;
+      }).catch(() => new Response(null, { status: 408 }));
     })
   );
 });
