@@ -2,7 +2,6 @@ const CACHE = "fitflow-v3";
 const ORIGIN = self.location.origin;
 
 const PRECACHE = [
-  "/",
   "/dashboard",
   "/workout/active",
   "/workout/cardio",
@@ -16,7 +15,14 @@ const PRECACHE = [
 
 async function precacheWithChunks() {
   const cache = await caches.open(CACHE);
-  await cache.addAll(PRECACHE);
+
+  await Promise.all(
+    PRECACHE.map((url) =>
+      fetch(url)
+        .then((r) => { if (r.ok) cache.put(url, r); })
+        .catch(() => {})
+    )
+  );
 
   const urls = new Set();
 
@@ -63,7 +69,6 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
-  // Static assets: cache-first with network fallback
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/static/")) {
     event.respondWith(
       caches.match(request).then((cached) => {
@@ -73,13 +78,15 @@ self.addEventListener("fetch", (event) => {
             if (res.ok) caches.open(CACHE).then((cache) => cache.put(request, res.clone()));
             return res;
           })
-          .catch(() => new Response(null, { status: 408 }));
+          .catch(() => {
+            // Try fallback to dashboard HTML as last resort
+            return caches.match("/dashboard").then((d) => d || new Response(null, { status: 408 }));
+          });
       })
     );
     return;
   }
 
-  // Navigation: network-first, fallback to cache
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
@@ -94,7 +101,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Everything else: cache-first
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
