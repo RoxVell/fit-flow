@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Shuffle, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -112,17 +112,27 @@ export function ExerciseCard({
                   <span className="w-10 shrink-0 text-center">Reps</span>
                   <span className="w-7 shrink-0 ml-1" />
                 </div>
-                {exercise.sets.map((set, idx) => (
-                  <SetRow
-                    key={set.id}
-                    set={set}
-                    setNumber={idx + 1}
-                    previousSet={previousSets[idx] || null}
-                    onUpdate={(data) => onUpdateSet(idx, data)}
-                    onRemove={() => onRemoveSet(idx)}
-                    onComplete={() => onCompleteSet(idx)}
-                  />
-                ))}
+                <AnimatePresence mode="popLayout">
+                  {exercise.sets.map((set, idx) => (
+                    <motion.div
+                      key={set.id}
+                      layout
+                      initial={{ opacity: 0, x: -20, height: 0 }}
+                      animate={{ opacity: 1, x: 0, height: "auto" }}
+                      exit={{ opacity: 0, x: -100, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <SetRow
+                        set={set}
+                        setNumber={idx + 1}
+                        previousSet={previousSets[idx] || null}
+                        onUpdate={(data) => onUpdateSet(idx, data)}
+                        onRemove={() => onRemoveSet(idx)}
+                        onComplete={() => onCompleteSet(idx)}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
                 <Button
                   variant="ghost"
                   size="sm"
