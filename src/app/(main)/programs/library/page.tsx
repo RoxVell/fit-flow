@@ -32,7 +32,7 @@ export default function ExerciseLibraryPage() {
   });
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full pt-[env(safe-area-inset-top)]">
       <div className="p-4 pb-2 space-y-3">
         <h1 className="text-xl font-bold">Exercise Library</h1>
         <div className="relative">

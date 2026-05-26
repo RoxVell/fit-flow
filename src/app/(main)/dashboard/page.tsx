@@ -32,7 +32,7 @@ export default function DashboardPage() {
     : undefined;
 
   return (
-    <div className="space-y-4 p-4 pb-24">
+    <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">FitFlow</h1>
         <p className="text-sm text-muted-foreground">

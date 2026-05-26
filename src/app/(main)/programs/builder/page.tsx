@@ -28,7 +28,7 @@ export default function ProgramBuilderPage() {
   };
 
   return (
-    <div className="space-y-4 p-4 pb-24">
+    <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Program Builder</h1>
         <Button variant="outline" size="sm" className="gap-1" onClick={() => setShowAi(!showAi)}>

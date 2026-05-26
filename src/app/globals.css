@@ -129,9 +129,10 @@
     outline: none !important;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
   }
   html {
     @apply font-sans;
+    min-height: 100dvh;
   }
 }
