@@ -54,14 +54,7 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    Promise.all([
-      self.clients.claim(),
-      caches.keys().then((keys) =>
-        Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-      ),
-    ])
-  );
+  event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener("fetch", (event) => {
@@ -73,17 +66,15 @@ self.addEventListener("fetch", (event) => {
   // Static assets: cache-first with network fallback
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/static/")) {
     event.respondWith(
-      caches.open(CACHE).then((cache) =>
-        cache.match(request).then((cached) => {
-          if (cached) return cached;
-          return fetch(request)
-            .then((res) => {
-              if (res.ok) cache.put(request, res.clone());
-              return res;
-            })
-            .catch(() => new Response(null, { status: 408 }));
-        })
-      )
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request)
+          .then((res) => {
+            if (res.ok) caches.open(CACHE).then((cache) => cache.put(request, res.clone()));
+            return res;
+          })
+          .catch(() => new Response(null, { status: 408 }));
+      })
     );
     return;
   }
