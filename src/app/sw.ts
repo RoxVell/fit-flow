@@ -11,8 +11,6 @@ installSerwist({
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: false,
-  navigateFallback: "/dashboard",
-  navigateFallbackAllowlist: [/^\/(?!api\/).*/],
   runtimeCaching: defaultCache,
   cleanupOutdatedCaches: true,
 });
