@@ -72,7 +72,9 @@ self.addEventListener("fetch", (event) => {
 
   // Cache same-origin responses for future offline use
   const save = (res) => {
-    if (res.ok) caches.open(CACHE).then((c) => c.put(request, res.clone()));
+    if (res.ok && !res.bodyUsed) {
+      caches.open(CACHE).then((c) => c.put(request, res.clone()));
+    }
   };
 
   if (request.mode === "navigate") {
