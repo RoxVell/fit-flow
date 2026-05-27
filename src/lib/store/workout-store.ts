@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { LoggedExercise, LoggedSet, SetType } from "@/lib/db/types";
 import { generateId } from "@/lib/utils/calculations";
+import { zustandStorage } from "@/lib/db/local-db";
 
 interface RestTimerState {
   endTime: number | null;
@@ -212,6 +213,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
     }),
     {
       name: "fitflow-workout",
+      storage: zustandStorage,
       partialize: (state) => ({
         activeWorkoutId: state.activeWorkoutId,
         exercises: state.exercises,

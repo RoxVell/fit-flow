@@ -13,12 +13,13 @@ import type {
 import {
   exercises,
   programs,
-  workoutLogs,
-  bodyMeasurements,
+  workoutLogs as seedLogs,
+  bodyMeasurements as seedMeasurements,
   personalRecords,
-  cardioSessions,
+  cardioSessions as seedCardio,
   getDashboardStatsMock,
 } from "./seed";
+import { localDb } from "./local-db";
 
 function filterExercises(filters?: ExerciseFilters): Exercise[] {
   let result = [...exercises];
@@ -39,10 +40,14 @@ function filterExercises(filters?: ExerciseFilters): Exercise[] {
   return result;
 }
 
-function attachExercisesToSession(session: WorkoutProgram["sessions"][0]): void {
-  for (const se of session.exercises) {
-    se.exercise = exercises.find((e) => e.id === se.exerciseId);
-  }
+function attachExercises(log: WorkoutLog): WorkoutLog {
+  return {
+    ...log,
+    exercises: log.exercises.map((e) => ({
+      ...e,
+      exercise: exercises.find((ex) => ex.id === e.exerciseId),
+    })),
+  };
 }
 
 export async function getExercises(filters?: ExerciseFilters): Promise<Exercise[]> {
@@ -57,56 +62,63 @@ export async function getExerciseById(id: string): Promise<Exercise | undefined>
 
 export async function getPrograms(): Promise<WorkoutProgram[]> {
   await delay(400);
-  for (const p of programs) for (const s of p.sessions) attachExercisesToSession(s);
+  for (const p of programs) for (const s of p.sessions) {
+    for (const se of s.exercises) {
+      se.exercise = exercises.find((e) => e.id === se.exerciseId);
+    }
+  }
   return programs;
 }
 
 export async function getActiveProgram(): Promise<WorkoutProgram | undefined> {
   await delay(300);
   const prog = programs.find((p) => p.isActive);
-  if (prog) for (const s of prog.sessions) attachExercisesToSession(s);
+  if (prog) for (const s of prog.sessions) {
+    for (const se of s.exercises) {
+      se.exercise = exercises.find((e) => e.id === se.exerciseId);
+    }
+  }
   return prog;
 }
 
 export async function getProgramById(id: string): Promise<WorkoutProgram | undefined> {
   await delay(300);
   const prog = programs.find((p) => p.id === id);
-  if (prog) for (const s of prog.sessions) attachExercisesToSession(s);
+  if (prog) for (const s of prog.sessions) {
+    for (const se of s.exercises) {
+      se.exercise = exercises.find((e) => e.id === se.exerciseId);
+    }
+  }
   return prog;
 }
 
 export async function getWorkoutLogs(limit: number = 20): Promise<WorkoutLog[]> {
   await delay(400);
-  return workoutLogs
+  const persisted = await localDb.workoutLogs.getAll();
+  const all = [...seedLogs, ...persisted];
+  return all
     .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
     .slice(0, limit)
-    .map((log) => ({
-      ...log,
-      exercises: log.exercises.map((e) => ({
-        ...e,
-        exercise: exercises.find((ex) => ex.id === e.exerciseId),
-      })),
-    }));
+    .map(attachExercises);
 }
 
 export async function getWorkoutLogById(id: string): Promise<WorkoutLog | undefined> {
   await delay(300);
-  const log = workoutLogs.find((l) => l.id === id);
-  if (!log) return undefined;
-  return {
-    ...log,
-    exercises: log.exercises.map((e) => ({
-      ...e,
-      exercise: exercises.find((ex) => ex.id === e.exerciseId),
-    })),
-  };
+  const fromSeed = seedLogs.find((l) => l.id === id);
+  if (fromSeed) return attachExercises(fromSeed);
+  const persisted = await localDb.workoutLogs.getAll();
+  const fromDb = persisted.find((l) => l.id === id);
+  if (!fromDb) return undefined;
+  return attachExercises(fromDb);
 }
 
 export async function getExerciseHistory(
   exerciseId: string
 ): Promise<{ date: string; volume: number; maxWeight: number; estimated1RM: number }[]> {
   await delay(300);
-  const logs = workoutLogs
+  const persisted = await localDb.workoutLogs.getAll();
+  const all = [...seedLogs, ...persisted];
+  const logs = all
     .filter((l) => l.exercises.some((e) => e.exerciseId === exerciseId))
     .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
 
@@ -131,9 +143,9 @@ export async function getExerciseHistory(
 export async function createWorkoutLog(
   data: Omit<WorkoutLog, "id">
 ): Promise<WorkoutLog> {
-  await delay(500);
+  await delay(200);
   const log: WorkoutLog = { ...data, id: generateId() };
-  workoutLogs.unshift(log);
+  await localDb.workoutLogs.add(log);
   return log;
 }
 
@@ -141,16 +153,21 @@ export async function updateWorkoutLog(
   id: string,
   data: Partial<WorkoutLog>
 ): Promise<WorkoutLog | undefined> {
-  await delay(400);
-  const idx = workoutLogs.findIndex((l) => l.id === id);
-  if (idx === -1) return undefined;
-  workoutLogs[idx] = { ...workoutLogs[idx], ...data };
-  return workoutLogs[idx];
+  await delay(200);
+  const persisted = await localDb.workoutLogs.getAll();
+  const existing = persisted.find((l) => l.id === id);
+  if (!existing) return undefined;
+  const updated = { ...existing, ...data };
+  await localDb.workoutLogs.delete(id);
+  await localDb.workoutLogs.add(updated);
+  return updated;
 }
 
 export async function getBodyMeasurements(): Promise<BodyMeasurement[]> {
   await delay(300);
-  return [...bodyMeasurements].sort(
+  const persisted = await localDb.bodyMeasurements.getAll();
+  const all = [...seedMeasurements, ...persisted];
+  return all.sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 }
@@ -162,7 +179,9 @@ export async function getPersonalRecords(): Promise<PersonalRecord[]> {
 
 export async function getCardioSessions(): Promise<CardioSession[]> {
   await delay(300);
-  return [...cardioSessions].sort(
+  const persisted = await localDb.cardioSessions.getAll();
+  const all = [...seedCardio, ...persisted];
+  return all.sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 }
@@ -175,17 +194,17 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 export async function createCardioSession(
   data: Omit<CardioSession, "id">
 ): Promise<CardioSession> {
-  await delay(400);
+  await delay(200);
   const session: CardioSession = { ...data, id: generateId() };
-  cardioSessions.unshift(session);
+  await localDb.cardioSessions.add(session);
   return session;
 }
 
 export async function logBodyMeasurement(
   data: Omit<BodyMeasurement, "id">
 ): Promise<BodyMeasurement> {
-  await delay(300);
+  await delay(200);
   const bm: BodyMeasurement = { ...data, id: generateId() };
-  bodyMeasurements.push(bm);
+  await localDb.bodyMeasurements.add(bm);
   return bm;
 }

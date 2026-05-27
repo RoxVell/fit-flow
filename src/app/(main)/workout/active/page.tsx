@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWorkoutStore } from "@/lib/store/workout-store";
-import { useExercises, useWorkoutLogs } from "@/lib/hooks/use-queries";
+import { useExercises, useWorkoutLogs, useCreateWorkoutLog } from "@/lib/hooks/use-queries";
 import { ExerciseCard } from "@/components/workout/exercise-card";
 import { RestTimer } from "@/components/workout/rest-timer";
 import { TriumphScreen } from "@/components/workout/triumph-screen";
@@ -42,6 +42,7 @@ export default function ActiveWorkoutPage() {
   const [isPaused, setIsPaused] = useState(false);
   const [lastActiveExerciseId, setLastActiveExerciseId] = useState<string | null>(null);
   const [newRecords, setNewRecords] = useState<PersonalRecord[]>([]);
+  const saveLog = useCreateWorkoutLog();
 
   // Timer effect
   useEffect(() => {
@@ -144,6 +145,28 @@ export default function ActiveWorkoutPage() {
         });
       }
     }
+
+    // Save workout log to IndexedDB
+    saveLog.mutate({
+      startedAt: store.startedAt || new Date().toISOString(),
+      endedAt: new Date().toISOString(),
+      exercises: store.exercises.map((e) => ({
+        id: e.id,
+        exerciseId: e.exerciseId,
+        workoutLogId: store.activeWorkoutId || "",
+        sortOrder: e.sortOrder,
+        sets: e.sets.map((s) => ({
+          id: s.id,
+          loggedExerciseId: e.id,
+          type: s.type,
+          setOrder: s.setOrder,
+          reps: s.reps,
+          weight: s.weight,
+          completed: s.completed,
+        })),
+      })),
+    });
+
     setNewRecords(records);
     setShowTriumph(true);
   };
