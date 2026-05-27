@@ -6,9 +6,23 @@ export function ServiceWorkerRegister() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
-        .register("/sw.js")
-        .then(() => console.log("SW registered"))
-        .catch(() => console.log("SW registration failed"));
+        .register("/sw.js", { scope: "/" })
+        .then((registration) => {
+          console.log("SW registered");
+
+          registration.addEventListener("updatefound", () => {
+            const newWorker = registration.installing;
+            if (!newWorker) return;
+
+            newWorker.addEventListener("statechange", () => {
+              if (newWorker.state === "activated" && navigator.serviceWorker.controller) {
+                console.log("New SW activated, reloading for fresh content");
+                window.location.reload();
+              }
+            });
+          });
+        })
+        .catch((err) => console.log("SW registration failed:", err));
     }
   }, []);
 

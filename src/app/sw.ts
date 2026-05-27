@@ -1,3 +1,18 @@
-// Serwist service worker — will be enabled in Phase 10
-// This is a placeholder for the build to pass
-export {};
+/// <reference lib="webworker" />
+import { defaultCache } from "@serwist/next/worker";
+import { installSerwist } from "@serwist/sw";
+
+declare const self: ServiceWorkerGlobalScope & {
+  __SW_MANIFEST: (string | { url: string; revision: string | null })[];
+};
+
+installSerwist({
+  precacheEntries: self.__SW_MANIFEST,
+  skipWaiting: true,
+  clientsClaim: true,
+  navigationPreload: false,
+  navigateFallback: "/dashboard",
+  navigateFallbackAllowlist: [/^\/(?!api\/).*/],
+  runtimeCaching: defaultCache,
+  cleanupOutdatedCaches: true,
+});
