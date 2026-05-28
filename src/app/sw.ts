@@ -13,4 +13,15 @@ installSerwist({
   navigationPreload: false,
   runtimeCaching: defaultCache,
   cleanupOutdatedCaches: true,
+  fallbacks: {
+    entries: [
+      {
+        url: "/offline.html",
+        revision: "1",
+        matcher({ request }) {
+          return request.destination === "document";
+        },
+      },
+    ],
+  },
 });
