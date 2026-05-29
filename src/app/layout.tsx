@@ -21,8 +21,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  colorScheme: "dark",
-  themeColor: "#0f0f0f",
+  colorScheme: "light dark",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -38,7 +37,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col text-foreground">
         <Providers>{children}</Providers>

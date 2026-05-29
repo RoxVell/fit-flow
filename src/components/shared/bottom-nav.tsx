@@ -8,6 +8,7 @@ import {
   Dumbbell,
   Library,
   BarChart3,
+  Settings,
 } from "lucide-react";
 
 const navItems = [
@@ -15,6 +16,7 @@ const navItems = [
   { href: "/workout/active", label: "Workout", icon: Dumbbell },
   { href: "/programs/library", label: "Programs", icon: Library },
   { href: "/progress", label: "Progress", icon: BarChart3 },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function BottomNav() {
