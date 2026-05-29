@@ -3,8 +3,8 @@
 import { useDashboardStats, useActiveProgram } from "@/lib/hooks/use-queries";
 import { Greeting } from "@/components/dashboard/greeting";
 import { StartWorkoutButton } from "@/components/dashboard/start-workout-button";
-import { MuscleHeatmap } from "@/components/dashboard/muscle-heatmap";
 import { SmartStats } from "@/components/dashboard/smart-stats";
+import { RecentPRs } from "@/components/dashboard/recent-prs";
 import { CurrentProgram } from "@/components/dashboard/current-program";
 import { AiBriefingCard } from "@/components/ai/ai-briefing";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,10 +39,6 @@ export default function DashboardPage() {
       <StartWorkoutButton />
 
       {stats && (
-        <MuscleHeatmap data={stats.heatmapData} />
-      )}
-
-      {stats && (
         <SmartStats
           steps={stats.steps}
           calories={stats.calories}
@@ -50,6 +46,8 @@ export default function DashboardPage() {
           weightTrend={stats.weightTrend}
         />
       )}
+
+      <RecentPRs />
 
       <AiBriefingCard />
 

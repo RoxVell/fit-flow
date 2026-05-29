@@ -308,15 +308,34 @@ export const bodyMeasurements: BodyMeasurement[] = [
 ];
 
 export const personalRecords: PersonalRecord[] = [
+  // Bench Press — был 87.5 e1RM, стало 92.5
+  { id: "pr0a", exerciseId: "ex1", exerciseName: "Barbell Bench Press", type: "estimated_1rm", value: 87.5, date: daysAgo(35) },
   { id: "pr1", exerciseId: "ex1", exerciseName: "Barbell Bench Press", type: "estimated_1rm", value: 92.5, date: daysAgo(7) },
+  // Bench Press weight — было 75, стало 80
+  { id: "pr0b", exerciseId: "ex1", exerciseName: "Barbell Bench Press", type: "weight", value: 75, date: daysAgo(35) },
   { id: "pr2", exerciseId: "ex1", exerciseName: "Barbell Bench Press", type: "weight", value: 80, date: daysAgo(7) },
+  // Bench Press volume — предыдущих нет (null)
   { id: "pr3", exerciseId: "ex1", exerciseName: "Barbell Bench Press", type: "volume", value: 2880, date: daysAgo(14) },
+  // Squat — был 115 e1RM, стало 125
+  { id: "pr0c", exerciseId: "ex19", exerciseName: "Squat", type: "estimated_1rm", value: 115, date: daysAgo(28) },
   { id: "pr4", exerciseId: "ex19", exerciseName: "Squat", type: "estimated_1rm", value: 125, date: daysAgo(3) },
+  // Squat weight — было 100, стало 110
+  { id: "pr0d", exerciseId: "ex19", exerciseName: "Squat", type: "weight", value: 100, date: daysAgo(28) },
   { id: "pr5", exerciseId: "ex19", exerciseName: "Squat", type: "weight", value: 110, date: daysAgo(3) },
+  // Deadlift — был 140 e1RM, стало 150
+  { id: "pr0e", exerciseId: "ex26", exerciseName: "Deadlift", type: "estimated_1rm", value: 140, date: daysAgo(28) },
   { id: "pr6", exerciseId: "ex26", exerciseName: "Deadlift", type: "estimated_1rm", value: 150, date: daysAgo(10) },
+  // Deadlift weight — было 130, стало 140
+  { id: "pr0f", exerciseId: "ex26", exerciseName: "Deadlift", type: "weight", value: 130, date: daysAgo(28) },
   { id: "pr7", exerciseId: "ex26", exerciseName: "Deadlift", type: "weight", value: 140, date: daysAgo(10) },
+  // OHP — был 55 e1RM, стало 60
+  { id: "pr0g", exerciseId: "ex12", exerciseName: "Overhead Press", type: "estimated_1rm", value: 55, date: daysAgo(21) },
   { id: "pr8", exerciseId: "ex12", exerciseName: "Overhead Press", type: "estimated_1rm", value: 60, date: daysAgo(5) },
+  // OHP weight — было 47.5, стало 52.5
+  { id: "pr0h", exerciseId: "ex12", exerciseName: "Overhead Press", type: "weight", value: 47.5, date: daysAgo(21) },
   { id: "pr9", exerciseId: "ex12", exerciseName: "Overhead Press", type: "weight", value: 52.5, date: daysAgo(5) },
+  // Barbell Row — был 80 e1RM, стало 85
+  { id: "pr0i", exerciseId: "ex7", exerciseName: "Barbell Row", type: "estimated_1rm", value: 80, date: daysAgo(28) },
   { id: "pr10", exerciseId: "ex7", exerciseName: "Barbell Row", type: "estimated_1rm", value: 85, date: daysAgo(8) },
 ];
 
