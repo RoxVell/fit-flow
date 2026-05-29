@@ -29,7 +29,7 @@ export function CurrentProgram({ programName, session }: CurrentProgramProps) {
   const isToday = session.dayOfWeek === today || session.dayOfWeek % 7 === today;
 
   return (
-    <Link href={`/workout/active?session=${session.id}`}>
+    <Link href={`/workout`}>
       <motion.div whileTap={{ scale: 0.98 }}>
         <Card className="relative overflow-hidden border-primary/20">
           <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-primary/5 to-transparent" />

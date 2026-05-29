@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { Suspense, use, useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWorkoutStore } from "@/lib/store/workout-store";
-import { useExercises, useWorkoutLogs } from "@/lib/hooks/use-queries";
+import { useExercises, useWorkoutLogs, useActiveProgram } from "@/lib/hooks/use-queries";
 import { ExerciseCard } from "@/components/workout/exercise-card";
 import { RestTimer } from "@/components/workout/rest-timer";
 import { TriumphScreen } from "@/components/workout/triumph-screen";
@@ -30,10 +30,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { MUSCLE_GROUP_LABELS } from "@/lib/utils/constants";
 
-export default function ActiveWorkoutPage() {
+function ActiveWorkoutContent({
+  searchParams,
+}: {
+  searchParams: Promise<{ session?: string }>;
+}) {
+  const { session: sessionId } = use(searchParams);
   const router = useRouter();
   const store = useWorkoutStore();
   const { data: allExercises } = useExercises();
+  const { data: program, isLoading: programLoading } = useActiveProgram();
   const [elapsed, setElapsed] = useState(0);
   const [showTriumph, setShowTriumph] = useState(false);
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
@@ -52,19 +58,30 @@ export default function ActiveWorkoutPage() {
     return () => clearInterval(interval);
   }, [store.startedAt, isPaused]);
 
-  // Auto-start workout with 6 default exercises × 3 sets
+  // Start workout from session
   useEffect(() => {
-    if (!store.activeWorkoutId) {
-      store.startWorkout(undefined, [
-        { exerciseId: "ex1", sets: 3 },
-        { exerciseId: "ex12", sets: 3 },
-        { exerciseId: "ex6", sets: 3 },
-        { exerciseId: "ex19", sets: 3 },
-        { exerciseId: "ex22", sets: 3 },
-        { exerciseId: "ex29", sets: 3 },
-      ]);
+    if (store.activeWorkoutId) return;
+    if (!sessionId) {
+      router.replace("/workout");
+      return;
     }
-  }, []);
+    if (programLoading || !program) return;
+
+    const session = program.sessions.find((s) => s.id === sessionId);
+    if (!session) {
+      router.replace("/workout");
+      return;
+    }
+
+    const exercises = session.exercises
+      .filter((se) => se.exercise)
+      .map((se) => ({
+        exerciseId: se.exerciseId,
+        sets: se.targetSets,
+      }));
+
+    store.startWorkout(sessionId, exercises);
+  }, [sessionId, program, programLoading, store.activeWorkoutId]);
 
   const exerciseMap = new Map(allExercises?.map((e) => [e.id, e]));
   const { data: workoutLogs } = useWorkoutLogs(10);
@@ -357,5 +374,21 @@ export default function ActiveWorkoutPage() {
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+export default function ActiveWorkoutPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ session?: string }>;
+}) {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-full p-4">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    }>
+      <ActiveWorkoutContent searchParams={searchParams} />
+    </Suspense>
   );
 }

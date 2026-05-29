@@ -45,8 +45,6 @@ export function RecentPRs() {
           const absDelta = prev ? pr.value - prev.value : null;
           const pctDelta = prev && prev.value > 0 ? (pr.value / prev.value - 1) * 100 : null;
 
-          console.log(absDelta, pctDelta);
-
           return (
             <div
               key={pr.id}

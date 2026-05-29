@@ -6,7 +6,7 @@ import Link from "next/link";
 
 export function StartWorkoutButton() {
   return (
-    <Link href="/workout/active" className="block px-2">
+    <Link href="/workout" className="block px-2">
       <motion.div
         className="relative flex items-center justify-center gap-3 rounded-2xl bg-primary px-6 py-5 text-primary-foreground shadow-lg shadow-primary/30"
         whileTap={{ scale: 0.97 }}
