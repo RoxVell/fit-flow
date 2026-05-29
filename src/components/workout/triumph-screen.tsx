@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Trophy, TrendingUp, Dumbbell, X } from "lucide-react";
+import { Trophy, TrendingUp, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { PersonalRecord } from "@/lib/db/types";
 
@@ -17,7 +17,7 @@ export function TriumphScreen({ records, volume, duration, onClose }: TriumphScr
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-lg"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 dark:bg-black/50 backdrop-blur-lg"
     >
       <div className="relative flex flex-col items-center gap-6 px-8 text-center">
         <motion.div
@@ -32,7 +32,7 @@ export function TriumphScreen({ records, volume, duration, onClose }: TriumphScr
 
         <div>
           <h2 className="text-2xl font-bold">Workout Complete!</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-foreground">
             {duration} · {volume.toLocaleString()} kg total volume
           </p>
         </div>
@@ -73,12 +73,7 @@ export function TriumphScreen({ records, volume, duration, onClose }: TriumphScr
         </Button>
       </div>
 
-      <button
-        onClick={onClose}
-        className="absolute right-4 top-4 rounded-full p-2 text-muted-foreground hover:bg-muted"
-      >
-        <X className="h-5 w-5" />
-      </button>
+
     </motion.div>
   );
 }

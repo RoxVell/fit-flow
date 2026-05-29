@@ -1,6 +1,7 @@
 "use client";
 
 import { useDashboardStats, useActiveProgram } from "@/lib/hooks/use-queries";
+import { Greeting } from "@/components/dashboard/greeting";
 import { StartWorkoutButton } from "@/components/dashboard/start-workout-button";
 import { MuscleHeatmap } from "@/components/dashboard/muscle-heatmap";
 import { SmartStats } from "@/components/dashboard/smart-stats";
@@ -33,12 +34,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">FitFlow</h1>
-        <p className="text-sm text-muted-foreground">
-          {stats?.activeDays}/{stats?.weeklyWorkouts} workouts this week
-        </p>
-      </div>
+      <Greeting />
 
       <StartWorkoutButton />
 
