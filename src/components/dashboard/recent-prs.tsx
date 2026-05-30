@@ -60,7 +60,7 @@ export function RecentPRs() {
                 </div>
               </div>
               <div className="text-right shrink-0 min-w-0">
-                <p className="text-sm font-bold text-primary">
+                <p className="text-sm font-bold">
                   {pr.value} {prUnits[pr.type] || ""}
                 </p>
                 {absDelta !== null && (

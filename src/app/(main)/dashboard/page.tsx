@@ -36,7 +36,6 @@ export default function DashboardPage() {
     <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <Greeting />
 
-      <StartWorkoutButton />
 
       {stats && (
         <SmartStats
@@ -51,14 +50,16 @@ export default function DashboardPage() {
 
       <AiBriefingCard />
 
-      {program && (
+      <StartWorkoutButton />
+
+      {/* {program && (
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             Today's Program
           </h2>
           <CurrentProgram programName={program.name} session={nextSession} />
         </div>
-      )}
+      )} */}
     </div>
   );
 }
