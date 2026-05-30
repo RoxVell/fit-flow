@@ -84,6 +84,12 @@
   --sidebar-accent-foreground: oklch(0.35 0.1 45);
   --sidebar-border: oklch(0.9 0.04 45);
   --sidebar-ring: oklch(0.63 0.18 45);
+  --body-bg:
+    radial-gradient(circle at 85% 35%, #ff91281a 0%, #ff78140f 20%, #0000 55%),
+    radial-gradient(circle at 15% 72%, #ff912812 0%, #ff781408 25%, #0000 60%),
+    radial-gradient(circle at 50% 100%, #ff6e000d 0%, #0000 45%),
+    radial-gradient(circle at 20% 0%, #ff912805 0%, #0000 35%),
+    linear-gradient(180deg, #fffdfa 0%, #faf5f0 100%);
 }
 
 .dark {
@@ -118,6 +124,12 @@
   --sidebar-accent-foreground: oklch(0.85 0 0);
   --sidebar-border: oklch(0.22 0 0);
   --sidebar-ring: oklch(0.65 0.17 45);
+  --body-bg:
+    radial-gradient(circle at 85% 35%, #ff91281a 0%, #ff78140f 20%, #0000 55%),
+    radial-gradient(circle at 15% 72%, #ff912812 0%, #ff781408 25%, #0000 60%),
+    radial-gradient(circle at 50% 100%, #ff6e000d 0%, #0000 45%),
+    radial-gradient(circle at 20% 0%, #ffffff04 0%, #0000 35%),
+    linear-gradient(180deg, #0d0d0f 0%, #070708 100%);
 }
 
 @layer base {
@@ -139,63 +151,6 @@
 }
 
 body {
-  background:
-  radial-gradient(
-    circle at 85% 35%,
-    rgba(255, 145, 40, 0.10) 0%,
-    rgba(255, 120, 20, 0.06) 20%,
-    transparent 55%
-  ),
-
-  radial-gradient(
-    circle at 50% 100%,
-    rgba(255, 110, 0, 0.05) 0%,
-    transparent 45%
-  ),
-
-  radial-gradient(
-    circle at 20% 0%,
-    rgba(255,255,255,0.015) 0%,
-    transparent 35%
-  ),
-
-  linear-gradient(
-    180deg,
-    #0d0d0f 0%,
-    #070708 100%
-  );
+  background: var(--body-bg);
 }
 
-body::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-
-  opacity: 0.02;
-
-  background-image:
-    radial-gradient(
-      rgba(255,255,255,0.25) 0.8px,
-      transparent 0.8px
-    );
-
-  background-size: 5px 5px;
-}
-
-body::before {
-  content: "";
-  position: absolute;
-  inset: -20%;
-  pointer-events: none;
-
-  background:
-    radial-gradient(
-      circle at 90% 35%,
-      rgba(255, 140, 50, 0.10),
-      transparent 28%
-    );
-
-  filter: blur(90px);
-  opacity: 0.7;
-}

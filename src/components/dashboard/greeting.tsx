@@ -33,9 +33,11 @@ export function Greeting() {
     return templates[idx](hour);
   }, []);
 
+  const [before, after] = message.split(name);
+
   return (
-    <p className="text-2xl font-bold text-foreground">
-      {message}
+    <p className="text-2xl font-bold text-foreground font-mono">
+      {before}<span className="text-primary">{name}</span>{after}
     </p>
   );
 }

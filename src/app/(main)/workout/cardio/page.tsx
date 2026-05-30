@@ -17,7 +17,7 @@ export default function CardioPage() {
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-xl font-bold">Cardio</h1>
+        <h1 className="text-2xl font-bold">Cardio</h1>
       </div>
 
       <CardioForm onSuccess={() => router.push("/dashboard")} />
