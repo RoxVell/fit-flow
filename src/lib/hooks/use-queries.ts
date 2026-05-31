@@ -114,6 +114,29 @@ export function useUpdateWorkoutLog() {
   });
 }
 
+export function useCreateProgram() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Parameters<typeof queries.createProgram>[0]) => queries.createProgram(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["programs"] });
+      qc.invalidateQueries({ queryKey: ["programs", "active"] });
+    },
+  });
+}
+
+export function useUpdateProgram() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof queries.updateProgram>[1] }) =>
+      queries.updateProgram(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["programs"] });
+      qc.invalidateQueries({ queryKey: ["programs", "active"] });
+    },
+  });
+}
+
 export function useCreateCardioSession() {
   const qc = useQueryClient();
   return useMutation({

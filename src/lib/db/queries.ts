@@ -172,6 +172,75 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   return getDashboardStatsMock();
 }
 
+export async function createProgram(
+  data: Omit<WorkoutProgram, "id" | "createdAt" | "sessions"> & {
+    sessions: { name: string; dayOfWeek: number; sortOrder: number; exercises: { exerciseId: string; targetSets: number; targetReps: string; sortOrder: number }[] }[];
+  }
+): Promise<WorkoutProgram> {
+  await delay(500);
+  const programId = generateId();
+  const program: WorkoutProgram = {
+    ...data,
+    id: programId,
+    description: data.description || "",
+    createdAt: new Date().toISOString(),
+    sessions: data.sessions.map((s) => ({
+      ...s,
+      id: generateId(),
+      programId,
+      exercises: s.exercises.map((e) => ({
+        ...e,
+        id: generateId(),
+        sessionId: "",
+        exercise: exercises.find((ex) => ex.id === e.exerciseId),
+      })),
+    })),
+  };
+  // Set sessionId on each exercise
+  for (const session of program.sessions) {
+    for (const se of session.exercises) {
+      se.sessionId = session.id;
+    }
+  }
+  programs.push(program);
+  return program;
+}
+
+export async function updateProgram(
+  id: string,
+  data: Omit<WorkoutProgram, "id" | "createdAt" | "sessions"> & {
+    sessions: { name: string; dayOfWeek: number; sortOrder: number; exercises: { exerciseId: string; targetSets: number; targetReps: string; sortOrder: number }[] }[];
+  }
+): Promise<WorkoutProgram | undefined> {
+  await delay(500);
+  const idx = programs.findIndex((p) => p.id === id);
+  if (idx === -1) return undefined;
+  const updated: WorkoutProgram = {
+    ...data,
+    id,
+    description: data.description || "",
+    createdAt: programs[idx].createdAt,
+    sessions: data.sessions.map((s) => ({
+      ...s,
+      id: generateId(),
+      programId: id,
+      exercises: s.exercises.map((e) => ({
+        ...e,
+        id: generateId(),
+        sessionId: "",
+        exercise: exercises.find((ex) => ex.id === e.exerciseId),
+      })),
+    })),
+  };
+  for (const session of updated.sessions) {
+    for (const se of session.exercises) {
+      se.sessionId = session.id;
+    }
+  }
+  programs[idx] = updated;
+  return updated;
+}
+
 export async function createCardioSession(
   data: Omit<CardioSession, "id">
 ): Promise<CardioSession> {

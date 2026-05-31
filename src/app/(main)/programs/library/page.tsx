@@ -3,14 +3,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useExercises, usePrograms } from "@/lib/hooks/use-queries";
 import { MUSCLE_GROUP_LABELS, EQUIPMENT_LABELS } from "@/lib/utils/constants";
-import { ChevronDown, Search, Dumbbell, Sparkles, Plus, Library, LayoutList } from "lucide-react";
+import { Search, Dumbbell, Plus, Pencil, Library, LayoutList } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { generateProgram } from "@/lib/ai/briefing";
 import type { MuscleGroup, Exercise } from "@/lib/db/types";
 import {
   Sheet,
@@ -65,104 +64,68 @@ export default function ProgramsPage() {
 
 function ProgramsView() {
   const { data: programs } = usePrograms();
-  const [showAi, setShowAi] = useState(false);
-  const [aiQuery, setAiQuery] = useState("");
-  const [aiResult, setAiResult] = useState<Awaited<ReturnType<typeof generateProgram>> | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-
-  const handleAiGenerate = async () => {
-    if (!aiQuery.trim()) return;
-    setAiLoading(true);
-    const result = await generateProgram(aiQuery);
-    setAiResult(result);
-    setAiLoading(false);
-  };
 
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-24 space-y-4">
       <div className="flex items-center justify-between">
-        <Button variant="outline" size="sm" className="gap-1" onClick={() => setShowAi(!showAi)}>
-          <Sparkles className="h-4 w-4 text-primary" />
-          AI Builder
-        </Button>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          Your Programs
+        </h2>
+        <Link href="/programs/create">
+          <Button variant="outline" size="sm" className="gap-1 h-7 text-xs">
+            <Plus className="h-3.5 w-3.5" />
+            Create new program
+          </Button>
+        </Link>
       </div>
 
-      {showAi && (
-        <Card>
-          <CardContent className="p-4 space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Describe your ideal program, e.g. "Upper/Lower split, 4 days, focus on shoulders"
-            </p>
-            <div className="flex gap-2">
-              <Input
-                value={aiQuery}
-                onChange={(e) => setAiQuery(e.target.value)}
-                placeholder="Describe your program..."
-                className="flex-1"
-              />
-              <Button onClick={handleAiGenerate} disabled={aiLoading}>
-                {aiLoading ? "..." : "Generate"}
-              </Button>
-            </div>
-            {aiResult && (
-              <div className="space-y-3 rounded-xl border bg-muted/30 p-3">
-                <div>
-                  <p className="font-semibold text-sm">{aiResult.name}</p>
-                  <p className="text-xs text-muted-foreground">{aiResult.description}</p>
+      {programs?.map((prog) => (
+        <Card key={prog.id} className="overflow-hidden">
+          <CardContent className="p-0">
+            <div className="px-4 pt-2 pb-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-base font-bold">{prog.name}</p>
+                    {prog.isActive && (
+                      <Badge className="text-[10px] h-5 px-2">Active</Badge>
+                    )}
+                  </div>
+                  {prog.description && (
+                    <p className="text-sm text-muted-foreground mt-0.5">{prog.description}</p>
+                  )}
+                  <Badge variant="secondary" className="text-[10px] mt-1.5">
+                    {prog.daysPerWeek} days &middot; {prog.sessions.length} sessions
+                  </Badge>
                 </div>
-                {aiResult.sessions.map((s, i) => (
-                  <div key={i}>
-                    <p className="text-xs font-medium text-muted-foreground mb-1">{s.name}</p>
-                    <div className="flex flex-wrap gap-1">
-                      {s.exercises.map((ex, j) => (
-                        <Badge key={j} variant="secondary" className="text-[10px]">
-                          {ex}
+                <Link href={`/programs/create?edit=${prog.id}`}>
+                  <Button variant="ghost" size="sm" className="gap-1 h-7 text-xs shrink-0">
+                    <Pencil className="h-3 w-3" />
+                    Edit
+                  </Button>
+                </Link>
+              </div>
+            </div>
+            <div className="border-t divide-y divide-border">
+              {prog.sessions.map((s) => {
+                const dayLabel = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][s.dayOfWeek % 7];
+                return (
+                  <div key={s.id} className="px-4 py-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground w-8">{dayLabel}</span>
+                      <span className="text-sm font-medium">{s.name}</span>
+                      <span className="text-xs text-muted-foreground ml-auto">{s.exercises.length} ex.</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1 pl-10">
+                      {s.exercises.map((se) => (
+                        <Badge key={se.id} variant="outline" className="text-xs font-normal">
+                          {se.exercise?.name || "..."}
                         </Badge>
                       ))}
                     </div>
                   </div>
-                ))}
-                <Button variant="default" size="sm" className="w-full">
-                  <Plus className="h-3 w-3" /> Save Program
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-        Your Programs
-      </h2>
-
-      {programs?.map((prog) => (
-        <Card key={prog.id}>
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-semibold">{prog.name}</p>
-                <p className="text-xs text-muted-foreground">{prog.description}</p>
-                <div className="flex gap-2 mt-1">
-                  <Badge variant="secondary" className="text-[10px]">
-                    {prog.daysPerWeek} days/week
-                  </Badge>
-                  {prog.isActive && <Badge className="text-[10px]">Active</Badge>}
-                </div>
-              </div>
-            </div>
-            <div className="mt-3 space-y-2">
-              {prog.sessions.map((s) => (
-                <div key={s.id} className="rounded-lg bg-muted/50 p-2">
-                  <p className="text-xs font-medium">{s.name}</p>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {s.exercises.map((se) => (
-                      <Badge key={se.id} variant="outline" className="text-[10px]">
-                        {se.exercise?.name || "..."}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
