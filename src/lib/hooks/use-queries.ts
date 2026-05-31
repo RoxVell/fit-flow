@@ -62,6 +62,14 @@ export function useExerciseHistory(exerciseId: string) {
   });
 }
 
+export function useExerciseDetailedHistory(exerciseId: string) {
+  return useQuery({
+    queryKey: ["exercise-detailed-history", exerciseId],
+    queryFn: () => queries.getExerciseDetailedHistory(exerciseId),
+    enabled: !!exerciseId,
+  });
+}
+
 export function useBodyMeasurements() {
   return useQuery({
     queryKey: ["body-measurements"],

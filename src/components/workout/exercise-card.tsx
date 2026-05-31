@@ -160,7 +160,6 @@ export function ExerciseCard({
             placeholder="Search exercises..."
             value={swapSearch}
             onChange={(e) => setSwapSearch(e.target.value)}
-            className="mb-2"
           />
           <ScrollArea className="max-h-[50vh]">
             <div className="space-y-1">

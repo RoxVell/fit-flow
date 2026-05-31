@@ -128,6 +128,34 @@ export async function getExerciseHistory(
   });
 }
 
+export async function getExerciseDetailedHistory(
+  exerciseId: string
+): Promise<{ date: string; bestE1RM: number; sets: { weight: number; reps: number; type: string; setOrder: number }[] }[]> {
+  await delay(300);
+  const logs = workoutLogs
+    .filter((l) => l.exercises.some((e) => e.exerciseId === exerciseId))
+    .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+
+  return logs.map((l) => {
+    const ex = l.exercises.find((e) => e.exerciseId === exerciseId)!;
+    const completed = ex.sets.filter((s) => s.completed);
+    const bestE1RM = completed.reduce((best, s) => {
+      const e1rm = s.weight * (1 + s.reps / 30);
+      return e1rm > (best?.e1rm || 0) ? { ...s, e1rm } : best;
+    }, undefined as (LoggedSet & { e1rm: number }) | undefined);
+    return {
+      date: l.startedAt,
+      bestE1RM: bestE1RM?.e1rm || 0,
+      sets: completed.map((s) => ({
+        weight: s.weight,
+        reps: s.reps,
+        type: s.type,
+        setOrder: s.setOrder,
+      })),
+    };
+  });
+}
+
 export async function createWorkoutLog(
   data: Omit<WorkoutLog, "id">
 ): Promise<WorkoutLog> {

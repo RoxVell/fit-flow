@@ -185,17 +185,17 @@ function generateLoggedSets(
   baseWeight: number, baseReps: number, sets: number, weeks: number, decrease: boolean
 ): LoggedSetGen[] {
   const result: LoggedSetGen[] = [];
-  for (let w = weeks; w >= 0; w--) {
+  for (let w = 0; w <= weeks; w++) {
     const weekSets: LoggedSetGen["sets"] = [];
-    const progress = decrease ? w * 0.5 : (weeks - w) * 0.5;
+    const progress = decrease ? (weeks - w) * 1.0 : w * 1.0;
     const wWeight = Math.round((baseWeight + progress) * 2) / 2;
-    const wReps = Math.max(6, Math.round(baseReps + (weeks - w) * 0.3));
+    const wReps = Math.max(6, Math.round(baseReps + w * 0.4));
     for (let s = 0; s < sets; s++) {
       const drop = s * 0.05;
       const setWeight = Math.round(wWeight * (1 - drop) * 2) / 2;
       const setReps = s === 0 ? wReps : Math.max(6, Math.round(wReps * (1 - s * 0.03)));
       weekSets.push({
-        type: s === 0 && w < 2 ? "warmup" as const : "working" as const,
+        type: s === 0 && w > weeks - 2 ? "warmup" as const : "working" as const,
         setOrder: s,
         reps: setReps,
         weight: setWeight,
@@ -203,7 +203,7 @@ function generateLoggedSets(
       });
     }
     result.push({
-      date: daysAgo(w * 7 + Math.floor(Math.random() * 3)),
+      date: daysAgo((weeks - w) * 7 + Math.floor(Math.random() * 3)),
       sets: weekSets,
     });
   }
@@ -254,7 +254,9 @@ export function generateWorkoutLogs(): WorkoutLog[] {
       const exercisesInSession: WorkoutLog["exercises"] = [];
       for (const se of session.exercises) {
         const history = historyMap[se.exerciseId];
-        const weekHistory = history ? history[Math.min(w, history.length - 1)] : undefined;
+        const weekHistory = history
+          ? history[history.length - 1 - Math.min(w, history.length - 1)]
+          : undefined;
         const sets = weekHistory
           ? weekHistory.sets.map((s, i) => ({
               id: `ls${logId}-${i}`,

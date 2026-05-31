@@ -121,7 +121,7 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
       name: name.trim(),
       description: description.trim(),
       daysPerWeek: sessions.length,
-      isActive: sessions.length > 0 && !sessions.some((s) => s.dayOfWeek === new Date().getDay()),
+      isActive: sessions.length > 0 && sessions.some((s) => s.dayOfWeek === new Date().getDay()),
       sessions: sessions.map((s, i) => ({
         name: s.name.trim(),
         dayOfWeek: s.dayOfWeek,
@@ -461,7 +461,9 @@ function SessionEditorDialog({
   }, [open, session]);
 
   const handleClose = () => {
-    if (local) onSave(local);
+    if (local && session && (local.name !== session.name || local.dayOfWeek !== session.dayOfWeek || JSON.stringify(local.exercises) !== JSON.stringify(session.exercises))) {
+      onSave(local);
+    }
     onOpenChange(false);
   };
 
@@ -490,6 +492,7 @@ function SessionEditorContent({
   onDelete: () => void;
 }) {
   const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const { data: exercises } = useExercises();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -576,7 +579,7 @@ function SessionEditorContent({
                         key={ex.exerciseId}
                         id={ex.exerciseId}
                         index={i}
-                        exerciseId={ex.exerciseId}
+                        exerciseName={exercises?.find((e) => e.id === ex.exerciseId)?.name || "Unknown"}
                         targetSets={ex.targetSets}
                         targetReps={ex.targetReps}
                         onUpdate={(data) => {
@@ -631,7 +634,7 @@ function SessionEditorContent({
 function SortableExerciseRow({
   id,
   index,
-  exerciseId,
+  exerciseName,
   targetSets,
   targetReps,
   onUpdate,
@@ -639,14 +642,12 @@ function SortableExerciseRow({
 }: {
   id: string;
   index: number;
-  exerciseId: string;
+  exerciseName: string;
   targetSets: number;
   targetReps: string;
   onUpdate: (data: Partial<ExerciseEntry>) => void;
   onRemove: () => void;
 }) {
-  const { data: exercises } = useExercises();
-  const exercise = exercises?.find((e) => e.id === exerciseId);
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id });
 
   const style = {
@@ -671,7 +672,7 @@ function SortableExerciseRow({
       </button>
       <div className="flex-1 min-w-0 space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium truncate">{exercise?.name || "Unknown"}</p>
+          <p className="text-sm font-medium truncate">{exerciseName}</p>
           <button
             type="button"
             onClick={onRemove}

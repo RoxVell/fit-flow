@@ -88,7 +88,7 @@ export function ProgressChart() {
 
     if (filteredWeeks.length < 2) return null;
 
-    const baseline = new Map(filteredWeeks[0][1]);
+    const baseline = new Map(sortedWeeks[0][1]);
 
     const result = filteredWeeks.map(([weekStart, exercises]) => {
       let total = 0;
@@ -127,7 +127,7 @@ export function ProgressChart() {
     <div className="rounded-xl border bg-card p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-xs text-muted-foreground">Общий прогресс</p>
+          <p className="text-sm font-heading font-medium">General progress</p>
           <p className="text-lg font-bold flex items-center gap-1">
             {isPositive ? (
               <TrendingUp className="h-5 w-5 text-green-500" />

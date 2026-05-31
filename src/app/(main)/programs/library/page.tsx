@@ -66,7 +66,7 @@ function ProgramsView() {
   const { data: programs } = usePrograms();
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 pb-24 space-y-4">
+    <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           Your Programs
@@ -150,7 +150,7 @@ function ExercisesView() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search exercises..."
-            className="pl-9"
+            className="pl-9 text-sm"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
