@@ -37,20 +37,28 @@ function isStandalone(): boolean {
 
 export function InstallPrompt() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
-  const [visible, setVisible] = useState(() =>
-    isStandalone() ? false : isIOS()
-  );
-  const [installed, setInstalled] = useState(() => isStandalone());
-  const [ios] = useState(() => isIOS());
+  const [visible, setVisible] = useState(false);
+  const [installed, setInstalled] = useState(false);
+  const [ios, setIos] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (installed) return;
+    if (isStandalone()) {
+      setInstalled(true);
+      return;
+    }
+
+    const isDeviceIOS = isIOS();
+    setIos(isDeviceIOS);
 
     const dismissed = window.localStorage.getItem(STORAGE_KEY);
     if (dismissed) {
       const ts = Number(dismissed);
       if (Number.isFinite(ts) && Date.now() - ts < DISMISS_DURATION_MS) return;
+    }
+
+    if (isDeviceIOS) {
+      setVisible(true);
+      return;
     }
 
     const onBeforeInstall = (e: Event) => {
@@ -73,7 +81,7 @@ export function InstallPrompt() {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
       window.removeEventListener("appinstalled", onInstalled);
     };
-  }, [installed]);
+  }, []);
 
   if (installed || !visible) return null;
 
