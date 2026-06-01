@@ -1,10 +1,11 @@
 /// <reference lib="webworker" />
 
-import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import {
+  CacheableResponsePlugin,
   ExpirationPlugin,
   NetworkFirst,
+  NetworkOnly,
   Serwist,
   StaleWhileRevalidate,
 } from "serwist";
@@ -23,12 +24,11 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
-    ...defaultCache,
     {
-      matcher: ({ url }) => url.pathname.startsWith("/api/"),
-      handler: new NetworkFirst({
+      matcher: ({ request, url }) =>
+        request.method === "GET" && url.pathname.startsWith("/api/"),
+      handler: new StaleWhileRevalidate({
         cacheName: "api-cache",
-        networkTimeoutSeconds: 5,
         plugins: [
           new ExpirationPlugin({
             maxEntries: 200,
@@ -36,6 +36,11 @@ const serwist = new Serwist({
           }),
         ],
       }),
+    },
+    {
+      matcher: ({ request, url }) =>
+        request.method !== "GET" && url.pathname.startsWith("/api/"),
+      handler: new NetworkOnly(),
     },
     {
       matcher: ({ request }) => request.destination === "image",
@@ -49,11 +54,45 @@ const serwist = new Serwist({
         ],
       }),
     },
+    {
+      matcher: ({ request, url }) => {
+        if (request.method !== "GET") return false;
+        if (url.pathname.endsWith(".rsc")) return true;
+        if (url.searchParams.has("_rsc")) return true;
+        if (request.headers.get("RSC") === "1") return true;
+        if (request.headers.get("Next-Router-Prefetch") === "1") return true;
+        return false;
+      },
+      handler: new StaleWhileRevalidate({
+        cacheName: "rsc-cache",
+        plugins: [
+          new CacheableResponsePlugin({ statuses: [0, 200] }),
+          new ExpirationPlugin({
+            maxEntries: 100,
+            maxAgeSeconds: 60 * 60 * 24 * 7,
+          }),
+        ],
+      }),
+    },
+    {
+      matcher: ({ request }) => request.mode === "navigate",
+      handler: new NetworkFirst({
+        cacheName: "html-pages",
+        networkTimeoutSeconds: 3,
+        plugins: [
+          new CacheableResponsePlugin({ statuses: [0, 200] }),
+          new ExpirationPlugin({
+            maxEntries: 50,
+            maxAgeSeconds: 60 * 60 * 24 * 7,
+          }),
+        ],
+      }),
+    },
   ],
   fallbacks: {
     entries: [
       {
-        url: "/dashboard",
+        url: "/offline.html",
         matcher: ({ request }) => request.destination === "document",
       },
     ],

@@ -41,7 +41,7 @@ export function ServiceWorkerRegister() {
           return;
         }
         const mod = await import("@serwist/window");
-        const sw = new mod.Serwist("/sw.js", {
+        const sw = new mod.Serwist("/serwist/sw.js", {
           scope: "/",
           updateViaCache: "none",
           type: "classic",

@@ -13,7 +13,7 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "types": ["@serwist/next/typings"],
+    "types": ["@serwist/turbopack"],
     "plugins": [
       {
         "name": "next"
