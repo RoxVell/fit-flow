@@ -13,12 +13,18 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWorkoutStore } from "@/lib/store/workout-store";
-import { useExercises, useWorkoutLogs, useActiveProgram } from "@/lib/hooks/use-queries";
+import {
+  useExercises,
+  useWorkoutLogs,
+  useActiveProgram,
+  useCreateWorkoutLog,
+  useCreatePersonalRecord,
+} from "@/lib/hooks/use-queries";
 import { ExerciseCard } from "@/components/workout/exercise-card";
 import { RestTimer } from "@/components/workout/rest-timer";
 import { TriumphScreen } from "@/components/workout/triumph-screen";
 import { calculateVolume, formatDuration } from "@/lib/utils/calculations";
-import type { PersonalRecord } from "@/lib/db/types";
+import type { PersonalRecord, WorkoutLog } from "@/lib/db/types";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +46,8 @@ function ActiveWorkoutContent({
   const store = useWorkoutStore();
   const { data: allExercises } = useExercises();
   const { data: program, isLoading: programLoading } = useActiveProgram();
+  const createWorkoutLog = useCreateWorkoutLog();
+  const createPersonalRecord = useCreatePersonalRecord();
   const [elapsed, setElapsed] = useState(0);
   const [showTriumph, setShowTriumph] = useState(false);
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
@@ -131,7 +139,25 @@ function ActiveWorkoutContent({
   }, [workoutLogs, store.exercises]);
 
   const finishWorkout = () => {
-    store.finishWorkout();
+    const session = program?.sessions.find((s) => s.id === sessionId);
+    const completedAt = new Date().toISOString();
+
+    const loggedExercises = store.exercises.map((ex) => ({
+      ...ex,
+      workoutLogId: store.activeWorkoutId ?? ex.workoutLogId,
+      sets: ex.sets.map((s) => s),
+    }));
+
+    const log: Omit<WorkoutLog, "id"> = {
+      startedAt: store.startedAt ?? completedAt,
+      endedAt: completedAt,
+      programId: program?.id,
+      sessionId,
+      programName: program?.name,
+      sessionName: session?.name,
+      exercises: loggedExercises,
+    };
+
     const records: PersonalRecord[] = [];
     for (const ex of store.exercises) {
       const exercise = exerciseMap.get(ex.exerciseId);
@@ -142,25 +168,39 @@ function ActiveWorkoutContent({
       const vol = completed.reduce((sum, s) => sum + s.weight * s.reps, 0);
       if (maxWeight > 0) {
         records.push({
-          id: `pr-${ex.id}-w`,
+          id: `pr-${ex.id}-w-${Date.now()}`,
           exerciseId: ex.exerciseId,
           exerciseName: exercise.name,
           type: "weight",
           value: maxWeight,
-          date: new Date().toISOString(),
+          date: completedAt,
         });
       }
       if (vol > 0) {
         records.push({
-          id: `pr-${ex.id}-v`,
+          id: `pr-${ex.id}-v-${Date.now()}`,
           exerciseId: ex.exerciseId,
           exerciseName: exercise.name,
           type: "volume",
           value: vol,
-          date: new Date().toISOString(),
+          date: completedAt,
         });
       }
     }
+
+    void createWorkoutLog.mutateAsync(log).catch((err) => {
+      console.warn("[finishWorkout] createWorkoutLog failed", err);
+    });
+    for (const rec of records) {
+      const { id: _id, ...payload } = rec;
+      void createPersonalRecord.mutateAsync(payload as Omit<PersonalRecord, "id">).catch(
+        (err) => {
+          console.warn("[finishWorkout] createPersonalRecord failed", err);
+        }
+      );
+    }
+
+    store.finishWorkout();
     setNewRecords(records);
     setShowTriumph(true);
   };

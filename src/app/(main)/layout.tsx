@@ -1,7 +1,5 @@
 "use client";
 import { BottomNav } from "@/components/shared/bottom-nav";
-import { OfflineBanner } from "@/components/shared/offline-banner";
-import { ServiceWorkerRegister } from "@/components/shared/service-worker-register";
 import Blocks from "../../../components/uilayouts/blocks";
 import { useRef } from "react";
 
@@ -13,8 +11,6 @@ export default function MainLayout({
   const containerRef = useRef<HTMLDivElement>(null);
   return (
     <div className="flex flex-col min-h-dvh max-w-lg mx-auto w-full">
-      <ServiceWorkerRegister />
-      <OfflineBanner />
       <div
       className='h-full overflow-hidden dark:bg-black bg-white before:absolute before:w-full before:h-full before:bg-linear-to-t  dark:before:from-[#070707] before:from-[#dbdbdb] before:z-1  w-full  relative'
       ref={containerRef}
