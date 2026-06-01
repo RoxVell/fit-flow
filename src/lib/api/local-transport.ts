@@ -24,8 +24,9 @@ export interface Transport {
   }>;
 }
 
-function parseUrl(url: string): string {
-  return url.split("?")[0];
+function parseUrl(url: string): { pathname: string; params: URLSearchParams } {
+  const [pathname, query = ""] = url.split("?");
+  return { pathname, params: new URLSearchParams(query) };
 }
 
 function jsonOk<T>(data: T, status = 200) {
@@ -38,7 +39,7 @@ function jsonNotFound<T>() {
 
 export const localTransport: Transport = {
   async request<T>(method: HttpMethod, url: string, body?: unknown) {
-    const pathname = parseUrl(url);
+    const { pathname, params } = parseUrl(url);
 
     if (pathname === "/api/exercises" && method === "GET") {
       await ensureSeeded();
@@ -60,7 +61,9 @@ export const localTransport: Transport = {
     }
     if (pathname === "/api/workout-logs" && method === "GET") {
       await ensureSeeded();
-      return jsonOk<T>((await db.getWorkoutLogs()) as T);
+      const limitParam = params.get("limit");
+      const limit = limitParam ? Number(limitParam) : undefined;
+      return jsonOk<T>((await db.getWorkoutLogs(limit)) as T);
     }
     if (pathname === "/api/workout-logs" && method === "POST") {
       return jsonOk<T>(

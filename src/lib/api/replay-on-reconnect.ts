@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { syncOutbox } from "./client";
 import { pendingCount } from "./sync-queue";
 
@@ -19,6 +19,7 @@ export function notifyQueueChanged(): void {
 export function useSyncQueueState(): SyncQueueState {
   const [pending, setPending] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const syncingRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -58,7 +59,8 @@ export function useSyncQueueState(): SyncQueueState {
   }, []);
 
   async function doFlush(): Promise<void> {
-    if (syncing) return;
+    if (syncingRef.current) return;
+    syncingRef.current = true;
     setSyncing(true);
     try {
       await syncOutbox();
@@ -66,6 +68,7 @@ export function useSyncQueueState(): SyncQueueState {
       const n = await pendingCount();
       setPending(n);
     } finally {
+      syncingRef.current = false;
       setSyncing(false);
     }
   }

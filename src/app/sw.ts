@@ -3,6 +3,7 @@
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import {
   CacheableResponsePlugin,
+  CacheFirst,
   ExpirationPlugin,
   NetworkFirst,
   NetworkOnly,
@@ -55,13 +56,25 @@ const serwist = new Serwist({
       }),
     },
     {
-      matcher: ({ request, url }) => {
+      matcher: ({ url }) => url.pathname.startsWith("/_next/static/"),
+      handler: new CacheFirst({
+        cacheName: "static-assets",
+        plugins: [
+          new ExpirationPlugin({
+            maxEntries: 200,
+            maxAgeSeconds: 60 * 60 * 24 * 30,
+            purgeOnQuotaError: true,
+          }),
+        ],
+      }),
+    },
+    {
+      matcher: ({ request }) => {
         if (request.method !== "GET") return false;
-        if (url.pathname.endsWith(".rsc")) return true;
-        if (url.searchParams.has("_rsc")) return true;
-        if (request.headers.get("RSC") === "1") return true;
-        if (request.headers.get("Next-Router-Prefetch") === "1") return true;
-        return false;
+        return (
+          request.headers.get("RSC") === "1" ||
+          request.headers.get("Next-Router-Prefetch") === "1"
+        );
       },
       handler: new StaleWhileRevalidate({
         cacheName: "rsc-cache",
