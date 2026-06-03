@@ -239,7 +239,7 @@ export function useActiveWorkout(
   };
 
   const handleFinish = () => {
-    if (incompleteExists) {
+    if (incompleteExists || completedSetsCount === 0) {
       setShowConfirmFinish(true);
       return;
     }
@@ -248,6 +248,7 @@ export function useActiveWorkout(
 
   const confirmFinish = () => {
     setShowConfirmFinish(false);
+    if (completedSetsCount === 0) return;
     finish();
   };
 
