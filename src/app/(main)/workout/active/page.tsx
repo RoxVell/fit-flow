@@ -57,7 +57,7 @@ function ActiveWorkoutContent({
     showTriumph,
     newRecords,
     handleCloseTriumph,
-    markSetCompleted,
+    toggleSetCompleted,
   } = useActiveWorkout(sessionId);
 
   const [showAddExercise, setShowAddExercise] = useState(false);
@@ -142,7 +142,7 @@ function ActiveWorkoutContent({
                   onAddSet={() => store.addSet(ex.id)}
                   onRemoveSet={(idx) => store.removeSet(ex.id, idx)}
                   onUpdateSet={(idx, data) => store.updateSet(ex.id, idx, data)}
-                  onCompleteSet={(idx) => markSetCompleted(ex.id, idx)}
+                  onCompleteSet={(idx) => toggleSetCompleted(ex.id, idx)}
                   onRemove={() => store.removeExercise(ex.id)}
                   onSwap={(newId) => store.swapExercise(ex.id, newId)}
                 />

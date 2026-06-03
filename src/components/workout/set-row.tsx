@@ -81,24 +81,25 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
             inputMode="decimal"
             value={displayWeight}
             onChange={(e) => onUpdate({ weight: parseFloat(e.target.value) || 0 })}
-            className="h-8 w-16 shrink-0 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-muted-foreground/30"
+            className="h-9 w-16 shrink-0 text-center text-base tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-muted-foreground/30"
             placeholder={previousSet ? "" : "kg"}
           />
 
-          <span className="w-3 shrink-0 text-center text-sm text-muted-foreground/40">×</span>
+          <span className="w-3 shrink-0 text-center text-base text-muted-foreground/40">×</span>
 
           <Input
             type="number"
             inputMode="numeric"
             value={displayReps}
             onChange={(e) => onUpdate({ reps: parseInt(e.target.value) || 0 })}
-            className="h-8 w-12 shrink-0 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-muted-foreground/30"
+            className="h-9 w-12 shrink-0 text-center text-base tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-muted-foreground/30"
             placeholder={previousSet ? "" : "r"}
           />
 
           <button
             onClick={onComplete}
-            disabled={set.completed}
+            aria-pressed={set.completed}
+            aria-label={set.completed ? "Mark set incomplete" : "Mark set complete"}
             className={cn(
               "ml-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-all",
               set.completed

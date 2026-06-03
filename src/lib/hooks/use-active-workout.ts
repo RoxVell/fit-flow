@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useWorkoutStore } from "@/lib/store/workout-store";
 import {
@@ -35,7 +35,7 @@ export interface UseActiveWorkoutResult {
   showTriumph: boolean;
   newRecords: PersonalRecord[];
   handleCloseTriumph: () => void;
-  markSetCompleted: (exerciseId: string, setIndex: number) => void;
+  toggleSetCompleted: (exerciseId: string, setIndex: number) => void;
 }
 
 /**
@@ -62,22 +62,35 @@ export function useActiveWorkout(
   const createPersonalRecord = useCreatePersonalRecord();
   const { data: workoutLogs } = useWorkoutLogs(10);
 
-  const [elapsed, setElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
   const [showTriumph, setShowTriumph] = useState(false);
   const [newRecords, setNewRecords] = useState<PersonalRecord[]>([]);
   const [lastActiveExerciseId, setLastActiveExerciseId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!store.startedAt || isPaused) return;
-    const interval = setInterval(() => {
-      setElapsed(
-        Math.floor((Date.now() - new Date(store.startedAt!).getTime()) / 1000)
-      );
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [store.startedAt, isPaused]);
+  const nowSec = useSyncExternalStore(
+    (cb) => {
+      const id = setInterval(cb, 1000);
+      return () => clearInterval(id);
+    },
+    () => Math.floor(Date.now() / 1000),
+    () => 0
+  );
+
+  const computedElapsed = store.startedAt
+    ? Math.max(
+        0,
+        nowSec - Math.floor(new Date(store.startedAt).getTime() / 1000)
+      )
+    : 0;
+
+  const [frozenElapsed, setFrozenElapsed] = useState<number | null>(null);
+  const [prevIsPaused, setPrevIsPaused] = useState(isPaused);
+  if (isPaused !== prevIsPaused) {
+    setPrevIsPaused(isPaused);
+    setFrozenElapsed(isPaused ? computedElapsed : null);
+  }
+  const elapsed = frozenElapsed ?? computedElapsed;
 
   useEffect(() => {
     if (store.activeWorkoutId) return;
@@ -235,9 +248,10 @@ export function useActiveWorkout(
     router.push("/workout");
   };
 
-  const markSetCompleted = (exerciseId: string, setIndex: number) => {
-    store.markSetCompleted(exerciseId, setIndex);
-    setLastActiveExerciseId(exerciseId);
+  const toggleSetCompleted = (exerciseId: string, setIndex: number) => {
+    const before = store.exercises.find((e) => e.id === exerciseId)?.sets[setIndex];
+    store.toggleSetCompleted(exerciseId, setIndex);
+    if (before && !before.completed) setLastActiveExerciseId(exerciseId);
   };
 
   const minutes = Math.floor(elapsed / 60);
@@ -264,6 +278,6 @@ export function useActiveWorkout(
     showTriumph,
     newRecords,
     handleCloseTriumph,
-    markSetCompleted,
+    toggleSetCompleted,
   };
 }
