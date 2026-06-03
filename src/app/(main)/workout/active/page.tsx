@@ -219,15 +219,20 @@ function ActiveWorkoutContent({
       {/* Confirm finish dialog */}
       {showConfirmFinish && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-xs rounded-xl bg-popover p-4 shadow-lg">
+          <div className="w-full max-w-sm rounded-xl bg-popover p-4 shadow-lg">
             <h3 className="text-lg font-medium mb-2">Incomplete Sets</h3>
-            <p className="text-base text-muted-foreground mb-5">
-              You have sets with weight entered but not marked as complete. Finish anyway?
+            <p className="text-base text-muted-foreground mb-3">
+              {completedSetsCount} of {totalSetsCount} sets complete
             </p>
-            <div className="flex flex-wrap gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowConfirmFinish(false)}>
-                Cancel
-              </Button>
+            <div className="w-full bg-muted rounded-full h-1.5 mb-5">
+              <div
+                className="bg-primary h-1.5 rounded-full transition-all"
+                style={{
+                  width: `${totalSetsCount > 0 ? (completedSetsCount / totalSetsCount) * 100 : 0}%`,
+                }}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2">
               <Button
                 variant="destructive"
                 onClick={() => {
@@ -237,9 +242,14 @@ function ActiveWorkoutContent({
               >
                 Discard
               </Button>
-              <Button onClick={confirmFinish}>
-                Finish Anyway
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowConfirmFinish(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={confirmFinish}>
+                  Finish Anyway
+                </Button>
+              </div>
             </div>
           </div>
         </div>
