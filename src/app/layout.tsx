@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
+import { ServiceWorkerRegister } from "@/components/shared/service-worker-register";
+import { OfflineBanner } from "@/components/shared/offline-banner";
+import { InstallPrompt } from "@/components/shared/install-prompt";
+import { UpdateToast } from "@/components/shared/update-toast";
 import "./globals.css";
 import BlockOne from "@/components/ui/block-one";
 
@@ -17,7 +21,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "FitFlow",
   description: "Your intelligent workout companion",
-  manifest: "/manifest.json",
+  manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "FitFlow" },
 };
 
@@ -44,6 +48,10 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col text-foreground">
         <Providers>
           <BlockOne />
+          <ServiceWorkerRegister />
+          <OfflineBanner />
+          <UpdateToast />
+          <InstallPrompt />
           {children}
         </Providers>
       </body>

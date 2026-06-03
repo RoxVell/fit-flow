@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#000000" />
+    <title>Offline · FitFlow</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #0a0a0a;
+        --muted: #6b7280;
+        --accent: #10b981;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0a0a0a;
+          --fg: #fafafa;
+          --muted: #9ca3af;
+          --accent: #34d399;
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; height: 100%; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        -webkit-font-smoothing: antialiased;
+      }
+      main {
+        max-width: 420px;
+        text-align: center;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--accent) 12%, transparent);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 16px;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        animation: pulse 1.6s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+      }
+      h1 { font-size: 24px; font-weight: 700; margin: 0 0 12px; }
+      p { font-size: 15px; line-height: 1.55; color: var(--muted); margin: 0 0 20px; }
+      .tips {
+        text-align: left;
+        background: color-mix(in srgb, var(--fg) 4%, transparent);
+        border: 1px solid color-mix(in srgb, var(--fg) 8%, transparent);
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin: 0 0 20px;
+      }
+      .tips h2 {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        margin: 0 0 8px;
+      }
+      .tips ul { margin: 0; padding-left: 18px; }
+      .tips li { font-size: 14px; line-height: 1.6; color: var(--fg); }
+      button {
+        appearance: none;
+        border: 0;
+        background: var(--accent);
+        color: #052e1f;
+        font-weight: 600;
+        font-size: 15px;
+        padding: 12px 20px;
+        border-radius: 10px;
+        cursor: pointer;
+        min-height: 44px;
+      }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="badge"><span class="dot"></span>Offline</span>
+      <h1>You&rsquo;re offline</h1>
+      <p>
+        This page hasn&rsquo;t been downloaded yet. Pages and workouts you&rsquo;ve
+        already opened are still available from your cache.
+      </p>
+      <section class="tips" aria-label="What you can do offline">
+        <h2>What still works</h2>
+        <ul>
+          <li>Browse pages you visited before going offline</li>
+          <li>Log workouts &mdash; they&rsquo;ll sync when you&rsquo;re back</li>
+          <li>View your last-loaded stats and history</li>
+        </ul>
+      </section>
+      <button id="retry" type="button">Retry</button>
+    </main>
+    <script>
+      const btn = document.getElementById("retry");
+      const update = () => {
+        btn.disabled = !navigator.onLine;
+        btn.textContent = navigator.onLine ? "Reload" : "Waiting for connection…";
+      };
+      update();
+      window.addEventListener("online", update);
+      window.addEventListener("offline", update);
+      btn.addEventListener("click", () => {
+        if (navigator.onLine) location.reload();
+      });
+      if (navigator.onLine) location.reload();
+    </script>
+  </body>
+</html>
