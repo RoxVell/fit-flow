@@ -33,6 +33,7 @@ export interface UseActiveWorkoutResult {
   abandonWorkout: () => void;
   showTriumph: boolean;
   newRecords: PersonalRecord[];
+  triumphData: { volume: number; minutes: number; seconds: number } | null;
   handleCloseTriumph: () => void;
   toggleSetCompleted: (exerciseId: string, setIndex: number) => void;
 }
@@ -65,7 +66,9 @@ export function useActiveWorkout(
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
   const [showTriumph, setShowTriumph] = useState(false);
   const [newRecords, setNewRecords] = useState<PersonalRecord[]>([]);
+  const [triumphData, setTriumphData] = useState<{ volume: number; minutes: number; seconds: number } | null>(null);
   const [lastActiveExerciseId, setLastActiveExerciseId] = useState<string | null>(null);
+  const hasFinishedRef = useRef(false);
 
   const nowSec = useSyncExternalStore(
     (cb) => {
@@ -187,6 +190,9 @@ export function useActiveWorkout(
   );
 
   const finish = () => {
+    if (hasFinishedRef.current) return;
+    hasFinishedRef.current = true;
+
     const session = program?.sessions.find((s) => s.id === sessionId);
     const completedAt = new Date().toISOString();
 
@@ -206,6 +212,10 @@ export function useActiveWorkout(
       completedAt
     );
 
+    const capturedVolume = totalVolume;
+    const capturedMinutes = minutes;
+    const capturedSeconds = seconds;
+
     void createWorkoutLog.mutateAsync(log).catch((err) => {
       console.warn("[finishWorkout] createWorkoutLog failed", err);
     });
@@ -218,8 +228,13 @@ export function useActiveWorkout(
       });
     }
 
-    store.finishWorkout();
+    store.reset();
     setNewRecords(records);
+    setTriumphData({
+      volume: capturedVolume,
+      minutes: capturedMinutes,
+      seconds: capturedSeconds,
+    });
     setShowTriumph(true);
   };
 
@@ -274,6 +289,7 @@ export function useActiveWorkout(
     abandonWorkout,
     showTriumph,
     newRecords,
+    triumphData,
     handleCloseTriumph,
     toggleSetCompleted,
   };

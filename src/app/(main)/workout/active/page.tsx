@@ -55,6 +55,7 @@ function ActiveWorkoutContent({
     abandonWorkout,
     showTriumph,
     newRecords,
+    triumphData,
     handleCloseTriumph,
     toggleSetCompleted,
   } = useActiveWorkout(sessionId);
@@ -63,7 +64,7 @@ function ActiveWorkoutContent({
   const [addSearch, setAddSearch] = useState("");
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
 
-  if (!store.activeWorkoutId) {
+  if (!store.activeWorkoutId && !showTriumph) {
     return (
       <div className="flex items-center justify-center h-full p-4">
         <p className="text-muted-foreground">Starting workout...</p>
@@ -284,8 +285,12 @@ function ActiveWorkoutContent({
         {showTriumph && (
           <TriumphScreen
             records={newRecords}
-            volume={totalVolume}
-            duration={formatDuration(minutes)}
+            volume={triumphData?.volume ?? 0}
+            duration={
+              triumphData
+                ? formatDuration(triumphData.minutes)
+                : formatDuration(minutes)
+            }
             onClose={handleCloseTriumph}
           />
         )}
