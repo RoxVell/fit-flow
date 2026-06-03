@@ -446,6 +446,44 @@ export async function logBodyMeasurement(
   return bm;
 }
 
+export function createPRsFromWorkout(
+  loggedExercises: LoggedExercise[],
+  exerciseMap: Map<string, Exercise>,
+  completedAt: string
+): PersonalRecord[] {
+  const records: PersonalRecord[] = [];
+  const now = Date.now();
+  for (const ex of loggedExercises) {
+    const exercise = exerciseMap.get(ex.exerciseId);
+    if (!exercise) continue;
+    const completed = ex.sets.filter((s) => s.completed);
+    if (completed.length === 0) continue;
+    const maxWeight = bestWeight(completed);
+    const vol = volume(completed);
+    if (maxWeight > 0) {
+      records.push({
+        id: `pr-${ex.id}-w-${now}`,
+        exerciseId: ex.exerciseId,
+        exerciseName: exercise.name,
+        type: "weight",
+        value: maxWeight,
+        date: completedAt,
+      });
+    }
+    if (vol > 0) {
+      records.push({
+        id: `pr-${ex.id}-v-${now}`,
+        exerciseId: ex.exerciseId,
+        exerciseName: exercise.name,
+        type: "volume",
+        value: vol,
+        date: completedAt,
+      });
+    }
+  }
+  return records;
+}
+
 export async function createPersonalRecord(
   data: Omit<PersonalRecord, "id">
 ): Promise<PersonalRecord> {

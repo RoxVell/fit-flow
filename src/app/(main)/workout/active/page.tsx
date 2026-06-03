@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, use, useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, use, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -13,19 +12,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWorkoutStore } from "@/lib/store/workout-store";
-import {
-  useExercises,
-  useWorkoutLogs,
-  useActiveProgram,
-  useCreateWorkoutLog,
-  useCreatePersonalRecord,
-} from "@/lib/hooks/use-queries";
+import { useExercises } from "@/lib/hooks/use-queries";
+import { useActiveWorkout } from "@/lib/hooks/use-active-workout";
 import { ExerciseCard } from "@/components/workout/exercise-card";
 import { RestTimer } from "@/components/workout/rest-timer";
 import { TriumphScreen } from "@/components/workout/triumph-screen";
-import { bestWeight, volume } from "@/lib/training-metrics";
 import { formatDuration } from "@/lib/utils/calculations";
-import type { PersonalRecord, WorkoutLog } from "@/lib/db/types";
 import {
   Dialog,
   DialogContent,
@@ -43,186 +35,32 @@ function ActiveWorkoutContent({
   searchParams: Promise<{ session?: string }>;
 }) {
   const { session: sessionId } = use(searchParams);
-  const router = useRouter();
   const store = useWorkoutStore();
   const { data: allExercises } = useExercises();
-  const { data: program, isLoading: programLoading } = useActiveProgram();
-  const createWorkoutLog = useCreateWorkoutLog();
-  const createPersonalRecord = useCreatePersonalRecord();
-  const [elapsed, setElapsed] = useState(0);
-  const [showTriumph, setShowTriumph] = useState(false);
-  const [showConfirmFinish, setShowConfirmFinish] = useState(false);
+  const {
+    exerciseMap,
+    previousSetsMap,
+    activeExerciseId,
+    minutes,
+    seconds,
+    isPaused,
+    togglePause,
+    completedSetsCount,
+    totalSetsCount,
+    totalVolume,
+    disableFinish,
+    handleFinish,
+    confirmFinish,
+    showConfirmFinish,
+    setShowConfirmFinish,
+    showTriumph,
+    newRecords,
+    handleCloseTriumph,
+    markSetCompleted,
+  } = useActiveWorkout(sessionId);
+
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [addSearch, setAddSearch] = useState("");
-  const [isPaused, setIsPaused] = useState(false);
-  const [lastActiveExerciseId, setLastActiveExerciseId] = useState<string | null>(null);
-  const [newRecords, setNewRecords] = useState<PersonalRecord[]>([]);
-
-  // Timer effect
-  useEffect(() => {
-    if (!store.startedAt || isPaused) return;
-    const interval = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - new Date(store.startedAt!).getTime()) / 1000));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [store.startedAt, isPaused]);
-
-  // Start workout from session
-  useEffect(() => {
-    if (store.activeWorkoutId) return;
-    if (!sessionId) {
-      router.replace("/workout");
-      return;
-    }
-    if (programLoading || !program) return;
-
-    const session = program.sessions.find((s) => s.id === sessionId);
-    if (!session) {
-      router.replace("/workout");
-      return;
-    }
-
-    const exercises = session.exercises
-      .filter((se) => se.exercise)
-      .map((se) => ({
-        exerciseId: se.exerciseId,
-        sets: se.targetSets,
-      }));
-
-    store.startWorkout(sessionId, exercises);
-  }, [sessionId, program, programLoading, store.activeWorkoutId]);
-
-  const exerciseMap = new Map(allExercises?.map((e) => [e.id, e]));
-  const { data: workoutLogs } = useWorkoutLogs(10);
-
-  const totalVolume = volume(
-    store.exercises.flatMap((e) => e.sets.filter((s) => s.completed))
-  );
-  const minutes = Math.floor(elapsed / 60);
-  const seconds = elapsed % 60;
-
-  const hasNoData = !store.exercises.some((ex) =>
-    ex.sets.some((s) => s.weight > 0)
-  );
-  const hasEmptyComplete = store.exercises.some((ex) =>
-    ex.sets.some((s) => s.completed && s.weight === 0)
-  );
-  const disableFinish = hasNoData || hasEmptyComplete;
-
-  const incompleteExists = store.exercises.some((ex) =>
-    ex.sets.some((s) => !s.completed)
-  );
-
-  const lastEx = lastActiveExerciseId
-    ? store.exercises.find(e => e.id === lastActiveExerciseId)
-    : null;
-
-  const activeExerciseId = lastEx && lastEx.sets.some(s => !s.completed)
-    ? lastEx.id
-    : (store.exercises.find((ex) =>
-        ex.sets.some((s) => !s.completed)
-      )?.id || store.exercises[store.exercises.length - 1]?.id);
-
-  const previousSetsMap = useMemo(() => {
-    const map = new Map<string, ({ weight: number; reps: number } | null)[]>();
-    if (!workoutLogs) return map;
-    for (const ex of store.exercises) {
-      for (const log of workoutLogs) {
-        const loggedEx = log.exercises.find((e) => e.exerciseId === ex.exerciseId);
-        if (loggedEx) {
-          const completed = [...loggedEx.sets].sort((a, b) => a.setOrder - b.setOrder);
-          map.set(ex.id, completed.map((s) => ({ weight: s.weight, reps: s.reps })));
-          break;
-        }
-      }
-    }
-    return map;
-  }, [workoutLogs, store.exercises]);
-
-  const finishWorkout = () => {
-    const session = program?.sessions.find((s) => s.id === sessionId);
-    const completedAt = new Date().toISOString();
-
-    const loggedExercises = store.exercises.map((ex) => ({
-      ...ex,
-      workoutLogId: store.activeWorkoutId ?? ex.workoutLogId,
-      sets: ex.sets.map((s) => s),
-    }));
-
-    const log: Omit<WorkoutLog, "id"> = {
-      startedAt: store.startedAt ?? completedAt,
-      endedAt: completedAt,
-      programId: program?.id,
-      sessionId,
-      programName: program?.name,
-      sessionName: session?.name,
-      exercises: loggedExercises,
-    };
-
-    const records: PersonalRecord[] = [];
-    for (const ex of store.exercises) {
-      const exercise = exerciseMap.get(ex.exerciseId);
-      if (!exercise) continue;
-      const completed = ex.sets.filter((s) => s.completed);
-      if (completed.length === 0) continue;
-      const maxWeight = bestWeight(completed);
-      const vol = volume(completed);
-      if (maxWeight > 0) {
-        records.push({
-          id: `pr-${ex.id}-w-${Date.now()}`,
-          exerciseId: ex.exerciseId,
-          exerciseName: exercise.name,
-          type: "weight",
-          value: maxWeight,
-          date: completedAt,
-        });
-      }
-      if (vol > 0) {
-        records.push({
-          id: `pr-${ex.id}-v-${Date.now()}`,
-          exerciseId: ex.exerciseId,
-          exerciseName: exercise.name,
-          type: "volume",
-          value: vol,
-          date: completedAt,
-        });
-      }
-    }
-
-    void createWorkoutLog.mutateAsync(log).catch((err) => {
-      console.warn("[finishWorkout] createWorkoutLog failed", err);
-    });
-    for (const rec of records) {
-      const { id: _id, ...payload } = rec;
-      void createPersonalRecord.mutateAsync(payload as Omit<PersonalRecord, "id">).catch(
-        (err) => {
-          console.warn("[finishWorkout] createPersonalRecord failed", err);
-        }
-      );
-    }
-
-    store.finishWorkout();
-    setNewRecords(records);
-    setShowTriumph(true);
-  };
-
-  const handleFinish = () => {
-    if (incompleteExists) {
-      setShowConfirmFinish(true);
-      return;
-    }
-    finishWorkout();
-  };
-
-  const confirmFinish = () => {
-    setShowConfirmFinish(false);
-    finishWorkout();
-  };
-
-  const handleCloseTriumph = () => {
-    store.reset();
-    router.push("/dashboard");
-  };
 
   if (!store.activeWorkoutId) {
     return (
@@ -247,7 +85,7 @@ function ActiveWorkoutContent({
               {minutes.toString().padStart(2, "0")}:{seconds.toString().padStart(2, "0")}
             </span>
             <button
-              onClick={() => setIsPaused(!isPaused)}
+              onClick={togglePause}
               className="rounded-full p-1 text-muted-foreground hover:bg-muted"
             >
               {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
@@ -257,14 +95,10 @@ function ActiveWorkoutContent({
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
               <span className="tabular-nums text-foreground">
-                {store.exercises.reduce(
-                  (sum, e) => sum + e.sets.filter((s) => s.completed).length,
-                  0
-                )}
+                {completedSetsCount}
               </span>
               <span className="text-muted-foreground/60">/</span>
-              <span className="tabular-nums text-foreground">{store.exercises.reduce((sum, e) => sum + e.sets.length, 0)}</span>
-              {/*<span>sets</span>*/}
+              <span className="tabular-nums text-foreground">{totalSetsCount}</span>
               <span className="text-muted-foreground/60">·</span>
               <span className="tabular-nums">{totalVolume.toLocaleString()}</span>
               <span>kg</span>
@@ -306,10 +140,7 @@ function ActiveWorkoutContent({
                   onAddSet={() => store.addSet(ex.id)}
                   onRemoveSet={(idx) => store.removeSet(ex.id, idx)}
                   onUpdateSet={(idx, data) => store.updateSet(ex.id, idx, data)}
-                  onCompleteSet={(idx) => {
-                    store.markSetCompleted(ex.id, idx);
-                    setLastActiveExerciseId(ex.id);
-                  }}
+                  onCompleteSet={(idx) => markSetCompleted(ex.id, idx)}
                   onRemove={() => store.removeExercise(ex.id)}
                   onSwap={(newId) => store.swapExercise(ex.id, newId)}
                 />
