@@ -31,6 +31,7 @@ export interface UseActiveWorkoutResult {
   confirmFinish: () => void;
   showConfirmFinish: boolean;
   setShowConfirmFinish: (b: boolean) => void;
+  abandonWorkout: () => void;
   showTriumph: boolean;
   newRecords: PersonalRecord[];
   handleCloseTriumph: () => void;
@@ -229,6 +230,11 @@ export function useActiveWorkout(
     router.push("/dashboard");
   };
 
+  const abandonWorkout = () => {
+    store.reset();
+    router.push("/workout");
+  };
+
   const markSetCompleted = (exerciseId: string, setIndex: number) => {
     store.markSetCompleted(exerciseId, setIndex);
     setLastActiveExerciseId(exerciseId);
@@ -254,6 +260,7 @@ export function useActiveWorkout(
     confirmFinish,
     showConfirmFinish,
     setShowConfirmFinish,
+    abandonWorkout,
     showTriumph,
     newRecords,
     handleCloseTriumph,

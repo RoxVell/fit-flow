@@ -53,6 +53,7 @@ function ActiveWorkoutContent({
     confirmFinish,
     showConfirmFinish,
     setShowConfirmFinish,
+    abandonWorkout,
     showTriumph,
     newRecords,
     handleCloseTriumph,
@@ -61,6 +62,7 @@ function ActiveWorkoutContent({
 
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [addSearch, setAddSearch] = useState("");
+  const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
 
   if (!store.activeWorkoutId) {
     return (
@@ -222,12 +224,41 @@ function ActiveWorkoutContent({
             <p className="text-base text-muted-foreground mb-5">
               You have sets with weight entered but not marked as complete. Finish anyway?
             </p>
-            <div className="flex gap-3 justify-end">
+            <div className="flex flex-wrap gap-2 justify-end">
               <Button variant="outline" onClick={() => setShowConfirmFinish(false)}>
                 Cancel
               </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setShowConfirmFinish(false);
+                  setShowAbandonConfirm(true);
+                }}
+              >
+                Discard
+              </Button>
               <Button onClick={confirmFinish}>
                 Finish Anyway
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm abandon dialog */}
+      {showAbandonConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-xs rounded-xl bg-popover p-4 shadow-lg">
+            <h3 className="text-lg font-medium mb-2">Abandon workout?</h3>
+            <p className="text-base text-muted-foreground mb-5">
+              Your progress won&apos;t be saved.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setShowAbandonConfirm(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={abandonWorkout}>
+                Abandon
               </Button>
             </div>
           </div>
