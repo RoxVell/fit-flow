@@ -134,7 +134,7 @@ export default function WorkoutPlanPage() {
               <span className="text-sm font-medium">
                 {se.exercise?.name || "Unknown"}
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sm text-muted-foreground">
                 {se.targetSets}&times;{se.targetReps}
               </span>
             </div>

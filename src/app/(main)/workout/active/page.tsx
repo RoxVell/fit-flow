@@ -48,7 +48,6 @@ function ActiveWorkoutContent({
     completedSetsCount,
     totalSetsCount,
     totalVolume,
-    disableFinish,
     handleFinish,
     confirmFinish,
     showConfirmFinish,
@@ -110,7 +109,6 @@ function ActiveWorkoutContent({
               size="sm"
               className="gap-1"
               onClick={handleFinish}
-              disabled={disableFinish}
             >
               <StopCircle className="h-4 w-4" />
               Finish
@@ -220,9 +218,13 @@ function ActiveWorkoutContent({
       {showConfirmFinish && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-sm rounded-xl bg-popover p-4 shadow-lg">
-            <h3 className="text-lg font-medium mb-2">Incomplete Sets</h3>
+            <h3 className="text-lg font-medium mb-2">
+              {completedSetsCount === 0 ? "No completed sets" : "Incomplete Sets"}
+            </h3>
             <p className="text-base text-muted-foreground mb-3">
-              {completedSetsCount} of {totalSetsCount} sets complete
+              {completedSetsCount === 0
+                ? "Complete at least one set to save this workout, or discard it."
+                : `${completedSetsCount} of ${totalSetsCount} sets complete`}
             </p>
             <div className="w-full bg-muted rounded-full h-1.5 mb-5">
               <div
@@ -246,9 +248,11 @@ function ActiveWorkoutContent({
                 <Button variant="outline" onClick={() => setShowConfirmFinish(false)}>
                   Cancel
                 </Button>
-                <Button onClick={confirmFinish}>
-                  Finish Anyway
-                </Button>
+                {completedSetsCount > 0 && (
+                  <Button onClick={confirmFinish}>
+                    Finish Anyway
+                  </Button>
+                )}
               </div>
             </div>
           </div>

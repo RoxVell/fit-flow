@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useWorkoutStore } from "@/lib/store/workout-store";
 import {
@@ -26,7 +26,6 @@ export interface UseActiveWorkoutResult {
   completedSetsCount: number;
   totalSetsCount: number;
   totalVolume: number;
-  disableFinish: boolean;
   handleFinish: () => void;
   confirmFinish: () => void;
   showConfirmFinish: boolean;
@@ -98,7 +97,10 @@ export function useActiveWorkout(
     () => false
   );
 
+  const hasBootstrapped = useRef(false);
+
   useEffect(() => {
+    if (hasBootstrapped.current) return;
     if (store.activeWorkoutId) return;
     if (!hasHydrated) return;
     if (!sessionId) {
@@ -120,6 +122,7 @@ export function useActiveWorkout(
         sets: se.targetSets,
       }));
 
+    hasBootstrapped.current = true;
     store.startWorkout(sessionId, exercises);
   }, [sessionId, program, programLoading, store.activeWorkoutId, hasHydrated]);
 
@@ -178,18 +181,6 @@ export function useActiveWorkout(
     );
   }, [lastActiveExerciseId, store.exercises]);
 
-  const hasNoData = useMemo(
-    () => !store.exercises.some((ex) => ex.sets.some((s) => s.weight > 0)),
-    [store.exercises]
-  );
-  const hasEmptyComplete = useMemo(
-    () =>
-      store.exercises.some((ex) =>
-        ex.sets.some((s) => s.completed && s.reps === 0)
-      ),
-    [store.exercises]
-  );
-  const disableFinish = hasNoData || hasEmptyComplete;
   const incompleteExists = useMemo(
     () => store.exercises.some((ex) => ex.sets.some((s) => !s.completed)),
     [store.exercises]
@@ -276,7 +267,6 @@ export function useActiveWorkout(
     completedSetsCount,
     totalSetsCount,
     totalVolume,
-    disableFinish,
     handleFinish,
     confirmFinish,
     showConfirmFinish,
