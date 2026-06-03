@@ -1,4 +1,5 @@
 import { generateId } from "../utils/calculations";
+import { bestE1RM, bestWeight, volume } from "../training-metrics";
 import { ensureSeeded } from "./seed-loader";
 import {
   idbBulkPut,
@@ -173,20 +174,11 @@ export async function getExerciseHistory(
   return logs.map((l) => {
     const ex = l.exercises.find((e) => e.exerciseId === exerciseId)!;
     const completed = ex.sets.filter((s) => s.completed);
-    const volume = completed.reduce((sum, s) => sum + s.weight * s.reps, 0);
-    const maxWeight = Math.max(...completed.map((s) => s.weight));
-    const bestSet = completed.reduce<((typeof completed)[number] & { e1rm: number }) | undefined>(
-      (best, s) => {
-        const e1rm = s.weight * (1 + s.reps / 30);
-        return e1rm > (best?.e1rm || 0) ? { ...s, e1rm } : best;
-      },
-      undefined
-    );
     return {
       date: l.startedAt,
-      volume,
-      maxWeight,
-      estimated1RM: bestSet?.e1rm || 0,
+      volume: volume(completed),
+      maxWeight: bestWeight(completed),
+      estimated1RM: bestE1RM(completed),
     };
   });
 }
@@ -205,16 +197,9 @@ export async function getExerciseDetailedHistory(
   return logs.map((l) => {
     const ex = l.exercises.find((e) => e.exerciseId === exerciseId)!;
     const completed = ex.sets.filter((s) => s.completed);
-    const bestE1RM = completed.reduce<((typeof completed)[number] & { e1rm: number }) | undefined>(
-      (best, s) => {
-        const e1rm = s.weight * (1 + s.reps / 30);
-        return e1rm > (best?.e1rm || 0) ? { ...s, e1rm } : best;
-      },
-      undefined
-    );
     return {
       date: l.startedAt,
-      bestE1RM: bestE1RM?.e1rm || 0,
+      bestE1RM: bestE1RM(completed),
       sets: completed.map((s) => ({
         weight: s.weight,
         reps: s.reps,
@@ -280,14 +265,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     (l) => new Date(l.startedAt) >= weekAgo
   );
 
-  const weeklyVolume = thisWeek.reduce((sum, l) => {
-    return (
-      sum +
-      l.exercises.reduce((es, e) => {
-        return es + e.sets.reduce((ss, s) => ss + s.weight * s.reps, 0);
-      }, 0)
-    );
-  }, 0);
+  const weeklyVolume = thisWeek.reduce(
+    (sum, l) =>
+      sum + l.exercises.reduce((es, e) => es + volume(e.sets), 0),
+    0
+  );
 
   const sortedMeasurements = [...measurements].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()

@@ -23,7 +23,8 @@ import {
 import { ExerciseCard } from "@/components/workout/exercise-card";
 import { RestTimer } from "@/components/workout/rest-timer";
 import { TriumphScreen } from "@/components/workout/triumph-screen";
-import { calculateVolume, formatDuration } from "@/lib/utils/calculations";
+import { bestWeight, volume } from "@/lib/training-metrics";
+import { formatDuration } from "@/lib/utils/calculations";
 import type { PersonalRecord, WorkoutLog } from "@/lib/db/types";
 import {
   Dialog,
@@ -94,7 +95,7 @@ function ActiveWorkoutContent({
   const exerciseMap = new Map(allExercises?.map((e) => [e.id, e]));
   const { data: workoutLogs } = useWorkoutLogs(10);
 
-  const totalVolume = calculateVolume(
+  const totalVolume = volume(
     store.exercises.flatMap((e) => e.sets.filter((s) => s.completed))
   );
   const minutes = Math.floor(elapsed / 60);
@@ -164,8 +165,8 @@ function ActiveWorkoutContent({
       if (!exercise) continue;
       const completed = ex.sets.filter((s) => s.completed);
       if (completed.length === 0) continue;
-      const maxWeight = Math.max(...completed.map((s) => s.weight));
-      const vol = completed.reduce((sum, s) => sum + s.weight * s.reps, 0);
+      const maxWeight = bestWeight(completed);
+      const vol = volume(completed);
       if (maxWeight > 0) {
         records.push({
           id: `pr-${ex.id}-w-${Date.now()}`,
