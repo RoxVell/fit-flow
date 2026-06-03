@@ -92,8 +92,15 @@ export function useActiveWorkout(
   }
   const elapsed = frozenElapsed ?? computedElapsed;
 
+  const hasHydrated = useSyncExternalStore(
+    (cb) => useWorkoutStore.persist.onFinishHydration(cb),
+    () => useWorkoutStore.persist.hasHydrated(),
+    () => false
+  );
+
   useEffect(() => {
     if (store.activeWorkoutId) return;
+    if (!hasHydrated) return;
     if (!sessionId) {
       router.replace("/workout");
       return;
@@ -114,7 +121,7 @@ export function useActiveWorkout(
       }));
 
     store.startWorkout(sessionId, exercises);
-  }, [sessionId, program, programLoading, store.activeWorkoutId]);
+  }, [sessionId, program, programLoading, store.activeWorkoutId, hasHydrated]);
 
   const exerciseMap = useMemo(
     () => new Map(allExercises?.map((e) => [e.id, e])),
