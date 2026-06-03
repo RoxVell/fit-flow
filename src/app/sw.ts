@@ -26,24 +26,6 @@ const serwist = new Serwist({
   navigationPreload: true,
   runtimeCaching: [
     {
-      matcher: ({ request, url }) =>
-        request.method === "GET" && url.pathname.startsWith("/api/"),
-      handler: new StaleWhileRevalidate({
-        cacheName: "api-cache",
-        plugins: [
-          new ExpirationPlugin({
-            maxEntries: 200,
-            maxAgeSeconds: 60 * 60 * 24 * 7,
-          }),
-        ],
-      }),
-    },
-    {
-      matcher: ({ request, url }) =>
-        request.method !== "GET" && url.pathname.startsWith("/api/"),
-      handler: new NetworkOnly(),
-    },
-    {
       matcher: ({ request }) => request.destination === "image",
       handler: new StaleWhileRevalidate({
         cacheName: "images",

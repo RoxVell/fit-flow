@@ -10,9 +10,8 @@ import type {
 
 export interface OutboxEntry {
   id: string;
-  method: "POST" | "PUT" | "DELETE";
-  url: string;
-  body: unknown;
+  name: string;
+  args: unknown[];
   createdAt: number;
   retries: number;
   lastError?: string;
