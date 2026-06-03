@@ -40,6 +40,8 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
     }
   }, [previousSet]);
 
+  const hasRequired = set.weight > 0 && set.reps > 0;
+  const canToggleComplete = set.completed || hasRequired;
   const displayWeight = set.weight || (previousSet ? previousSet.weight : "");
   const displayReps = set.reps || (previousSet ? previousSet.reps : "");
 
@@ -97,14 +99,17 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
           />
 
           <button
-            onClick={onComplete}
+            onClick={canToggleComplete ? onComplete : undefined}
+            disabled={!canToggleComplete}
             aria-pressed={set.completed}
             aria-label={set.completed ? "Mark set incomplete" : "Mark set complete"}
             className={cn(
               "ml-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-all",
               set.completed
                 ? "border-primary text-primary"
-                : "border-muted-foreground/30 hover:border-primary/50"
+                : canToggleComplete
+                  ? "border-muted-foreground/30 hover:border-primary/50"
+                  : "border-muted-foreground/10 text-muted-foreground/20 cursor-not-allowed"
             )}
           >
             {set.completed && (

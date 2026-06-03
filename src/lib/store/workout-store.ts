@@ -160,6 +160,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
         const targetSet = exercise?.sets[setIndex];
         if (!targetSet) return;
         const willComplete = !targetSet.completed;
+        if (willComplete && (targetSet.weight === 0 || targetSet.reps === 0)) return;
         set((state) => ({
           exercises: state.exercises.map((e) =>
             e.id !== loggedExerciseId
