@@ -44,7 +44,7 @@ export default function ProgramsPage() {
               type="button"
               onClick={() => setView(v.value)}
               className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-all",
                 view === v.value
                   ? "bg-background text-foreground shadow-xs"
                   : "text-muted-foreground"
