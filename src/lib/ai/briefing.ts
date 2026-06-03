@@ -1,5 +1,5 @@
 import type { Exercise, WorkoutLog } from "../db/types";
-import { calculateVolume, estimate1RM } from "../utils/calculations";
+import { bestWeight } from "../training-metrics";
 
 export interface AiBriefing {
   summary: string;
@@ -27,7 +27,7 @@ export async function generateBriefing(
       const data = exerciseProgress.get(ex.exerciseId)!;
       const completed = ex.sets.filter((s) => s.completed);
       if (completed.length > 0) {
-        const maxWeight = Math.max(...completed.map((s) => s.weight));
+        const maxWeight = bestWeight(completed);
         data.weights.push(maxWeight);
         data.dates.push(new Date(log.startedAt));
       }

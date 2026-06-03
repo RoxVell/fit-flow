@@ -11,7 +11,7 @@ const prLabels: Record<string, string> = {
 
 const prUnits: Record<string, string> = {
   weight: "kg",
-  volume: "kg vol",
+  volume: "kg",
   estimated_1rm: "kg",
 };
 

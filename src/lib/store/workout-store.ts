@@ -31,7 +31,7 @@ interface WorkoutStore {
     setIndex: number,
     data: Partial<LoggedSet>
   ) => void;
-  markSetCompleted: (loggedExerciseId: string, setIndex: number) => void;
+  toggleSetCompleted: (loggedExerciseId: string, setIndex: number) => void;
   startRestTimer: (duration: number) => void;
   stopRestTimer: () => void;
   tickRestTimer: () => void;
@@ -155,24 +155,33 @@ export const useWorkoutStore = create<WorkoutStore>()(
         }));
       },
 
-      markSetCompleted: (loggedExerciseId: string, setIndex: number) => {
-        const store = get();
-        const exercise = store.exercises.find((e) => e.id === loggedExerciseId);
-        if (!exercise) return;
-
-        const targetSet = exercise.sets[setIndex];
-        if (!targetSet || targetSet.completed) return;
-
+      toggleSetCompleted: (loggedExerciseId: string, setIndex: number) => {
+        const exercise = get().exercises.find((e) => e.id === loggedExerciseId);
+        const targetSet = exercise?.sets[setIndex];
+        if (!targetSet) return;
+        const willComplete = !targetSet.completed;
+        if (willComplete && (targetSet.weight === 0 || targetSet.reps === 0)) return;
         set((state) => ({
-          exercises: state.exercises.map((e) => {
-            if (e.id !== loggedExerciseId) return e;
-            const newSets = e.sets.map((s, i) =>
-              i === setIndex ? { ...s, completed: true } : s
-            );
-            return { ...e, sets: newSets };
-          }),
-          restTimer: { endTime: Date.now() + 90 * 1000, duration: 90, isRunning: true },
+          exercises: state.exercises.map((e) =>
+            e.id !== loggedExerciseId
+              ? e
+              : {
+                  ...e,
+                  sets: e.sets.map((s, i) =>
+                    i === setIndex ? { ...s, completed: willComplete } : s
+                  ),
+                }
+          ),
           isOfflineDirty: true,
+          ...(willComplete
+            ? {
+                restTimer: {
+                  endTime: Date.now() + 90 * 1000,
+                  duration: 90,
+                  isRunning: true,
+                },
+              }
+            : {}),
         }));
       },
 

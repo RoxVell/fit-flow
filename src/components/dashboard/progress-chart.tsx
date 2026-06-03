@@ -11,12 +11,9 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useWorkoutLogs } from "@/lib/hooks/use-queries";
+import { e1RM } from "@/lib/training-metrics";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-function estimate1RM(weight: number, reps: number): number {
-  return weight * (1 + reps / 30);
-}
 
 function getMonday(date: Date): Date {
   const d = new Date(date);
@@ -59,7 +56,7 @@ export function ProgressChart() {
 
         let best1RM = 0;
         for (const set of completed) {
-          const e1rm = estimate1RM(set.weight, set.reps);
+          const e1rm = e1RM(set.weight, set.reps);
           if (e1rm > best1RM) best1RM = e1rm;
         }
 
