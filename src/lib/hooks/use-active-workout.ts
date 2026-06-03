@@ -164,7 +164,7 @@ export function useActiveWorkout(
   const hasEmptyComplete = useMemo(
     () =>
       store.exercises.some((ex) =>
-        ex.sets.some((s) => s.completed && s.weight === 0)
+        ex.sets.some((s) => s.completed && s.reps === 0)
       ),
     [store.exercises]
   );
