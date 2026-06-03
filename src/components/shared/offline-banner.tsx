@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { WifiOff, Wifi, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useSyncQueueState } from "@/lib/api/replay-on-reconnect";
+import { useOutboxState } from "@/lib/api";
 
 export function OfflineBanner() {
   const [online, setOnline] = useState(true);
-  const { pending, syncing, flush } = useSyncQueueState();
+  const { pending, syncing, flush } = useOutboxState();
 
   useEffect(() => {
     setOnline(navigator.onLine);

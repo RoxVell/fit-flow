@@ -1,55 +1,19 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api/client";
-import { notifyQueueChanged } from "@/lib/api/replay-on-reconnect";
-import type {
-  BodyMeasurement,
-  CardioSession,
-  Exercise,
-  ExerciseFilters,
-  PersonalRecord,
-  WorkoutLog,
-  WorkoutProgram,
-} from "@/lib/db/types";
+import * as api from "@/lib/api";
 
-function unwrap<T>(result: { ok: true; data: T } | { ok: true; queued: true; id: string } | { ok: false; status: number; error: string }): T {
-  if (!result.ok) {
-    throw new Error(result.error);
-  }
-  if ("queued" in result) {
-    notifyQueueChanged();
-    return undefined as T;
-  }
-  return result.data;
-}
-
-function throwIfFailed<T>(result: { ok: true; data: T } | { ok: true; queued: true; id: string } | { ok: false; status: number; error: string }): T {
-  if (!result.ok) throw new Error(result.error);
-  if ("queued" in result) {
-    notifyQueueChanged();
-    return undefined as T;
-  }
-  return result.data;
-}
-
-export function useExercises(filters?: ExerciseFilters) {
+export function useExercises(filters?: Parameters<typeof api.getExercises>[0]) {
   return useQuery({
     queryKey: ["exercises", filters],
-    queryFn: async () => {
-      const result = await apiGet<Exercise[]>("/api/exercises");
-      return unwrap(result);
-    },
+    queryFn: () => api.getExercises(filters),
   });
 }
 
 export function useExercise(id: string) {
   return useQuery({
     queryKey: ["exercise", id],
-    queryFn: async () => {
-      const result = await apiGet<Exercise | null>(`/api/exercises/${id}`);
-      return unwrap(result);
-    },
+    queryFn: () => api.getExerciseById(id),
     enabled: !!id,
   });
 }
@@ -57,30 +21,21 @@ export function useExercise(id: string) {
 export function usePrograms() {
   return useQuery({
     queryKey: ["programs"],
-    queryFn: async () => {
-      const result = await apiGet<WorkoutProgram[]>("/api/programs");
-      return unwrap(result);
-    },
+    queryFn: () => api.getPrograms(),
   });
 }
 
 export function useActiveProgram() {
   return useQuery({
     queryKey: ["programs", "active"],
-    queryFn: async () => {
-      const result = await apiGet<WorkoutProgram | null>("/api/programs/active");
-      return unwrap(result);
-    },
+    queryFn: () => api.getActiveProgram(),
   });
 }
 
 export function useProgram(id: string) {
   return useQuery({
     queryKey: ["program", id],
-    queryFn: async () => {
-      const result = await apiGet<WorkoutProgram | null>(`/api/programs/${id}`);
-      return unwrap(result);
-    },
+    queryFn: () => api.getProgramById(id),
     enabled: !!id,
   });
 }
@@ -88,22 +43,14 @@ export function useProgram(id: string) {
 export function useWorkoutLogs(limit?: number) {
   return useQuery({
     queryKey: ["workout-logs", limit],
-    queryFn: async () => {
-      const result = await apiGet<WorkoutLog[]>(
-        `/api/workout-logs${limit ? `?limit=${limit}` : ""}`
-      );
-      return unwrap(result);
-    },
+    queryFn: () => api.getWorkoutLogs(limit),
   });
 }
 
 export function useWorkoutLog(id: string) {
   return useQuery({
     queryKey: ["workout-log", id],
-    queryFn: async () => {
-      const result = await apiGet<WorkoutLog | null>(`/api/workout-logs/${id}`);
-      return unwrap(result);
-    },
+    queryFn: () => api.getWorkoutLogById(id),
     enabled: !!id,
   });
 }
@@ -111,12 +58,7 @@ export function useWorkoutLog(id: string) {
 export function useExerciseHistory(exerciseId: string) {
   return useQuery({
     queryKey: ["exercise-history", exerciseId],
-    queryFn: async () => {
-      const result = await apiGet<{ date: string; volume: number; maxWeight: number; estimated1RM: number }[]>(
-        `/api/exercise-history/${exerciseId}`
-      );
-      return unwrap(result);
-    },
+    queryFn: () => api.getExerciseHistory(exerciseId),
     enabled: !!exerciseId,
   });
 }
@@ -124,16 +66,7 @@ export function useExerciseHistory(exerciseId: string) {
 export function useExerciseDetailedHistory(exerciseId: string) {
   return useQuery({
     queryKey: ["exercise-detailed-history", exerciseId],
-    queryFn: async () => {
-      const result = await apiGet<
-        {
-          date: string;
-          bestE1RM: number;
-          sets: { weight: number; reps: number; type: string; setOrder: number }[];
-        }[]
-      >(`/api/exercise-detailed-history/${exerciseId}`);
-      return unwrap(result);
-    },
+    queryFn: () => api.getExerciseDetailedHistory(exerciseId),
     enabled: !!exerciseId,
   });
 }
@@ -141,52 +74,35 @@ export function useExerciseDetailedHistory(exerciseId: string) {
 export function useBodyMeasurements() {
   return useQuery({
     queryKey: ["body-measurements"],
-    queryFn: async () => {
-      const result = await apiGet<BodyMeasurement[]>("/api/body-measurements");
-      return unwrap(result);
-    },
+    queryFn: () => api.getBodyMeasurements(),
   });
 }
 
 export function usePersonalRecords() {
   return useQuery({
     queryKey: ["personal-records"],
-    queryFn: async () => {
-      const result = await apiGet<PersonalRecord[]>("/api/personal-records");
-      return unwrap(result);
-    },
+    queryFn: () => api.getPersonalRecords(),
   });
 }
 
 export function useCardioSessions() {
   return useQuery({
     queryKey: ["cardio-sessions"],
-    queryFn: async () => {
-      const result = await apiGet<CardioSession[]>("/api/cardio-sessions");
-      return unwrap(result);
-    },
+    queryFn: () => api.getCardioSessions(),
   });
 }
 
 export function useDashboardStats() {
   return useQuery({
     queryKey: ["dashboard-stats"],
-    queryFn: async () => {
-      const result = await apiGet<
-        import("@/lib/db/types").DashboardStats
-      >("/api/dashboard-stats");
-      return unwrap(result);
-    },
+    queryFn: () => api.getDashboardStats(),
   });
 }
 
 export function useCreateWorkoutLog() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: Omit<WorkoutLog, "id">) => {
-      const result = await apiPost<WorkoutLog>("/api/workout-logs", data);
-      return throwIfFailed(result);
-    },
+    mutationFn: api.createWorkoutLog,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["workout-logs"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
@@ -198,10 +114,13 @@ export function useCreateWorkoutLog() {
 export function useUpdateWorkoutLog() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<WorkoutLog> }) => {
-      const result = await apiPut<WorkoutLog>(`/api/workout-logs/${id}`, data);
-      return throwIfFailed(result);
-    },
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Parameters<typeof api.updateWorkoutLog>[1];
+    }) => api.updateWorkoutLog(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["workout-logs"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
@@ -212,10 +131,7 @@ export function useUpdateWorkoutLog() {
 export function useDeleteWorkoutLog() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const result = await apiDelete(`/api/workout-logs/${id}`);
-      return throwIfFailed(result);
-    },
+    mutationFn: api.deleteWorkoutLog,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["workout-logs"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
@@ -227,10 +143,7 @@ export function useDeleteWorkoutLog() {
 export function useCreateProgram() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: Parameters<typeof apiPost>[1]) => {
-      const result = await apiPost<WorkoutProgram>("/api/programs", data);
-      return throwIfFailed(result);
-    },
+    mutationFn: api.createProgram,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["programs"] });
       qc.invalidateQueries({ queryKey: ["programs", "active"] });
@@ -241,16 +154,13 @@ export function useCreateProgram() {
 export function useUpdateProgram() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({
+    mutationFn: ({
       id,
       data,
     }: {
       id: string;
-      data: Parameters<typeof apiPut>[1];
-    }) => {
-      const result = await apiPut<WorkoutProgram>(`/api/programs/${id}`, data);
-      return throwIfFailed(result);
-    },
+      data: Parameters<typeof api.updateProgram>[1];
+    }) => api.updateProgram(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["programs"] });
       qc.invalidateQueries({ queryKey: ["programs", "active"] });
@@ -261,10 +171,7 @@ export function useUpdateProgram() {
 export function useCreateCardioSession() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: Omit<CardioSession, "id">) => {
-      const result = await apiPost<CardioSession>("/api/cardio-sessions", data);
-      return throwIfFailed(result);
-    },
+    mutationFn: api.createCardioSession,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cardio-sessions"] });
     },
@@ -274,13 +181,7 @@ export function useCreateCardioSession() {
 export function useLogBodyMeasurement() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: Omit<BodyMeasurement, "id">) => {
-      const result = await apiPost<BodyMeasurement>(
-        "/api/body-measurements",
-        data
-      );
-      return throwIfFailed(result);
-    },
+    mutationFn: api.logBodyMeasurement,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["body-measurements"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
@@ -291,13 +192,7 @@ export function useLogBodyMeasurement() {
 export function useCreatePersonalRecord() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: Omit<PersonalRecord, "id">) => {
-      const result = await apiPost<PersonalRecord>(
-        "/api/personal-records",
-        data
-      );
-      return throwIfFailed(result);
-    },
+    mutationFn: api.createPersonalRecord,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["personal-records"] });
     },

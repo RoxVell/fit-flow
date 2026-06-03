@@ -2,10 +2,7 @@ import type { Exercise, WorkoutProgram } from "./types";
 
 /**
  * Reference data bootstrap.
- * TODO: when the real backend is wired up, delete this file and switch the
- * client transport to HTTP (see `src/lib/api/client.ts` and `setTransport`).
- * Exercises and programs will be fetched from `GET /api/exercises` and
- * `GET /api/programs`, then cached in IDB by the Serwist worker.
+ * Exercises and programs seeded into IDB on first read.
  */
 
 export const exercises: Exercise[] = [
