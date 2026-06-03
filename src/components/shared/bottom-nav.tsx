@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -10,6 +11,7 @@ import {
   BarChart3,
   Settings,
 } from "lucide-react";
+import { useWorkoutStore } from "@/lib/store/workout-store";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -21,6 +23,13 @@ const navItems = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const activeWorkoutId = useWorkoutStore((s) => s.activeWorkoutId);
+  const hydrated = useSyncExternalStore(
+    (cb) => useWorkoutStore.persist.onFinishHydration(cb),
+    () => useWorkoutStore.persist.hasHydrated(),
+    () => false
+  );
+  const showWorkoutDot = hydrated && activeWorkoutId !== null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -28,12 +37,13 @@ export function BottomNav() {
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           const Icon = item.icon;
+          const isWorkout = item.href === "/workout";
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-0.5 px-3 py-1.5 text-xs font-medium transition-colors",
+                "relative flex flex-col items-center gap-0.5 px-3 py-1.5 text-xs font-medium transition-colors",
                 isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -41,6 +51,15 @@ export function BottomNav() {
             >
               <Icon className="h-5 w-5" />
               <span>{item.label}</span>
+              {isWorkout && showWorkoutDot && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1 right-3 h-2 w-2 rounded-full bg-green-500"
+                />
+              )}
+              {isWorkout && showWorkoutDot && (
+                <span className="sr-only">Active session in progress</span>
+              )}
             </Link>
           );
         })}

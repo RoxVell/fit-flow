@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Play, Dumbbell, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useActiveProgram } from "@/lib/hooks/use-queries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useWorkoutStore } from "@/lib/store/workout-store";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,18 @@ export default function WorkoutPlanPage() {
   const router = useRouter();
   const { data: program, isLoading } = useActiveProgram();
   const today = new Date().getDay();
+  const activeWorkoutId = useWorkoutStore((s) => s.activeWorkoutId);
+  const hydrated = useSyncExternalStore(
+    (cb) => useWorkoutStore.persist.onFinishHydration(cb),
+    () => useWorkoutStore.persist.hasHydrated(),
+    () => false
+  );
+
+  useEffect(() => {
+    if (hydrated && activeWorkoutId) {
+      router.replace("/workout/active");
+    }
+  }, [hydrated, activeWorkoutId, router]);
 
   const recommendedId = useMemo(() => {
     if (!program) return null;
@@ -37,6 +50,16 @@ export default function WorkoutPlanPage() {
     if (!program || !effectiveId) return null;
     return program.sessions.find((s) => s.id === effectiveId) || null;
   }, [program, effectiveId]);
+
+  if (hydrated && activeWorkoutId) {
+    return (
+      <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
+        <Skeleton className="h-8 w-32 rounded-lg" />
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -111,7 +134,7 @@ export default function WorkoutPlanPage() {
               <span className="text-sm font-medium">
                 {se.exercise?.name || "Unknown"}
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sm text-muted-foreground">
                 {se.targetSets}&times;{se.targetReps}
               </span>
             </div>
