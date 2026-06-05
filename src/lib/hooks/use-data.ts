@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db/dexie";
-import { ensureSeeded } from "@/lib/db/seed-loader";
 import type {
   DashboardStats,
   ExerciseFilters,
@@ -14,17 +13,18 @@ import {
   filterExercises,
 } from "@/lib/repositories/exercises";
 import type { ProgramEntity } from "@/lib/db/types";
-import { volume } from "@/lib/training-metrics";
+import { bestE1RM, bestWeight, volume } from "@/lib/training-metrics";
 
-function useEnsureSeed() {
-  useLiveQuery(async () => {
-    await ensureSeeded();
-    return true;
-  }, []);
+async function attachPrograms(programs: ProgramEntity[]) {
+  const exercises = await db.exercises.toArray();
+  const map = new Map(exercises.map((e) => [e.id, e]));
+  return programs.map((p) => ({
+    ...p,
+    sessions: attachExercisesToSessions(p.sessions, map),
+  }));
 }
 
 export function useExercises(filters?: ExerciseFilters) {
-  useEnsureSeed();
   return useLiveQuery(async () => {
     const all = await db.exercises.toArray();
     return filterExercises(all, filters);
@@ -38,26 +38,14 @@ export function useExercises(filters?: ExerciseFilters) {
 }
 
 export function useExercise(id: string) {
-  useEnsureSeed();
   return useLiveQuery(() => db.exercises.get(id), [id]);
 }
 
-async function attachPrograms(programs: ProgramEntity[]) {
-  const exercises = await db.exercises.toArray();
-  const map = new Map(exercises.map((e) => [e.id, e]));
-  return programs.map((p) => ({
-    ...p,
-    sessions: attachExercisesToSessions(p.sessions, map),
-  }));
-}
-
 export function usePrograms() {
-  useEnsureSeed();
   return useLiveQuery(async () => attachPrograms(await db.programs.toArray()), []);
 }
 
 export function useActiveProgram() {
-  useEnsureSeed();
   return useLiveQuery(async () => {
     const active = await db.programs.filter((p) => p.isActive).first();
     if (!active) return undefined;
@@ -67,7 +55,6 @@ export function useActiveProgram() {
 }
 
 export function useProgram(id: string) {
-  useEnsureSeed();
   return useLiveQuery(async () => {
     const program = await db.programs.get(id);
     if (!program) return undefined;
@@ -77,7 +64,6 @@ export function useProgram(id: string) {
 }
 
 export function useWorkoutLogs(limit = 20) {
-  useEnsureSeed();
   return useLiveQuery(
     () => db.workoutLogs.orderBy("startedAt").reverse().limit(limit).toArray(),
     [limit]
@@ -85,12 +71,10 @@ export function useWorkoutLogs(limit = 20) {
 }
 
 export function useWorkoutLog(id: string) {
-  useEnsureSeed();
   return useLiveQuery(() => db.workoutLogs.get(id), [id]);
 }
 
 export function useBodyMeasurements() {
-  useEnsureSeed();
   return useLiveQuery(async () => {
     const all = await db.bodyMeasurements.toArray();
     return all.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -98,12 +82,10 @@ export function useBodyMeasurements() {
 }
 
 export function usePersonalRecords() {
-  useEnsureSeed();
   return useLiveQuery(() => db.personalRecords.toArray(), []);
 }
 
 export function useCardioSessions() {
-  useEnsureSeed();
   return useLiveQuery(async () => {
     const all = await db.cardioSessions.toArray();
     return all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -204,17 +186,45 @@ export function useDashboardStats(): DashboardStats | undefined {
 }
 
 export function useExerciseHistory(exerciseId: string) {
-  useEnsureSeed();
   return useLiveQuery(async () => {
-    const { getExerciseHistory } = await import("@/lib/repositories/workouts");
-    return getExerciseHistory(exerciseId);
+    const all = await db.workoutLogs.toArray();
+    const logs = all
+      .filter((l) => l.exercises.some((e) => e.exerciseId === exerciseId))
+      .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+
+    return logs.map((l) => {
+      const ex = l.exercises.find((e) => e.exerciseId === exerciseId)!;
+      const completed = ex.sets.filter((s) => s.completed);
+      return {
+        date: l.startedAt,
+        volume: volume(completed),
+        maxWeight: bestWeight(completed),
+        estimated1RM: bestE1RM(completed),
+      };
+    });
   }, [exerciseId]);
 }
 
 export function useExerciseDetailedHistory(exerciseId: string) {
-  useEnsureSeed();
   return useLiveQuery(async () => {
-    const { getExerciseDetailedHistory } = await import("@/lib/repositories/workouts");
-    return getExerciseDetailedHistory(exerciseId);
+    const all = await db.workoutLogs.toArray();
+    const logs = all
+      .filter((l) => l.exercises.some((e) => e.exerciseId === exerciseId))
+      .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+
+    return logs.map((l) => {
+      const ex = l.exercises.find((e) => e.exerciseId === exerciseId)!;
+      const completed = ex.sets.filter((s) => s.completed);
+      return {
+        date: l.startedAt,
+        bestE1RM: bestE1RM(completed),
+        sets: completed.map((s) => ({
+          weight: s.weight,
+          reps: s.reps,
+          type: s.type,
+          setOrder: s.setOrder,
+        })),
+      };
+    });
   }, [exerciseId]);
 }

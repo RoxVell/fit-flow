@@ -8,6 +8,7 @@ import { applyServerChanges } from "./apply-server-changes";
 import type { SyncRequest, SyncResponse } from "./types";
 
 let syncing = false;
+let initPromise: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -23,8 +24,7 @@ export async function sync(): Promise<SyncResponse | null> {
   notify();
 
   try {
-    await migrateFromLegacyIdb();
-    await ensureSeeded();
+    await initLocalDb();
 
     const meta = await getAppMeta();
     const pending = await getPending();
@@ -122,9 +122,15 @@ export function useSyncState() {
   return { pending, syncing: isSyncing, flush };
 }
 
-/** Warm up Dexie on app start */
-export async function initLocalDb(): Promise<void> {
-  if (typeof window === "undefined") return;
-  await migrateFromLegacyIdb();
-  await db.open();
+/** Warm up Dexie on app start (writes — must not run inside useLiveQuery) */
+export function initLocalDb(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (!initPromise) {
+    initPromise = (async () => {
+      await migrateFromLegacyIdb();
+      await db.open();
+      await ensureSeeded();
+    })();
+  }
+  return initPromise;
 }
