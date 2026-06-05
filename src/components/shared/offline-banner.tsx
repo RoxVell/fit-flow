@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { WifiOff, Wifi, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useOutboxState } from "@/lib/api";
+import { useSyncState } from "@/lib/sync/sync-service";
 
 export function OfflineBanner() {
   const [online, setOnline] = useState(true);
-  const { pending, syncing, flush } = useOutboxState();
+  const { pending, syncing, flush } = useSyncState();
 
   useEffect(() => {
     setOnline(navigator.onLine);
@@ -41,13 +41,11 @@ export function OfflineBanner() {
         <>
           <WifiOff className="h-3 w-3" />
           <span>
-            You're offline — {pending > 0
+            You're offline —{" "}
+            {pending > 0
               ? `${pending} pending change${pending === 1 ? "" : "s"}`
               : "changes will sync when connected"}
           </span>
-          {pending > 0 && online === false ? (
-            <span className="opacity-80">·</span>
-          ) : null}
           {pending > 0 ? (
             <button
               type="button"

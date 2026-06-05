@@ -1,6 +1,6 @@
 "use client";
 
-import { useExerciseHistory } from "@/lib/hooks/use-queries";
+import { useExerciseHistory } from "@/lib/hooks/use-data";
 import { TrendingUp } from "lucide-react";
 
 interface PreviousResultsProps {
@@ -8,7 +8,7 @@ interface PreviousResultsProps {
 }
 
 export function PreviousResults({ exerciseId }: PreviousResultsProps) {
-  const { data: history } = useExerciseHistory(exerciseId);
+  const history = useExerciseHistory(exerciseId);
 
   if (!history || history.length === 0) return null;
 

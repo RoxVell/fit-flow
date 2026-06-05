@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAdvice } from "@/lib/ai/briefing";
-import { useExerciseHistory } from "@/lib/hooks/use-queries";
+import { useExerciseHistory } from "@/lib/hooks/use-data";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface AiAdvisorProps {
@@ -16,7 +16,7 @@ export function AiAdvisor({ exerciseId, exerciseName }: AiAdvisorProps) {
   const [open, setOpen] = useState(false);
   const [advice, setAdvice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { data: history } = useExerciseHistory(exerciseId);
+  const history = useExerciseHistory(exerciseId);
 
   const handleGetAdvice = async () => {
     setOpen(true);

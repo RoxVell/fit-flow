@@ -35,6 +35,20 @@ export type CardioType = "run" | "cycle" | "elliptical" | "row";
 
 export type PRType = "volume" | "weight" | "estimated_1rm";
 
+export interface SyncableEntity {
+  revision: number;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+export type EntityType =
+  | "exercise"
+  | "program"
+  | "workoutLog"
+  | "bodyMeasurement"
+  | "cardioSession"
+  | "personalRecord";
+
 export interface Exercise {
   id: string;
   name: string;
@@ -163,4 +177,39 @@ export interface ExerciseFilters {
   search?: string;
   unilateral?: boolean;
   category?: "compound" | "isolation" | "cardio";
+}
+
+export type ExerciseEntity = Exercise & SyncableEntity;
+export type ProgramEntity = WorkoutProgram & SyncableEntity;
+export type WorkoutLogEntity = WorkoutLog & SyncableEntity;
+export type BodyMeasurementEntity = BodyMeasurement & SyncableEntity;
+export type CardioSessionEntity = CardioSession & SyncableEntity;
+export type PersonalRecordEntity = PersonalRecord & SyncableEntity;
+
+export interface SyncQueueEntry {
+  id: string;
+  entityType: EntityType;
+  entityId: string;
+  operation: "create" | "update" | "delete";
+  payload?: unknown;
+  revision: number;
+  createdAt: string;
+  status: "pending" | "synced" | "failed";
+}
+
+export interface AppMeta {
+  key: "app";
+  initialized: boolean;
+  lastPullAt: string | null;
+  lastSyncAt: string | null;
+  schemaVersion: number;
+}
+
+export interface WorkoutDraft {
+  id: "active";
+  activeWorkoutId: string | null;
+  sessionId: string | null;
+  exercises: LoggedExercise[];
+  startedAt: string | null;
+  updatedAt: string;
 }

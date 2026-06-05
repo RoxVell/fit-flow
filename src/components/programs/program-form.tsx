@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { useExercises } from "@/lib/hooks/use-queries";
+import { useExercises } from "@/lib/hooks/use-data";
 import { MUSCLE_GROUP_LABELS, EQUIPMENT_LABELS } from "@/lib/utils/constants";
 import { cn } from "@/lib/utils";
 import {
@@ -492,7 +492,7 @@ function SessionEditorContent({
   onDelete: () => void;
 }) {
   const [showExercisePicker, setShowExercisePicker] = useState(false);
-  const { data: exercises } = useExercises();
+  const exercises = useExercises();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -727,7 +727,7 @@ function ExercisePickerDialog({
   onSelect: (exerciseId: string) => void;
 }) {
   const [search, setSearch] = useState("");
-  const { data: exercises } = useExercises({ search: search || undefined });
+  const exercises = useExercises({ search: search || undefined });
 
   const filtered = useMemo(
     () => exercises?.filter((e) => !selectedIds.has(e.id)) || [],

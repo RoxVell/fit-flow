@@ -11,6 +11,8 @@ import {
   StaleWhileRevalidate,
 } from "serwist";
 
+const networkOnlyApi = new NetworkOnly();
+
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
     __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
@@ -25,6 +27,10 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
+    {
+      matcher: ({ url }) => url.pathname.startsWith("/api/"),
+      handler: networkOnlyApi,
+    },
     {
       matcher: ({ request }) => request.destination === "image",
       handler: new StaleWhileRevalidate({

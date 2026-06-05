@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useExercises, usePrograms } from "@/lib/hooks/use-queries";
+import { useExercises, usePrograms } from "@/lib/hooks/use-data";
 import { MUSCLE_GROUP_LABELS, EQUIPMENT_LABELS } from "@/lib/utils/constants";
 import { Search, Dumbbell, Plus, Pencil, Library, LayoutList } from "lucide-react";
 import Link from "next/link";
@@ -63,7 +63,7 @@ export default function ProgramsPage() {
 }
 
 function ProgramsView() {
-  const { data: programs } = usePrograms();
+  const programs = usePrograms();
 
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
@@ -138,14 +138,15 @@ function ExercisesView() {
   const [search, setSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup | null>(null);
 
-  const { data: exercises, isLoading } = useExercises({
+  const exercises = useExercises({
     search: search || undefined,
     muscleGroup: selectedMuscle || undefined,
   });
+  const isLoading = exercises === undefined;
 
   return (
     <>
-      <div className="px-4 pb-2 space-y-3">
+      <div className="px-4 pb-2 mb-4 space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input

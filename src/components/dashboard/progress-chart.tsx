@@ -10,7 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { useWorkoutLogs } from "@/lib/hooks/use-queries";
+import { useWorkoutLogs } from "@/lib/hooks/use-data";
 import { e1RM } from "@/lib/training-metrics";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,7 @@ const periods = [
 type Period = (typeof periods)[number]["value"];
 
 export function ProgressChart() {
-  const { data: logs } = useWorkoutLogs(50);
+  const logs = useWorkoutLogs(50);
   const [period, setPeriod] = useState<Period>("8w");
 
   const chartData = useMemo(() => {
