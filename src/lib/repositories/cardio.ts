@@ -1,3 +1,4 @@
+import { withoutDeleted } from "@/lib/db/active-records";
 import { db } from "@/lib/db/dexie";
 import { ensureSeeded } from "@/lib/db/seed-loader";
 import type { CardioSession, CardioSessionEntity } from "@/lib/db/types";
@@ -5,8 +6,9 @@ import { enqueueSync } from "@/lib/sync/queue";
 
 export async function getCardioSessions(): Promise<CardioSessionEntity[]> {
   await ensureSeeded();
-  const all = await db.cardioSessions.toArray();
-  return all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  return withoutDeleted(await db.cardioSessions.toArray()).sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
 }
 
 export async function createCardioSession(
@@ -32,19 +34,13 @@ export async function createCardioSession(
 
 export async function deleteCardioSession(id: string): Promise<void> {
   const existing = await db.cardioSessions.get(id);
-  if (!existing) return;
-  const now = new Date().toISOString();
-  const entity: CardioSessionEntity = {
-    ...existing,
-    deletedAt: now,
-    revision: existing.revision + 1,
-    updatedAt: now,
-  };
-  await db.cardioSessions.put(entity);
+  if (!existing || existing.deletedAt) return;
+  const revision = existing.revision + 1;
   await enqueueSync({
     entityType: "cardioSession",
     entityId: id,
     operation: "delete",
-    revision: entity.revision,
+    revision,
   });
+  await db.cardioSessions.delete(id);
 }

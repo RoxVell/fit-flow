@@ -12,7 +12,7 @@ import {
 import { createPRsFromWorkout } from "@/lib/repositories/records";
 import { createPersonalRecord } from "@/lib/repositories/records";
 import { createWorkoutLog } from "@/lib/repositories/workouts";
-import { clearDraft, initDraft, saveDraft } from "@/lib/repositories/drafts";
+import { clearDraft, initDraft, updateDraftExercises } from "@/lib/repositories/drafts";
 import { volume } from "@/lib/training-metrics";
 import type {
   Exercise,
@@ -275,17 +275,18 @@ export function useActiveWorkout(
     const willComplete = !before.completed;
     if (willComplete && (before.weight === 0 || before.reps === 0)) return;
 
-    const next = exercises.map((e) =>
-      e.id !== exerciseId
-        ? e
-        : {
-            ...e,
-            sets: e.sets.map((s, i) =>
-              i === setIndex ? { ...s, completed: willComplete } : s
-            ),
-          }
+    void updateDraftExercises((current) =>
+      current.map((e) =>
+        e.id !== exerciseId
+          ? e
+          : {
+              ...e,
+              sets: e.sets.map((s, i) =>
+                i === setIndex ? { ...s, completed: willComplete } : s
+              ),
+            }
+      )
     );
-    void saveDraft({ exercises: next });
     if (willComplete) {
       restStore.startRestTimer(90);
       setLastActiveExerciseId(exerciseId);
@@ -293,66 +294,70 @@ export function useActiveWorkout(
   };
 
   const addExercise = (exerciseId: string) => {
-    const id = crypto.randomUUID();
-    const next: LoggedExercise[] = [
-      ...exercises,
-      {
-        id,
-        exerciseId,
-        workoutLogId: activeWorkoutId ?? id,
-        sortOrder: exercises.length,
-        sets: [
-          {
-            id: crypto.randomUUID(),
-            loggedExerciseId: id,
-            type: "working",
-            setOrder: 0,
-            reps: 0,
-            weight: 0,
-            completed: false,
-          },
-        ],
-      },
-    ];
-    void saveDraft({ exercises: next });
+    void updateDraftExercises((current) => {
+      const id = crypto.randomUUID();
+      return [
+        ...current,
+        {
+          id,
+          exerciseId,
+          workoutLogId: activeWorkoutId ?? id,
+          sortOrder: current.length,
+          sets: [
+            {
+              id: crypto.randomUUID(),
+              loggedExerciseId: id,
+              type: "working",
+              setOrder: 0,
+              reps: 0,
+              weight: 0,
+              completed: false,
+            },
+          ],
+        },
+      ];
+    });
   };
 
   const removeExercise = (loggedExerciseId: string) => {
-    const next = exercises
-      .filter((e) => e.id !== loggedExerciseId)
-      .map((e, i) => ({ ...e, sortOrder: i }));
-    void saveDraft({ exercises: next });
+    void updateDraftExercises((current) =>
+      current
+        .filter((e) => e.id !== loggedExerciseId)
+        .map((e, i) => ({ ...e, sortOrder: i }))
+    );
   };
 
   const addSet = (loggedExerciseId: string) => {
-    const next = exercises.map((e) => {
-      if (e.id !== loggedExerciseId) return e;
-      const lastSet = e.sets[e.sets.length - 1];
-      const newSet: LoggedSet = {
-        id: crypto.randomUUID(),
-        loggedExerciseId: e.id,
-        type: "working",
-        setOrder: (lastSet?.setOrder ?? -1) + 1,
-        reps: lastSet?.reps || 10,
-        weight: lastSet?.weight || 0,
-        completed: false,
-      };
-      return { ...e, sets: [...e.sets, newSet] };
-    });
-    void saveDraft({ exercises: next });
+    void updateDraftExercises((current) =>
+      current.map((e) => {
+        if (e.id !== loggedExerciseId) return e;
+        const lastSet = e.sets[e.sets.length - 1];
+        const newSet: LoggedSet = {
+          id: crypto.randomUUID(),
+          loggedExerciseId: e.id,
+          type: "working",
+          setOrder: (lastSet?.setOrder ?? -1) + 1,
+          reps: lastSet?.reps || 10,
+          weight: lastSet?.weight || 0,
+          completed: false,
+        };
+        return { ...e, sets: [...e.sets, newSet] };
+      })
+    );
   };
 
   const removeSet = (loggedExerciseId: string, setIndex: number) => {
-    const next = exercises.map((e) => {
-      if (e.id !== loggedExerciseId) return e;
-      return {
-        ...e,
-        sets: e.sets
-          .filter((_, i) => i !== setIndex)
-          .map((s, i) => ({ ...s, setOrder: i })),
-      };
-    });
-    void saveDraft({ exercises: next });
+    void updateDraftExercises((current) =>
+      current.map((e) => {
+        if (e.id !== loggedExerciseId) return e;
+        return {
+          ...e,
+          sets: e.sets
+            .filter((_, i) => i !== setIndex)
+            .map((s, i) => ({ ...s, setOrder: i })),
+        };
+      })
+    );
   };
 
   const updateSet = (
@@ -360,21 +365,23 @@ export function useActiveWorkout(
     setIndex: number,
     data: Partial<LoggedSet>
   ) => {
-    const next = exercises.map((e) => {
-      if (e.id !== loggedExerciseId) return e;
-      return {
-        ...e,
-        sets: e.sets.map((s, i) => (i === setIndex ? { ...s, ...data } : s)),
-      };
-    });
-    void saveDraft({ exercises: next });
+    void updateDraftExercises((current) =>
+      current.map((e) => {
+        if (e.id !== loggedExerciseId) return e;
+        return {
+          ...e,
+          sets: e.sets.map((s, i) => (i === setIndex ? { ...s, ...data } : s)),
+        };
+      })
+    );
   };
 
   const swapExercise = (loggedExerciseId: string, newExerciseId: string) => {
-    const next = exercises.map((e) =>
-      e.id === loggedExerciseId ? { ...e, exerciseId: newExerciseId } : e
+    void updateDraftExercises((current) =>
+      current.map((e) =>
+        e.id === loggedExerciseId ? { ...e, exerciseId: newExerciseId } : e
+      )
     );
-    void saveDraft({ exercises: next });
   };
 
   return {

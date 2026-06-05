@@ -1,3 +1,4 @@
+import { withoutDeleted } from "@/lib/db/active-records";
 import { db } from "@/lib/db/dexie";
 import { ensureSeeded } from "@/lib/db/seed-loader";
 import type { Exercise, WorkoutLog, WorkoutLogEntity } from "@/lib/db/types";
@@ -21,7 +22,12 @@ function attachExercisesToLogs(
 export async function getWorkoutLogs(limit = 20): Promise<WorkoutLogEntity[]> {
   await ensureSeeded();
   const [all, exerciseMap] = await Promise.all([
-    db.workoutLogs.orderBy("startedAt").reverse().limit(limit).toArray(),
+    db.workoutLogs
+      .orderBy("startedAt")
+      .reverse()
+      .filter((l) => !l.deletedAt)
+      .limit(limit)
+      .toArray(),
     getExerciseMap(),
   ]);
   return attachExercisesToLogs(all, exerciseMap);
@@ -30,14 +36,13 @@ export async function getWorkoutLogs(limit = 20): Promise<WorkoutLogEntity[]> {
 export async function getWorkoutLogById(id: string): Promise<WorkoutLogEntity | undefined> {
   await ensureSeeded();
   const [log, exerciseMap] = await Promise.all([db.workoutLogs.get(id), getExerciseMap()]);
-  if (!log) return undefined;
+  if (!log || log.deletedAt) return undefined;
   return attachExercisesToLogs([log], exerciseMap)[0];
 }
 
 export async function getExerciseHistory(exerciseId: string) {
   await ensureSeeded();
-  const all = await db.workoutLogs.toArray();
-  const logs = all
+  const logs = withoutDeleted(await db.workoutLogs.toArray())
     .filter((l) => l.exercises.some((e) => e.exerciseId === exerciseId))
     .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
 
@@ -55,8 +60,7 @@ export async function getExerciseHistory(exerciseId: string) {
 
 export async function getExerciseDetailedHistory(exerciseId: string) {
   await ensureSeeded();
-  const all = await db.workoutLogs.toArray();
-  const logs = all
+  const logs = withoutDeleted(await db.workoutLogs.toArray())
     .filter((l) => l.exercises.some((e) => e.exerciseId === exerciseId))
     .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
 
@@ -124,19 +128,13 @@ export async function updateWorkoutLog(
 
 export async function deleteWorkoutLog(id: string): Promise<void> {
   const existing = await db.workoutLogs.get(id);
-  if (!existing) return;
-  const now = new Date().toISOString();
-  const entity: WorkoutLogEntity = {
-    ...existing,
-    deletedAt: now,
-    revision: existing.revision + 1,
-    updatedAt: now,
-  };
-  await db.workoutLogs.put(entity);
+  if (!existing || existing.deletedAt) return;
+  const revision = existing.revision + 1;
   await enqueueSync({
     entityType: "workoutLog",
     entityId: id,
     operation: "delete",
-    revision: entity.revision,
+    revision,
   });
+  await db.workoutLogs.delete(id);
 }

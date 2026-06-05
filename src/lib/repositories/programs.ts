@@ -1,3 +1,4 @@
+import { isActiveRecord, withoutDeleted } from "@/lib/db/active-records";
 import { db } from "@/lib/db/dexie";
 import { ensureSeeded } from "@/lib/db/seed-loader";
 import type { ProgramEntity, WorkoutProgram, WorkoutSession } from "@/lib/db/types";
@@ -44,20 +45,20 @@ async function withAttachedExercises(program: ProgramEntity): Promise<ProgramEnt
 
 export async function getPrograms(): Promise<ProgramEntity[]> {
   await ensureSeeded();
-  const list = await db.programs.toArray();
+  const list = withoutDeleted(await db.programs.toArray());
   return Promise.all(list.map(withAttachedExercises));
 }
 
 export async function getActiveProgram(): Promise<ProgramEntity | undefined> {
   await ensureSeeded();
-  const active = await db.programs.filter((p) => p.isActive).first();
+  const active = await db.programs.filter((p) => p.isActive && !p.deletedAt).first();
   return active ? withAttachedExercises(active) : undefined;
 }
 
 export async function getProgramById(id: string): Promise<ProgramEntity | undefined> {
   await ensureSeeded();
   const program = await db.programs.get(id);
-  return program ? withAttachedExercises(program) : undefined;
+  return isActiveRecord(program) ? withAttachedExercises(program) : undefined;
 }
 
 export async function createProgram(data: ProgramInput): Promise<ProgramEntity> {

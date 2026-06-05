@@ -12,29 +12,49 @@ const EMPTY_DRAFT: WorkoutDraft = {
   updatedAt: new Date().toISOString(),
 };
 
+type DraftPatch = Partial<Omit<WorkoutDraft, "id" | "updatedAt">>;
+type DraftPatcher = DraftPatch | ((current: WorkoutDraft) => DraftPatch);
+
+let draftWriteChain: Promise<unknown> = Promise.resolve();
+
+function enqueueDraftWrite<T>(fn: () => Promise<T>): Promise<T> {
+  const result = draftWriteChain.then(fn);
+  draftWriteChain = result.catch(() => {});
+  return result;
+}
+
 export async function getDraft(): Promise<WorkoutDraft> {
   const draft = await db.workoutDrafts.get(DRAFT_ID);
   return draft ?? EMPTY_DRAFT;
 }
 
-export async function saveDraft(
-  patch: Partial<Omit<WorkoutDraft, "id" | "updatedAt">>
+export function saveDraft(patch: DraftPatcher): Promise<WorkoutDraft> {
+  return enqueueDraftWrite(async () => {
+    const current = await getDraft();
+    const resolved = typeof patch === "function" ? patch(current) : patch;
+    const draft: WorkoutDraft = {
+      ...current,
+      ...resolved,
+      id: DRAFT_ID,
+      updatedAt: new Date().toISOString(),
+    };
+    await db.workoutDrafts.put(draft);
+    return draft;
+  });
+}
+
+export function updateDraftExercises(
+  updater: (exercises: LoggedExercise[]) => LoggedExercise[]
 ): Promise<WorkoutDraft> {
-  const current = await getDraft();
-  const draft: WorkoutDraft = {
-    ...current,
-    ...patch,
-    id: DRAFT_ID,
-    updatedAt: new Date().toISOString(),
-  };
-  await db.workoutDrafts.put(draft);
-  return draft;
+  return saveDraft((current) => ({ exercises: updater(current.exercises) }));
 }
 
 export async function clearDraft(): Promise<void> {
-  await db.workoutDrafts.put({
-    ...EMPTY_DRAFT,
-    updatedAt: new Date().toISOString(),
+  await saveDraft({
+    activeWorkoutId: null,
+    sessionId: null,
+    exercises: [],
+    startedAt: null,
   });
 }
 

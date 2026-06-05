@@ -1,3 +1,4 @@
+import { isActiveRecord, withoutDeleted } from "@/lib/db/active-records";
 import { db } from "@/lib/db/dexie";
 import { ensureSeeded } from "@/lib/db/seed-loader";
 import type { Exercise, ExerciseEntity, ExerciseFilters } from "@/lib/db/types";
@@ -37,17 +38,18 @@ export function filterExercises(
 
 export async function getExercises(filters?: ExerciseFilters): Promise<ExerciseEntity[]> {
   await ensureSeeded();
-  const all = await db.exercises.toArray();
+  const all = withoutDeleted(await db.exercises.toArray());
   return filterExercises(all, filters) as ExerciseEntity[];
 }
 
 export async function getExerciseById(id: string): Promise<ExerciseEntity | undefined> {
   await ensureSeeded();
-  return db.exercises.get(id);
+  const exercise = await db.exercises.get(id);
+  return isActiveRecord(exercise) ? exercise : undefined;
 }
 
 export async function getExerciseMap(): Promise<Map<string, ExerciseEntity>> {
-  const all = await db.exercises.toArray();
+  const all = withoutDeleted(await db.exercises.toArray());
   return new Map(all.map((e) => [e.id, e]));
 }
 

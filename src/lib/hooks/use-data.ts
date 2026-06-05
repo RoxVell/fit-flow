@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { isActiveRecord, withoutDeleted } from "@/lib/db/active-records";
 import { db } from "@/lib/db/dexie";
 import type {
   DashboardStats,
@@ -16,7 +17,7 @@ import type { ProgramEntity } from "@/lib/db/types";
 import { bestE1RM, bestWeight, volume } from "@/lib/training-metrics";
 
 async function attachPrograms(programs: ProgramEntity[]) {
-  const exercises = await db.exercises.toArray();
+  const exercises = withoutDeleted(await db.exercises.toArray());
   const map = new Map(exercises.map((e) => [e.id, e]));
   return programs.map((p) => ({
     ...p,
@@ -26,7 +27,7 @@ async function attachPrograms(programs: ProgramEntity[]) {
 
 export function useExercises(filters?: ExerciseFilters) {
   return useLiveQuery(async () => {
-    const all = await db.exercises.toArray();
+    const all = withoutDeleted(await db.exercises.toArray());
     return filterExercises(all, filters);
   }, [
     filters?.muscleGroup,
@@ -38,16 +39,22 @@ export function useExercises(filters?: ExerciseFilters) {
 }
 
 export function useExercise(id: string) {
-  return useLiveQuery(() => db.exercises.get(id), [id]);
+  return useLiveQuery(async () => {
+    const exercise = await db.exercises.get(id);
+    return isActiveRecord(exercise) ? exercise : null;
+  }, [id]);
 }
 
 export function usePrograms() {
-  return useLiveQuery(async () => attachPrograms(await db.programs.toArray()), []);
+  return useLiveQuery(
+    async () => attachPrograms(withoutDeleted(await db.programs.toArray())),
+    []
+  );
 }
 
 export function useActiveProgram() {
   return useLiveQuery(async () => {
-    const active = await db.programs.filter((p) => p.isActive).first();
+    const active = await db.programs.filter((p) => p.isActive && !p.deletedAt).first();
     if (!active) return null;
     const [program] = await attachPrograms([active]);
     return program;
@@ -57,7 +64,7 @@ export function useActiveProgram() {
 export function useProgram(id: string) {
   return useLiveQuery(async () => {
     const program = await db.programs.get(id);
-    if (!program) return undefined;
+    if (!isActiveRecord(program)) return null;
     const [attached] = await attachPrograms([program]);
     return attached;
   }, [id]);
@@ -65,30 +72,44 @@ export function useProgram(id: string) {
 
 export function useWorkoutLogs(limit = 20) {
   return useLiveQuery(
-    () => db.workoutLogs.orderBy("startedAt").reverse().limit(limit).toArray(),
+    () =>
+      db.workoutLogs
+        .orderBy("startedAt")
+        .reverse()
+        .filter((l) => !l.deletedAt)
+        .limit(limit)
+        .toArray(),
     [limit]
   );
 }
 
 export function useWorkoutLog(id: string) {
-  return useLiveQuery(() => db.workoutLogs.get(id), [id]);
+  return useLiveQuery(async () => {
+    const log = await db.workoutLogs.get(id);
+    return isActiveRecord(log) ? log : null;
+  }, [id]);
 }
 
 export function useBodyMeasurements() {
   return useLiveQuery(async () => {
-    const all = await db.bodyMeasurements.toArray();
-    return all.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return withoutDeleted(await db.bodyMeasurements.toArray()).sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
   }, []);
 }
 
 export function usePersonalRecords() {
-  return useLiveQuery(() => db.personalRecords.toArray(), []);
+  return useLiveQuery(
+    () => db.personalRecords.filter((r) => !r.deletedAt).toArray(),
+    []
+  );
 }
 
 export function useCardioSessions() {
   return useLiveQuery(async () => {
-    const all = await db.cardioSessions.toArray();
-    return all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return withoutDeleted(await db.cardioSessions.toArray()).sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
   }, []);
 }
 
@@ -187,8 +208,7 @@ export function useDashboardStats(): DashboardStats | undefined {
 
 export function useExerciseHistory(exerciseId: string) {
   return useLiveQuery(async () => {
-    const all = await db.workoutLogs.toArray();
-    const logs = all
+    const logs = withoutDeleted(await db.workoutLogs.toArray())
       .filter((l) => l.exercises.some((e) => e.exerciseId === exerciseId))
       .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
 
@@ -207,8 +227,7 @@ export function useExerciseHistory(exerciseId: string) {
 
 export function useExerciseDetailedHistory(exerciseId: string) {
   return useLiveQuery(async () => {
-    const all = await db.workoutLogs.toArray();
-    const logs = all
+    const logs = withoutDeleted(await db.workoutLogs.toArray())
       .filter((l) => l.exercises.some((e) => e.exerciseId === exerciseId))
       .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
 

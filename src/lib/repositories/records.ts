@@ -1,3 +1,4 @@
+import { withoutDeleted } from "@/lib/db/active-records";
 import { db } from "@/lib/db/dexie";
 import { ensureSeeded } from "@/lib/db/seed-loader";
 import type {
@@ -11,7 +12,7 @@ import { enqueueSync } from "@/lib/sync/queue";
 
 export async function getPersonalRecords(): Promise<PersonalRecordEntity[]> {
   await ensureSeeded();
-  return db.personalRecords.toArray();
+  return withoutDeleted(await db.personalRecords.toArray());
 }
 
 export function createPRsFromWorkout(
