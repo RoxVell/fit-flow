@@ -42,8 +42,6 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
 
   const hasRequired = set.weight > 0 && set.reps > 0;
   const canToggleComplete = set.completed || hasRequired;
-  const displayWeight = set.weight || (previousSet ? previousSet.weight : "");
-  const displayReps = set.reps || (previousSet ? previousSet.reps : "");
 
   return (
     <div className="relative overflow-hidden">
@@ -81,10 +79,13 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
           <Input
             type="number"
             inputMode="decimal"
-            value={displayWeight}
-            onChange={(e) => onUpdate({ weight: parseFloat(e.target.value) || 0 })}
+            value={set.weight === 0 ? "" : set.weight}
+            onChange={(e) => {
+              const v = e.target.value;
+              onUpdate({ weight: v === "" ? 0 : parseFloat(v) || 0 });
+            }}
             className="h-8 w-16 shrink-0 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-muted-foreground/30"
-            placeholder={previousSet ? "" : "kg"}
+            placeholder={previousSet ? String(previousSet.weight) : "kg"}
           />
 
           <span className="w-3 shrink-0 text-center text-sm text-muted-foreground/40">×</span>
@@ -92,10 +93,13 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
           <Input
             type="number"
             inputMode="numeric"
-            value={displayReps}
-            onChange={(e) => onUpdate({ reps: parseInt(e.target.value) || 0 })}
+            value={set.reps === 0 ? "" : set.reps}
+            onChange={(e) => {
+              const v = e.target.value;
+              onUpdate({ reps: v === "" ? 0 : parseInt(v, 10) || 0 });
+            }}
             className="h-8 w-12 shrink-0 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-muted-foreground/30"
-            placeholder={previousSet ? "" : "r"}
+            placeholder={previousSet ? String(previousSet.reps) : "r"}
           />
 
           <button
