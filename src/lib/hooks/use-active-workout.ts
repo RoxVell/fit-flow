@@ -26,6 +26,7 @@ export interface UseActiveWorkoutResult {
   exerciseMap: Map<string, Exercise>;
   previousSetsMap: Map<string, ({ weight: number; reps: number } | null)[]>;
   activeExerciseId: string | undefined;
+  activeWorkoutId: string | null;
   exercises: LoggedExercise[];
   elapsed: number;
   minutes: number;
@@ -388,6 +389,7 @@ export function useActiveWorkout(
     exerciseMap,
     previousSetsMap,
     activeExerciseId,
+    activeWorkoutId,
     exercises,
     elapsed,
     minutes,

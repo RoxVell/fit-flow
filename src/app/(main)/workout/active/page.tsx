@@ -41,6 +41,7 @@ function ActiveWorkoutContent({
     exerciseMap,
     previousSetsMap,
     activeExerciseId,
+    activeWorkoutId,
     exercises,
     minutes,
     seconds,
@@ -71,7 +72,7 @@ function ActiveWorkoutContent({
   const [addSearch, setAddSearch] = useState("");
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
 
-  if (exercises.length === 0 && !showTriumph) {
+  if (!activeWorkoutId && !showTriumph) {
     return (
       <div className="flex items-center justify-center h-full p-4">
         <p className="text-muted-foreground">Starting workout...</p>
