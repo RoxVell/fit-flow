@@ -22,6 +22,8 @@ export interface SyncRequest {
 
 export interface SyncResponse {
   accepted: string[];
+  /** Stale client changes dropped from queue; server state wins via pull */
+  superseded: string[];
   rejected: Array<{ id: string; reason: string }>;
   serverChanges: ServerChange[];
   serverTime: string;

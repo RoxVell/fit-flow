@@ -51,7 +51,7 @@ export async function sync(): Promise<SyncResponse | null> {
     }
 
     const data = (await res.json()) as SyncResponse;
-    await markSynced(data.accepted);
+    await markSynced([...data.accepted, ...(data.superseded ?? [])]);
     await applyServerChanges(data.serverChanges);
     await setAppMeta({
       initialized: true,

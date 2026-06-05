@@ -129,9 +129,16 @@ async function shouldApply(entityType: EntityType, entityId: string, revision: n
   return revision > row.revision;
 }
 
-async function applyChange(change: SyncChange): Promise<boolean> {
+type ApplyResult =
+  | { ok: true; applied: true }
+  | { ok: true; applied: false; reason: "superseded" }
+  | { ok: false; reason: string };
+
+async function applyChange(change: SyncChange): Promise<ApplyResult> {
   const canApply = await shouldApply(change.entityType, change.entityId, change.revision);
-  if (!canApply) return true;
+  if (!canApply) {
+    return { ok: true, applied: false, reason: "superseded" };
+  }
 
   const now = new Date();
 
@@ -157,13 +164,13 @@ async function applyChange(change: SyncChange): Promise<boolean> {
         await db.update(personalRecords).set(patch).where(eq(personalRecords.id, change.entityId));
         break;
       default:
-        return false;
+        return { ok: false, reason: "Unknown entity type" };
     }
-    return true;
+    return { ok: true, applied: true };
   }
 
   const payload = change.payload as Record<string, unknown>;
-  if (!payload) return false;
+  if (!payload) return { ok: false, reason: "Missing payload" };
 
   switch (change.entityType) {
     case "exercise": {
@@ -200,7 +207,7 @@ async function applyChange(change: SyncChange): Promise<boolean> {
           deletedAt: null,
         },
       });
-      return true;
+      return { ok: true, applied: true };
     }
     case "program": {
       const p = payload as ReturnType<typeof mapProgram>;
@@ -229,7 +236,7 @@ async function applyChange(change: SyncChange): Promise<boolean> {
           deletedAt: null,
         },
       });
-      return true;
+      return { ok: true, applied: true };
     }
     case "workoutLog": {
       const p = payload as ReturnType<typeof mapWorkoutLog>;
@@ -263,7 +270,7 @@ async function applyChange(change: SyncChange): Promise<boolean> {
           deletedAt: null,
         },
       });
-      return true;
+      return { ok: true, applied: true };
     }
     case "bodyMeasurement": {
       const p = payload as ReturnType<typeof mapBodyMeasurement>;
@@ -297,7 +304,7 @@ async function applyChange(change: SyncChange): Promise<boolean> {
           deletedAt: null,
         },
       });
-      return true;
+      return { ok: true, applied: true };
     }
     case "cardioSession": {
       const p = payload as ReturnType<typeof mapCardioSession>;
@@ -327,7 +334,7 @@ async function applyChange(change: SyncChange): Promise<boolean> {
           deletedAt: null,
         },
       });
-      return true;
+      return { ok: true, applied: true };
     }
     case "personalRecord": {
       const p = payload as ReturnType<typeof mapPersonalRecord>;
@@ -357,10 +364,10 @@ async function applyChange(change: SyncChange): Promise<boolean> {
           deletedAt: null,
         },
       });
-      return true;
+      return { ok: true, applied: true };
     }
     default:
-      return false;
+      return { ok: false, reason: "Unknown entity type" };
   }
 }
 
@@ -436,13 +443,21 @@ export async function handleSync(
   await ensureServerSeeded();
 
   const accepted: string[] = [];
+  const superseded: string[] = [];
   const rejected: Array<{ id: string; reason: string }> = [];
+  const appliedEntityIds = new Set<string>();
 
   for (const change of changes) {
     try {
-      const ok = await applyChange(change);
-      if (ok) accepted.push(change.id);
-      else rejected.push({ id: change.id, reason: "Unknown entity type" });
+      const result = await applyChange(change);
+      if (result.ok && result.applied) {
+        accepted.push(change.id);
+        appliedEntityIds.add(change.entityId);
+      } else if (result.ok && !result.applied) {
+        superseded.push(change.id);
+      } else {
+        rejected.push({ id: change.id, reason: result.reason });
+      }
     } catch (err) {
       rejected.push({
         id: change.id,
@@ -451,8 +466,11 @@ export async function handleSync(
     }
   }
 
-  const serverChanges = await pullChanges(lastPullAt);
+  const serverChanges = (await pullChanges(lastPullAt)).filter((sc) => {
+    const id = (sc.entity as { id?: string })?.id;
+    return !id || !appliedEntityIds.has(id);
+  });
   const serverTime = new Date().toISOString();
 
-  return { accepted, rejected, serverChanges, serverTime };
+  return { accepted, superseded, rejected, serverChanges, serverTime };
 }

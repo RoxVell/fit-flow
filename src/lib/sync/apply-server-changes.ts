@@ -8,6 +8,7 @@ import type {
   ProgramEntity,
   WorkoutLogEntity,
 } from "@/lib/db/types";
+import { hasPendingDelete } from "./queue";
 import type { ServerChange } from "./types";
 
 type AnyEntity =
@@ -94,6 +95,13 @@ export async function applyServerChanges(changes: ServerChange[]): Promise<void>
 
     const localRevision = await getLocalRevision(change.entityType, entity.id);
     if (localRevision !== null && localRevision > change.revision) {
+      continue;
+    }
+    if (
+      localRevision === null &&
+      !entity.deletedAt &&
+      (await hasPendingDelete(change.entityType, entity.id))
+    ) {
       continue;
     }
     await applyEntity(change.entityType, entity);

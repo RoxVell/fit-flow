@@ -49,3 +49,20 @@ export async function markSynced(ids: string[]): Promise<void> {
 export async function pendingCount(): Promise<number> {
   return db.syncQueue.where("status").equals("pending").count();
 }
+
+export async function hasPendingDelete(
+  entityType: EntityType,
+  entityId: string
+): Promise<boolean> {
+  const count = await db.syncQueue
+    .where("status")
+    .equals("pending")
+    .filter(
+      (e) =>
+        e.entityType === entityType &&
+        e.entityId === entityId &&
+        e.operation === "delete"
+    )
+    .count();
+  return count > 0;
+}
