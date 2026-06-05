@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { SetRow } from "./set-row";
 import type { LoggedExercise } from "@/lib/db/types";
 import { MUSCLE_GROUP_LABELS } from "@/lib/utils/constants";
-import { useExercises } from "@/lib/hooks/use-queries";
+import { useExercises } from "@/lib/hooks/use-data";
 import {
   Dialog,
   DialogContent,
@@ -48,7 +48,7 @@ export function ExerciseCard({
   const [collapsed, setCollapsed] = useState(false);
   const [showSwap, setShowSwap] = useState(false);
   const [swapSearch, setSwapSearch] = useState("");
-  const { data: swapExercises } = useExercises({
+  const swapExercises = useExercises({
     search: swapSearch || undefined,
   });
 

@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useBodyMeasurements } from "@/lib/hooks/use-queries";
+import { useBodyMeasurements } from "@/lib/hooks/use-data";
 
 const COLORS = ["var(--color-primary)", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
@@ -24,7 +24,7 @@ const measurementConfig = [
 ];
 
 export function BodyTab() {
-  const { data: measurements } = useBodyMeasurements();
+  const measurements = useBodyMeasurements();
 
   const chartData = measurements?.map((m) => ({
     date: new Date(m.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),

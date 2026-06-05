@@ -1,7 +1,7 @@
 "use client";
 
 import { Trophy, Dumbbell, TrendingUp } from "lucide-react";
-import { usePersonalRecords } from "@/lib/hooks/use-queries";
+import { usePersonalRecords } from "@/lib/hooks/use-data";
 
 const prLabels: Record<string, string> = {
   weight: "Max Weight",
@@ -16,7 +16,7 @@ const prUnits: Record<string, string> = {
 };
 
 export function RecentPRs() {
-  const { data: records } = usePersonalRecords();
+  const records = usePersonalRecords();
 
   if (!records || records.length === 0) return null;
 

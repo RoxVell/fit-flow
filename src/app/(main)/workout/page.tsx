@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useMemo, useEffect, useSyncExternalStore } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Play, Dumbbell, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useActiveProgram } from "@/lib/hooks/use-queries";
+import { useActiveProgram, useWorkoutDraft } from "@/lib/hooks/use-data";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useWorkoutStore } from "@/lib/store/workout-store";
 import {
   Dialog,
   DialogContent,
@@ -19,20 +18,16 @@ const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function WorkoutPlanPage() {
   const router = useRouter();
-  const { data: program, isLoading } = useActiveProgram();
+  const program = useActiveProgram();
+  const draft = useWorkoutDraft();
   const today = new Date().getDay();
-  const activeWorkoutId = useWorkoutStore((s) => s.activeWorkoutId);
-  const hydrated = useSyncExternalStore(
-    (cb) => useWorkoutStore.persist.onFinishHydration(cb),
-    () => useWorkoutStore.persist.hasHydrated(),
-    () => false
-  );
 
   useEffect(() => {
-    if (hydrated && activeWorkoutId) {
-      router.replace("/workout/active");
+    if (draft === undefined) return;
+    if (draft?.activeWorkoutId && draft.sessionId) {
+      router.replace(`/workout/active?session=${draft.sessionId}`);
     }
-  }, [hydrated, activeWorkoutId, router]);
+  }, [draft, router]);
 
   const recommendedId = useMemo(() => {
     if (!program) return null;
@@ -51,17 +46,7 @@ export default function WorkoutPlanPage() {
     return program.sessions.find((s) => s.id === effectiveId) || null;
   }, [program, effectiveId]);
 
-  if (hydrated && activeWorkoutId) {
-    return (
-      <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
-        <Skeleton className="h-8 w-32 rounded-lg" />
-        <Skeleton className="h-12 w-full rounded-xl" />
-        <Skeleton className="h-64 w-full rounded-xl" />
-      </div>
-    );
-  }
-
-  if (isLoading) {
+  if (program === undefined || draft === undefined) {
     return (
       <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
         <Skeleton className="h-8 w-32 rounded-lg" />
@@ -184,8 +169,7 @@ export default function WorkoutPlanPage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium">{s.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {DAY_LABELS[s.dayOfWeek % 7]} &middot;{" "}
-                      {s.exercises.length} exercises
+                      {DAY_LABELS[s.dayOfWeek % 7]} &middot; {s.exercises.length} exercises
                     </p>
                   </div>
                   {s.id === recommendedId && (

@@ -4,12 +4,12 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CardioForm } from "@/components/cardio/cardio-form";
-import { useCardioSessions } from "@/lib/hooks/use-queries";
+import { useCardioSessions } from "@/lib/hooks/use-data";
 import { formatDuration } from "@/lib/utils/calculations";
 
 export default function CardioPage() {
   const router = useRouter();
-  const { data: sessions } = useCardioSessions();
+  const sessions = useCardioSessions();
 
   return (
     <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">

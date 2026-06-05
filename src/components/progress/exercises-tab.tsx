@@ -18,7 +18,7 @@ import {
   useExerciseHistory,
   useExerciseDetailedHistory,
   useExercises,
-} from "@/lib/hooks/use-queries";
+} from "@/lib/hooks/use-data";
 import {
   Select,
   SelectContent,
@@ -29,10 +29,10 @@ import {
 import { HistoryAccordion } from "@/components/progress/history-accordion";
 
 export function ExercisesTab() {
-  const { data: allExercises } = useExercises();
+  const allExercises = useExercises();
   const [selectedId, setSelectedId] = useState("ex1");
-  const { data: history } = useExerciseHistory(selectedId);
-  const { data: detailedHistory } = useExerciseDetailedHistory(selectedId);
+  const history = useExerciseHistory(selectedId);
+  const detailedHistory = useExerciseDetailedHistory(selectedId);
   const [chartType, setChartType] = useState<"1rm" | "volume">("1rm");
 
   const chartData = history?.map((h) => ({

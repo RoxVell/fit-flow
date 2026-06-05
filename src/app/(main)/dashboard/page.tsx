@@ -1,19 +1,18 @@
 "use client";
 
-import { useDashboardStats, useActiveProgram } from "@/lib/hooks/use-queries";
+import { useDashboardStats, useActiveProgram } from "@/lib/hooks/use-data";
 import { Greeting } from "@/components/dashboard/greeting";
 import { StartWorkoutButton } from "@/components/dashboard/start-workout-button";
 import { SmartStats } from "@/components/dashboard/smart-stats";
 import { RecentPRs } from "@/components/dashboard/recent-prs";
-import { CurrentProgram } from "@/components/dashboard/current-program";
 import { AiBriefingCard } from "@/components/ai/ai-briefing";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
-  const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  const { data: program, isLoading: programLoading } = useActiveProgram();
+  const stats = useDashboardStats();
+  const program = useActiveProgram();
 
-  if (statsLoading || programLoading) {
+  if (stats === undefined || program === undefined) {
     return (
       <div className="space-y-4 p-4">
         <Skeleton className="h-16 w-full rounded-2xl" />
@@ -28,14 +27,9 @@ export default function DashboardPage() {
     );
   }
 
-  const nextSession = stats?.nextSession
-    ? program?.sessions.find((s) => s.id === stats.nextSession!.id)
-    : undefined;
-
   return (
     <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <Greeting />
-
 
       {stats && (
         <SmartStats
@@ -51,15 +45,6 @@ export default function DashboardPage() {
       <AiBriefingCard />
 
       <StartWorkoutButton />
-
-      {/* {program && (
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Today's Program
-          </h2>
-          <CurrentProgram programName={program.name} session={nextSession} />
-        </div>
-      )} */}
     </div>
   );
 }

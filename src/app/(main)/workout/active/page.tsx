@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWorkoutStore } from "@/lib/store/workout-store";
-import { useExercises } from "@/lib/hooks/use-queries";
+import { useExercises } from "@/lib/hooks/use-data";
 import { useActiveWorkout } from "@/lib/hooks/use-active-workout";
 import { ExerciseCard } from "@/components/workout/exercise-card";
 import { RestTimer } from "@/components/workout/rest-timer";
@@ -35,12 +35,14 @@ function ActiveWorkoutContent({
   searchParams: Promise<{ session?: string }>;
 }) {
   const { session: sessionId } = use(searchParams);
-  const store = useWorkoutStore();
-  const { data: allExercises } = useExercises();
+  const restStore = useWorkoutStore();
+  const allExercises = useExercises();
   const {
     exerciseMap,
     previousSetsMap,
     activeExerciseId,
+    activeWorkoutId,
+    exercises,
     minutes,
     seconds,
     isPaused,
@@ -58,13 +60,19 @@ function ActiveWorkoutContent({
     triumphData,
     handleCloseTriumph,
     toggleSetCompleted,
+    addExercise,
+    removeExercise,
+    addSet,
+    removeSet,
+    updateSet,
+    swapExercise,
   } = useActiveWorkout(sessionId);
 
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [addSearch, setAddSearch] = useState("");
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
 
-  if (!store.activeWorkoutId && !showTriumph) {
+  if (!activeWorkoutId && !showTriumph) {
     return (
       <div className="flex items-center justify-center h-full p-4">
         <p className="text-muted-foreground">Starting workout...</p>
@@ -73,12 +81,11 @@ function ActiveWorkoutContent({
   }
 
   const addableExercises = allExercises?.filter(
-    (e) => !store.exercises.some((se) => se.exerciseId === e.id)
+    (e) => !exercises.some((se) => se.exerciseId === e.id)
   );
 
   return (
     <>
-      {/* Fixed header */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -96,21 +103,14 @@ function ActiveWorkoutContent({
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-              <span className="tabular-nums text-foreground">
-                {completedSetsCount}
-              </span>
+              <span className="tabular-nums text-foreground">{completedSetsCount}</span>
               <span className="text-muted-foreground/60">/</span>
               <span className="tabular-nums text-foreground">{totalSetsCount}</span>
               <span className="text-muted-foreground/60">·</span>
               <span className="tabular-nums">{totalVolume.toLocaleString()}</span>
               <span>kg</span>
             </div>
-            <Button
-              variant="default"
-              size="sm"
-              className="gap-1"
-              onClick={handleFinish}
-            >
+            <Button variant="default" size="sm" className="gap-1" onClick={handleFinish}>
               <StopCircle className="h-4 w-4" />
               Finish
             </Button>
@@ -118,10 +118,9 @@ function ActiveWorkoutContent({
         </div>
       </div>
 
-      {/* Scrollable content */}
       <div className="pt-[calc(env(safe-area-inset-top)+4rem)] pb-20 px-4">
         <AnimatePresence>
-          {store.exercises.map((ex) => {
+          {exercises.map((ex) => {
             const exercise = exerciseMap.get(ex.exerciseId);
             return (
               <motion.div
@@ -138,19 +137,18 @@ function ActiveWorkoutContent({
                   muscleGroup={exercise?.muscleGroup || "chest"}
                   previousSets={previousSetsMap.get(ex.id) || []}
                   isActive={ex.id === activeExerciseId}
-                  onAddSet={() => store.addSet(ex.id)}
-                  onRemoveSet={(idx) => store.removeSet(ex.id, idx)}
-                  onUpdateSet={(idx, data) => store.updateSet(ex.id, idx, data)}
+                  onAddSet={() => addSet(ex.id)}
+                  onRemoveSet={(idx) => removeSet(ex.id, idx)}
+                  onUpdateSet={(idx, data) => updateSet(ex.id, idx, data)}
                   onCompleteSet={(idx) => toggleSetCompleted(ex.id, idx)}
-                  onRemove={() => store.removeExercise(ex.id)}
-                  onSwap={(newId) => store.swapExercise(ex.id, newId)}
+                  onRemove={() => removeExercise(ex.id)}
+                  onSwap={(newId) => swapExercise(ex.id, newId)}
                 />
               </motion.div>
             );
           })}
         </AnimatePresence>
 
-        {/* Add exercise button */}
         <Dialog open={showAddExercise} onOpenChange={setShowAddExercise}>
           <Button
             variant="outline"
@@ -184,7 +182,7 @@ function ActiveWorkoutContent({
                     key={ex.id}
                     className="w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-muted transition-colors flex items-center justify-between"
                     onClick={() => {
-                      store.addExercise(ex.id);
+                      addExercise(ex.id);
                       setShowAddExercise(false);
                       setAddSearch("");
                     }}
@@ -206,16 +204,14 @@ function ActiveWorkoutContent({
         </Dialog>
       </div>
 
-      {/* Rest Timer */}
       <AnimatePresence>
         <RestTimer
-          endTime={store.restTimer.endTime}
-          isRunning={store.restTimer.isRunning}
-          onStop={store.stopRestTimer}
+          endTime={restStore.restTimer.endTime}
+          isRunning={restStore.restTimer.isRunning}
+          onStop={restStore.stopRestTimer}
         />
       </AnimatePresence>
 
-      {/* Confirm finish dialog */}
       {showConfirmFinish && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-sm rounded-xl bg-popover p-4 shadow-lg">
@@ -250,9 +246,7 @@ function ActiveWorkoutContent({
                   Cancel
                 </Button>
                 {completedSetsCount > 0 && (
-                  <Button onClick={confirmFinish}>
-                    Finish Anyway
-                  </Button>
+                  <Button onClick={confirmFinish}>Finish Anyway</Button>
                 )}
               </div>
             </div>
@@ -260,7 +254,6 @@ function ActiveWorkoutContent({
         </div>
       )}
 
-      {/* Confirm abandon dialog */}
       {showAbandonConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-xs rounded-xl bg-popover p-4 shadow-lg">
@@ -280,7 +273,6 @@ function ActiveWorkoutContent({
         </div>
       )}
 
-      {/* Triumph screen */}
       <AnimatePresence>
         {showTriumph && (
           <TriumphScreen
@@ -305,11 +297,13 @@ export default function ActiveWorkoutPage({
   searchParams: Promise<{ session?: string }>;
 }) {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-full p-4">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-full p-4">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      }
+    >
       <ActiveWorkoutContent searchParams={searchParams} />
     </Suspense>
   );

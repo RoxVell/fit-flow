@@ -5,19 +5,29 @@ import { useRouter } from "next/navigation";
 import { useWorkoutStore } from "@/lib/store/workout-store";
 import {
   useActiveProgram,
-  useCreatePersonalRecord,
-  useCreateWorkoutLog,
   useExercises,
+  useWorkoutDraft,
   useWorkoutLogs,
-} from "@/lib/hooks/use-queries";
-import { createPRsFromWorkout } from "@/lib/db/queries";
+} from "@/lib/hooks/use-data";
+import { createPRsFromWorkout } from "@/lib/repositories/records";
+import { createPersonalRecord } from "@/lib/repositories/records";
+import { createWorkoutLog } from "@/lib/repositories/workouts";
+import { clearDraft, initDraft, updateDraftExercises } from "@/lib/repositories/drafts";
 import { volume } from "@/lib/training-metrics";
-import type { Exercise, PersonalRecord, WorkoutLog } from "@/lib/db/types";
+import type {
+  Exercise,
+  LoggedExercise,
+  LoggedSet,
+  PersonalRecord,
+  WorkoutLog,
+} from "@/lib/db/types";
 
 export interface UseActiveWorkoutResult {
   exerciseMap: Map<string, Exercise>;
   previousSetsMap: Map<string, ({ weight: number; reps: number } | null)[]>;
   activeExerciseId: string | undefined;
+  activeWorkoutId: string | null;
+  exercises: LoggedExercise[];
   elapsed: number;
   minutes: number;
   seconds: number;
@@ -36,39 +46,40 @@ export interface UseActiveWorkoutResult {
   triumphData: { volume: number; minutes: number; seconds: number } | null;
   handleCloseTriumph: () => void;
   toggleSetCompleted: (exerciseId: string, setIndex: number) => void;
+  addExercise: (exerciseId: string) => void;
+  removeExercise: (loggedExerciseId: string) => void;
+  addSet: (loggedExerciseId: string) => void;
+  removeSet: (loggedExerciseId: string, setIndex: number) => void;
+  updateSet: (loggedExerciseId: string, setIndex: number, data: Partial<LoggedSet>) => void;
+  swapExercise: (loggedExerciseId: string, newExerciseId: string) => void;
 }
 
-/**
- * Owns the active-workout lifecycle: timer tick, session bootstrap,
- * finish orchestration (PR generation + mutation dispatch), and the
- * pure derivations the page renders.
- *
- * Test surface (callable in isolation, no React tree required):
- *   - createPRsFromWorkout(loggedExercises, exerciseMap, completedAt):
- *     empty input -> empty array; completed sets with weight>0 -> a
- *     weight PR; completed sets with sum(w*r)>0 -> a volume PR; the
- *     estimated_1rm PRType is defined but not emitted (gap preserved).
- *   - useActiveWorkout returns the full surface above; the page
- *     consumes it as data + actions, the render tree mounts in JSX.
- */
 export function useActiveWorkout(
   sessionId: string | undefined
 ): UseActiveWorkoutResult {
   const router = useRouter();
-  const store = useWorkoutStore();
-  const { data: allExercises } = useExercises();
-  const { data: program, isLoading: programLoading } = useActiveProgram();
-  const createWorkoutLog = useCreateWorkoutLog();
-  const createPersonalRecord = useCreatePersonalRecord();
-  const { data: workoutLogs } = useWorkoutLogs(10);
+  const restStore = useWorkoutStore();
+  const draft = useWorkoutDraft();
+  const allExercises = useExercises();
+  const program = useActiveProgram();
+  const workoutLogs = useWorkoutLogs(10);
+
+  const exercises = draft?.exercises ?? [];
+  const startedAt = draft?.startedAt ?? null;
+  const activeWorkoutId = draft?.activeWorkoutId ?? null;
 
   const [isPaused, setIsPaused] = useState(false);
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
   const [showTriumph, setShowTriumph] = useState(false);
   const [newRecords, setNewRecords] = useState<PersonalRecord[]>([]);
-  const [triumphData, setTriumphData] = useState<{ volume: number; minutes: number; seconds: number } | null>(null);
+  const [triumphData, setTriumphData] = useState<{
+    volume: number;
+    minutes: number;
+    seconds: number;
+  } | null>(null);
   const [lastActiveExerciseId, setLastActiveExerciseId] = useState<string | null>(null);
   const hasFinishedRef = useRef(false);
+  const hasBootstrapped = useRef(false);
 
   const nowSec = useSyncExternalStore(
     (cb) => {
@@ -79,11 +90,8 @@ export function useActiveWorkout(
     () => 0
   );
 
-  const computedElapsed = store.startedAt
-    ? Math.max(
-        0,
-        nowSec - Math.floor(new Date(store.startedAt).getTime() / 1000)
-      )
+  const computedElapsed = startedAt
+    ? Math.max(0, nowSec - Math.floor(new Date(startedAt).getTime() / 1000))
     : 0;
 
   const [frozenElapsed, setFrozenElapsed] = useState<number | null>(null);
@@ -94,23 +102,19 @@ export function useActiveWorkout(
   }
   const elapsed = frozenElapsed ?? computedElapsed;
 
-  const hasHydrated = useSyncExternalStore(
-    (cb) => useWorkoutStore.persist.onFinishHydration(cb),
-    () => useWorkoutStore.persist.hasHydrated(),
-    () => false
-  );
-
-  const hasBootstrapped = useRef(false);
-
   useEffect(() => {
     if (hasBootstrapped.current) return;
-    if (store.activeWorkoutId) return;
-    if (!hasHydrated) return;
+    if (draft === undefined) return;
+    if (draft?.activeWorkoutId) return;
     if (!sessionId) {
       router.replace("/workout");
       return;
     }
-    if (programLoading || !program) return;
+    if (program === undefined) return;
+    if (!program) {
+      router.replace("/workout");
+      return;
+    }
 
     const session = program.sessions.find((s) => s.id === sessionId);
     if (!session) {
@@ -118,26 +122,40 @@ export function useActiveWorkout(
       return;
     }
 
-    const exercises = session.exercises
-      .filter((se) => se.exercise)
-      .map((se) => ({
-        exerciseId: se.exerciseId,
-        sets: se.targetSets,
-      }));
+    const initialExercises = session.exercises
+      .filter((se) => se.exerciseId)
+      .map((se) => {
+        const leId = crypto.randomUUID();
+        return {
+          id: leId,
+          exerciseId: se.exerciseId,
+          workoutLogId: sessionId,
+          sortOrder: se.sortOrder,
+          sets: Array.from({ length: se.targetSets }, (_, si) => ({
+            id: crypto.randomUUID(),
+            loggedExerciseId: leId,
+            type: si === 0 ? ("warmup" as const) : ("working" as const),
+            setOrder: si,
+            reps: 0,
+            weight: 0,
+            completed: false,
+          })),
+        };
+      });
 
     hasBootstrapped.current = true;
-    store.startWorkout(sessionId, exercises);
-  }, [sessionId, program, programLoading, store.activeWorkoutId, hasHydrated]);
+    void initDraft(sessionId, sessionId, initialExercises, new Date().toISOString());
+  }, [sessionId, program, draft, router]);
 
   const exerciseMap = useMemo(
-    () => new Map(allExercises?.map((e) => [e.id, e])),
+    () => new Map((allExercises ?? []).map((e) => [e.id, e])),
     [allExercises]
   );
 
   const previousSetsMap = useMemo(() => {
     const map = new Map<string, ({ weight: number; reps: number } | null)[]>();
     if (!workoutLogs) return map;
-    for (const ex of store.exercises) {
+    for (const ex of exercises) {
       for (const log of workoutLogs) {
         const loggedEx = log.exercises.find((e) => e.exerciseId === ex.exerciseId);
         if (loggedEx) {
@@ -150,44 +168,41 @@ export function useActiveWorkout(
       }
     }
     return map;
-  }, [workoutLogs, store.exercises]);
+  }, [workoutLogs, exercises]);
 
   const totalVolume = useMemo(
-    () => volume(store.exercises.flatMap((e) => e.sets.filter((s) => s.completed))),
-    [store.exercises]
+    () => volume(exercises.flatMap((e) => e.sets.filter((s) => s.completed))),
+    [exercises]
   );
 
   const completedSetsCount = useMemo(
-    () =>
-      store.exercises.reduce(
-        (sum, e) => sum + e.sets.filter((s) => s.completed).length,
-        0
-      ),
-    [store.exercises]
+    () => exercises.reduce((sum, e) => sum + e.sets.filter((s) => s.completed).length, 0),
+    [exercises]
   );
 
   const totalSetsCount = useMemo(
-    () => store.exercises.reduce((sum, e) => sum + e.sets.length, 0),
-    [store.exercises]
+    () => exercises.reduce((sum, e) => sum + e.sets.length, 0),
+    [exercises]
   );
 
   const activeExerciseId = useMemo(() => {
     const lastEx = lastActiveExerciseId
-      ? store.exercises.find((e) => e.id === lastActiveExerciseId)
+      ? exercises.find((e) => e.id === lastActiveExerciseId)
       : null;
-    if (lastEx && lastEx.sets.some((s) => !s.completed)) {
-      return lastEx.id;
-    }
+    if (lastEx && lastEx.sets.some((s) => !s.completed)) return lastEx.id;
     return (
-      store.exercises.find((ex) => ex.sets.some((s) => !s.completed))?.id ||
-      store.exercises[store.exercises.length - 1]?.id
+      exercises.find((ex) => ex.sets.some((s) => !s.completed))?.id ||
+      exercises[exercises.length - 1]?.id
     );
-  }, [lastActiveExerciseId, store.exercises]);
+  }, [lastActiveExerciseId, exercises]);
 
   const incompleteExists = useMemo(
-    () => store.exercises.some((ex) => ex.sets.some((s) => !s.completed)),
-    [store.exercises]
+    () => exercises.some((ex) => ex.sets.some((s) => !s.completed)),
+    [exercises]
   );
+
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = elapsed % 60;
 
   const finish = () => {
     if (hasFinishedRef.current) return;
@@ -196,39 +211,32 @@ export function useActiveWorkout(
     const session = program?.sessions.find((s) => s.id === sessionId);
     const completedAt = new Date().toISOString();
 
-    const log: Omit<WorkoutLog, "id"> = {
-      startedAt: store.startedAt ?? completedAt,
+    const log: Omit<WorkoutLog, "id" | "revision" | "updatedAt"> = {
+      startedAt: startedAt ?? completedAt,
       endedAt: completedAt,
       programId: program?.id,
       sessionId,
       programName: program?.name,
       sessionName: session?.name,
-      exercises: store.exercises,
+      exercises,
     };
 
-    const records = createPRsFromWorkout(
-      store.exercises,
-      exerciseMap,
-      completedAt
-    );
-
+    const records = createPRsFromWorkout(exercises, exerciseMap, completedAt);
     const capturedVolume = totalVolume;
     const capturedMinutes = minutes;
     const capturedSeconds = seconds;
 
-    void createWorkoutLog.mutateAsync(log).catch((err) => {
+    void createWorkoutLog(log).catch((err) => {
       console.warn("[finishWorkout] createWorkoutLog failed", err);
     });
     for (const rec of records) {
       const { id: _id, ...payload } = rec;
-      void createPersonalRecord.mutateAsync(
-        payload as Omit<PersonalRecord, "id">
-      ).catch((err) => {
+      void createPersonalRecord(payload).catch((err) => {
         console.warn("[finishWorkout] createPersonalRecord failed", err);
       });
     }
 
-    store.reset();
+    void clearDraft();
     setNewRecords(records);
     setTriumphData({
       volume: capturedVolume,
@@ -253,28 +261,136 @@ export function useActiveWorkout(
   };
 
   const handleCloseTriumph = () => {
-    store.reset();
+    void clearDraft();
     router.push("/dashboard");
   };
 
   const abandonWorkout = () => {
-    store.reset();
+    void clearDraft();
     router.push("/workout");
   };
 
   const toggleSetCompleted = (exerciseId: string, setIndex: number) => {
-    const before = store.exercises.find((e) => e.id === exerciseId)?.sets[setIndex];
-    store.toggleSetCompleted(exerciseId, setIndex);
-    if (before && !before.completed) setLastActiveExerciseId(exerciseId);
+    const before = exercises.find((e) => e.id === exerciseId)?.sets[setIndex];
+    if (!before) return;
+    const willComplete = !before.completed;
+    if (willComplete && (before.weight === 0 || before.reps === 0)) return;
+
+    void updateDraftExercises((current) =>
+      current.map((e) =>
+        e.id !== exerciseId
+          ? e
+          : {
+              ...e,
+              sets: e.sets.map((s, i) =>
+                i === setIndex ? { ...s, completed: willComplete } : s
+              ),
+            }
+      )
+    );
+    if (willComplete) {
+      restStore.startRestTimer(90);
+      setLastActiveExerciseId(exerciseId);
+    }
   };
 
-  const minutes = Math.floor(elapsed / 60);
-  const seconds = elapsed % 60;
+  const addExercise = (exerciseId: string) => {
+    void updateDraftExercises((current) => {
+      const id = crypto.randomUUID();
+      return [
+        ...current,
+        {
+          id,
+          exerciseId,
+          workoutLogId: activeWorkoutId ?? id,
+          sortOrder: current.length,
+          sets: [
+            {
+              id: crypto.randomUUID(),
+              loggedExerciseId: id,
+              type: "working",
+              setOrder: 0,
+              reps: 0,
+              weight: 0,
+              completed: false,
+            },
+          ],
+        },
+      ];
+    });
+  };
+
+  const removeExercise = (loggedExerciseId: string) => {
+    void updateDraftExercises((current) =>
+      current
+        .filter((e) => e.id !== loggedExerciseId)
+        .map((e, i) => ({ ...e, sortOrder: i }))
+    );
+  };
+
+  const addSet = (loggedExerciseId: string) => {
+    void updateDraftExercises((current) =>
+      current.map((e) => {
+        if (e.id !== loggedExerciseId) return e;
+        const lastSet = e.sets[e.sets.length - 1];
+        const newSet: LoggedSet = {
+          id: crypto.randomUUID(),
+          loggedExerciseId: e.id,
+          type: "working",
+          setOrder: (lastSet?.setOrder ?? -1) + 1,
+          reps: lastSet?.reps || 10,
+          weight: lastSet?.weight || 0,
+          completed: false,
+        };
+        return { ...e, sets: [...e.sets, newSet] };
+      })
+    );
+  };
+
+  const removeSet = (loggedExerciseId: string, setIndex: number) => {
+    void updateDraftExercises((current) =>
+      current.map((e) => {
+        if (e.id !== loggedExerciseId) return e;
+        return {
+          ...e,
+          sets: e.sets
+            .filter((_, i) => i !== setIndex)
+            .map((s, i) => ({ ...s, setOrder: i })),
+        };
+      })
+    );
+  };
+
+  const updateSet = (
+    loggedExerciseId: string,
+    setIndex: number,
+    data: Partial<LoggedSet>
+  ) => {
+    void updateDraftExercises((current) =>
+      current.map((e) => {
+        if (e.id !== loggedExerciseId) return e;
+        return {
+          ...e,
+          sets: e.sets.map((s, i) => (i === setIndex ? { ...s, ...data } : s)),
+        };
+      })
+    );
+  };
+
+  const swapExercise = (loggedExerciseId: string, newExerciseId: string) => {
+    void updateDraftExercises((current) =>
+      current.map((e) =>
+        e.id === loggedExerciseId ? { ...e, exerciseId: newExerciseId } : e
+      )
+    );
+  };
 
   return {
     exerciseMap,
     previousSetsMap,
     activeExerciseId,
+    activeWorkoutId,
+    exercises,
     elapsed,
     minutes,
     seconds,
@@ -293,5 +409,11 @@ export function useActiveWorkout(
     triumphData,
     handleCloseTriumph,
     toggleSetCompleted,
+    addExercise,
+    removeExercise,
+    addSet,
+    removeSet,
+    updateSet,
+    swapExercise,
   };
 }

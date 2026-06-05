@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useCreateCardioSession } from "@/lib/hooks/use-queries";
+import { createCardioSession } from "@/lib/repositories/cardio";
 import { calculatePace, formatPace } from "@/lib/utils/calculations";
 import type { CardioType } from "@/lib/db/types";
 
@@ -21,25 +21,28 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
   const [minutes, setMinutes] = useState("");
   const [seconds, setSeconds] = useState("");
   const [heartRate, setHeartRate] = useState("");
-  const mutation = useCreateCardioSession();
+  const [saving, setSaving] = useState(false);
 
   const totalMinutes = parseFloat(minutes) + parseFloat(seconds) / 60 || 0;
   const distKm = parseFloat(distance) || 0;
   const pace = calculatePace(totalMinutes, distKm);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const duration = parseFloat(minutes) * 60 + parseFloat(seconds);
     if (!distance || !duration) return;
-    mutation.mutate(
-      {
+    setSaving(true);
+    try {
+      await createCardioSession({
         type,
         distance: parseFloat(distance),
         duration,
         avgHeartRate: heartRate ? parseInt(heartRate) : undefined,
         date: new Date().toISOString(),
-      },
-      { onSuccess: () => onSuccess?.() }
-    );
+      });
+      onSuccess?.();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -111,10 +114,10 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
 
         <Button
           className="w-full"
-          onClick={handleSubmit}
-          disabled={!distance || !minutes || mutation.isPending}
+          onClick={() => void handleSubmit()}
+          disabled={!distance || !minutes || saving}
         >
-          {mutation.isPending ? "Saving..." : "Save Cardio"}
+          {saving ? "Saving..." : "Save Cardio"}
         </Button>
       </CardContent>
     </Card>

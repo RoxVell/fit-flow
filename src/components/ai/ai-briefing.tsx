@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { Sparkles, TrendingUp, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useWorkoutLogs, useExercises } from "@/lib/hooks/use-queries";
+import { useWorkoutLogs, useExercises } from "@/lib/hooks/use-data";
 import { generateBriefing, type AiBriefing } from "@/lib/ai/briefing";
 
 export function AiBriefingCard() {
-  const { data: logs, isLoading: logsLoading } = useWorkoutLogs(30);
-  const { data: exercises, isLoading: exLoading } = useExercises();
+  const logs = useWorkoutLogs(30);
+  const exercises = useExercises();
+  const logsLoading = logs === undefined;
+  const exLoading = exercises === undefined;
   const [briefing, setBriefing] = useState<AiBriefing | null>(null);
   const [loading, setLoading] = useState(true);
 

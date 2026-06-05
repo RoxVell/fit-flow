@@ -1,7 +1,9 @@
-import { getMeta, idbBulkPut, setMeta, idbGetAll, idbClearAll } from "./idb";
+import { db } from "./dexie";
 import { exercises, programs } from "./seed";
-
-const SEED_KEY = "fitflow.seeded";
+import type {
+  ExerciseEntity,
+  ProgramEntity,
+} from "./types";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -19,27 +21,65 @@ function getSeedPromise(): Promise<void> {
 
 export async function ensureSeeded(): Promise<void> {
   if (typeof window === "undefined") return;
-  if ((await getMeta<boolean>(SEED_KEY)) === true) return;
+  const meta = await db.meta.get("app");
+  if (meta?.initialized) return;
+  const count = await db.exercises.count();
+  if (count > 0) return;
   await getSeedPromise();
 }
 
 async function doSeed(): Promise<void> {
   if (typeof window === "undefined") return;
-  const [existingExercises, existingPrograms] = await Promise.all([
-    idbGetAll("exercises"),
-    idbGetAll("programs"),
-  ]);
-  if (existingExercises.length === 0) {
-    await idbBulkPut("exercises", exercises);
+  const now = new Date().toISOString();
+  const exerciseRows: ExerciseEntity[] = exercises.map((e) => ({
+    ...e,
+    revision: 1,
+    updatedAt: now,
+  }));
+  const programRows: ProgramEntity[] = programs.map((p) => ({
+    ...p,
+    revision: 1,
+    updatedAt: now,
+  }));
+
+  const existingExercises = await db.exercises.count();
+  const existingPrograms = await db.programs.count();
+  if (existingExercises === 0) {
+    await db.exercises.bulkPut(exerciseRows);
   }
-  if (existingPrograms.length === 0) {
-    await idbBulkPut("programs", programs);
+  if (existingPrograms === 0) {
+    await db.programs.bulkPut(programRows);
   }
-  await setMeta(SEED_KEY, true);
 }
 
 export async function resetAllData(): Promise<void> {
-  await idbClearAll();
+  await db.transaction(
+    "rw",
+    [
+      db.exercises,
+      db.programs,
+      db.workoutLogs,
+      db.bodyMeasurements,
+      db.cardioSessions,
+      db.personalRecords,
+      db.syncQueue,
+      db.workoutDrafts,
+      db.meta,
+    ],
+    async () => {
+      await Promise.all([
+        db.exercises.clear(),
+        db.programs.clear(),
+        db.workoutLogs.clear(),
+        db.bodyMeasurements.clear(),
+        db.cardioSessions.clear(),
+        db.personalRecords.clear(),
+        db.syncQueue.clear(),
+        db.workoutDrafts.clear(),
+        db.meta.clear(),
+      ]);
+    }
+  );
   delete globalThis.__fitflow_seed_promise__;
   await doSeed();
 }
