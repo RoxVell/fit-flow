@@ -126,7 +126,7 @@ async function shouldApply(entityType: EntityType, entityId: string, revision: n
   const table = tables[entityType];
   const [row] = await db.select({ revision: table.revision }).from(table).where(eq(table.id, entityId)).limit(1);
   if (!row) return true;
-  return revision >= row.revision;
+  return revision > row.revision;
 }
 
 async function applyChange(change: SyncChange): Promise<boolean> {

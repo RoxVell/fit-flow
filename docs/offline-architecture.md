@@ -92,9 +92,9 @@ Each change in `changes`:
 
 Last Write Wins by `revision`:
 
-- Server applies client change if `client.revision >= server.revision`
+- Server applies client change if `client.revision > server.revision`
 - Client applies server change if `server.revision >= local.revision`
-- Tie → server wins
+- Tie → server wins (equal revision: server keeps its copy; client accepts server on pull)
 
 Single user, single device — no CRDT/OT.
 
