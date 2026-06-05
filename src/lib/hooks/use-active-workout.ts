@@ -103,12 +103,17 @@ export function useActiveWorkout(
 
   useEffect(() => {
     if (hasBootstrapped.current) return;
-    if (activeWorkoutId) return;
+    if (draft === undefined) return;
+    if (draft?.activeWorkoutId) return;
     if (!sessionId) {
       router.replace("/workout");
       return;
     }
-    if (!program) return;
+    if (program === undefined) return;
+    if (!program) {
+      router.replace("/workout");
+      return;
+    }
 
     const session = program.sessions.find((s) => s.id === sessionId);
     if (!session) {
@@ -139,7 +144,7 @@ export function useActiveWorkout(
 
     hasBootstrapped.current = true;
     void initDraft(sessionId, sessionId, initialExercises, new Date().toISOString());
-  }, [sessionId, program, activeWorkoutId, router]);
+  }, [sessionId, program, draft, router]);
 
   const exerciseMap = useMemo(
     () => new Map((allExercises ?? []).map((e) => [e.id, e])),

@@ -21,13 +21,13 @@ export default function WorkoutPlanPage() {
   const program = useActiveProgram();
   const draft = useWorkoutDraft();
   const today = new Date().getDay();
-  const activeWorkoutId = draft?.activeWorkoutId;
 
   useEffect(() => {
-    if (activeWorkoutId && draft?.sessionId) {
+    if (draft === undefined) return;
+    if (draft?.activeWorkoutId && draft.sessionId) {
       router.replace(`/workout/active?session=${draft.sessionId}`);
     }
-  }, [activeWorkoutId, draft?.sessionId, router]);
+  }, [draft, router]);
 
   const recommendedId = useMemo(() => {
     if (!program) return null;
@@ -46,7 +46,7 @@ export default function WorkoutPlanPage() {
     return program.sessions.find((s) => s.id === effectiveId) || null;
   }, [program, effectiveId]);
 
-  if (program === undefined || (activeWorkoutId && draft === undefined)) {
+  if (program === undefined || draft === undefined) {
     return (
       <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
         <Skeleton className="h-8 w-32 rounded-lg" />

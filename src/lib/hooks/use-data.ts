@@ -48,7 +48,7 @@ export function usePrograms() {
 export function useActiveProgram() {
   return useLiveQuery(async () => {
     const active = await db.programs.filter((p) => p.isActive).first();
-    if (!active) return undefined;
+    if (!active) return null;
     const [program] = await attachPrograms([active]);
     return program;
   }, []);
@@ -93,7 +93,7 @@ export function useCardioSessions() {
 }
 
 export function useWorkoutDraft() {
-  return useLiveQuery(() => db.workoutDrafts.get("active"), []);
+  return useLiveQuery(async () => (await db.workoutDrafts.get("active")) ?? null, []);
 }
 
 export function useDashboardStats(): DashboardStats | undefined {
