@@ -1,12 +1,10 @@
-import { isActiveRecord } from "@/lib/db/active-records";
-import { db } from "@/lib/db/dexie";
 import { ensureSeeded } from "@/lib/db/seed-loader";
 import {
   buildExerciseMapFromManifest,
   manifestToExercise,
 } from "@/lib/exercises/adapter";
 import { filterManifest } from "@/lib/exercises/filter";
-import { toLibraryFilters } from "@/lib/exercises/legacy-filters";
+import { toLibraryFilters } from "@/lib/exercises/filter-adapter";
 import { ensureManifestLoaded } from "@/lib/hooks/use-exercise-library";
 import { getActiveLocale } from "@/lib/i18n/locale-context";
 import type { Exercise, ExerciseEntity, ExerciseFilters } from "@/lib/db/types";
@@ -62,10 +60,7 @@ export async function getExerciseById(id: string): Promise<ExerciseEntity | unde
   const manifest = await ensureManifestLoaded();
   const locale = getActiveLocale();
   const item = manifest.find((e) => e.id === id);
-  if (!item) {
-    const legacy = await db.exercises.get(id);
-    return isActiveRecord(legacy) ? legacy : undefined;
-  }
+  if (!item) return undefined;
   return {
     ...manifestToExercise(item, locale),
     revision: 1,

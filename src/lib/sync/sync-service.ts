@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { db, getAppMeta, migrateFromLegacyIdb, setAppMeta } from "@/lib/db/dexie";
+import { db, getAppMeta, setAppMeta } from "@/lib/db/dexie";
 import { ensureSeeded } from "@/lib/db/seed-loader";
 import { ensureManifestLoaded } from "@/lib/hooks/use-exercise-library";
 import { getPending, markSynced, pendingCount } from "./queue";
@@ -128,7 +128,6 @@ export function initLocalDb(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
   if (!initPromise) {
     initPromise = (async () => {
-      await migrateFromLegacyIdb();
       await db.open();
       await ensureSeeded();
       await ensureManifestLoaded().catch(() => undefined);

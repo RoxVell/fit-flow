@@ -23,7 +23,7 @@ export function LanguageToggle() {
             type="button"
             onClick={() => setLocale(lang.value)}
             className={cn(
-              "inline-flex items-center justify-center rounded-md px-3.5 py-2 text-sm font-medium transition-all min-w-[3rem]",
+              "inline-flex h-9 min-w-[3rem] items-center justify-center rounded-md px-3.5 text-sm font-medium transition-all",
               isActive
                 ? "bg-card text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"

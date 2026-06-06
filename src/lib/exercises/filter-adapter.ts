@@ -1,9 +1,5 @@
 import type { Equipment, ExerciseFilters, MuscleGroup } from "@/lib/db/types";
-import type {
-  BodyPart,
-  ExerciseLibraryFilters,
-  LibraryMechanics,
-} from "./types";
+import type { BodyPart, ExerciseLibraryFilters } from "./types";
 
 const MUSCLE_TO_BODY_PART: Partial<Record<MuscleGroup, BodyPart>> = {
   chest: "CHEST",
@@ -66,10 +62,4 @@ export function matchesUnilateralFilter(
   const isUnilateral =
     laterality === "UNILATERAL" || laterality === "ALTERNATING";
   return unilateral === isUnilateral;
-}
-
-export function categoryFromMechanics(
-  mechanics: LibraryMechanics
-): "compound" | "isolation" {
-  return mechanics === "COMPOUND" ? "compound" : "isolation";
 }
