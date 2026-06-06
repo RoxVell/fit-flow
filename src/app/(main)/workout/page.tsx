@@ -94,7 +94,7 @@ export default function WorkoutPlanPage() {
           </div>
           <div className="flex items-center gap-2">
             {selectedSession.id === recommendedId && (
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
                 Today
               </span>
             )}
@@ -173,7 +173,7 @@ export default function WorkoutPlanPage() {
                     </p>
                   </div>
                   {s.id === recommendedId && (
-                    <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                    <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
                       Today
                     </span>
                   )}
