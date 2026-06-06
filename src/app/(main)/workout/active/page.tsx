@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useState } from "react";
+import { Suspense, use, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -63,7 +63,18 @@ function ActiveWorkoutContent({
   } = useActiveWorkout(sessionId);
 
   const [showAddExercise, setShowAddExercise] = useState(false);
+  const [swapTargetLoggedExerciseId, setSwapTargetLoggedExerciseId] = useState<
+    string | null
+  >(null);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
+
+  const swapTargetExerciseId = useMemo(() => {
+    if (!swapTargetLoggedExerciseId) return null;
+    return (
+      exercises.find((ex) => ex.id === swapTargetLoggedExerciseId)?.exerciseId ??
+      null
+    );
+  }, [exercises, swapTargetLoggedExerciseId]);
 
   if (isAbandoning) {
     return (
@@ -82,6 +93,10 @@ function ActiveWorkoutContent({
   }
 
   const excludedExerciseIds = new Set(exercises.map((ex) => ex.exerciseId));
+
+  const handleSwapDialogOpenChange = (open: boolean) => {
+    if (!open) setSwapTargetLoggedExerciseId(null);
+  };
 
   return (
     <>
@@ -141,7 +156,7 @@ function ActiveWorkoutContent({
                   onUpdateSet={(idx, data) => updateSet(ex.id, idx, data)}
                   onCompleteSet={(idx) => toggleSetCompleted(ex.id, idx)}
                   onRemove={() => removeExercise(ex.id)}
-                  onSwap={(newId) => swapExercise(ex.id, newId)}
+                  onSwapRequest={() => setSwapTargetLoggedExerciseId(ex.id)}
                 />
               </motion.div>
             );
@@ -157,13 +172,28 @@ function ActiveWorkoutContent({
           {t.workout.addExercise}
         </Button>
 
-        <ExercisePickerDialog
-          open={showAddExercise}
-          onOpenChange={setShowAddExercise}
-          title={t.workout.addExercise}
-          excludeIds={excludedExerciseIds}
-          onSelect={addExercise}
-        />
+        {showAddExercise ? (
+          <ExercisePickerDialog
+            open={showAddExercise}
+            onOpenChange={setShowAddExercise}
+            title={t.workout.addExercise}
+            excludeIds={excludedExerciseIds}
+            onSelect={addExercise}
+          />
+        ) : null}
+
+        {swapTargetLoggedExerciseId && swapTargetExerciseId ? (
+          <ExercisePickerDialog
+            open={swapTargetLoggedExerciseId != null}
+            onOpenChange={handleSwapDialogOpenChange}
+            title={t.workout.swapExercise}
+            excludeIds={new Set([swapTargetExerciseId])}
+            onSelect={(newId) => {
+              swapExercise(swapTargetLoggedExerciseId, newId);
+              setSwapTargetLoggedExerciseId(null);
+            }}
+          />
+        ) : null}
       </div>
 
       <AnimatePresence>

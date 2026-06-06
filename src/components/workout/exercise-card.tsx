@@ -9,7 +9,6 @@ import { SetRow } from "./set-row";
 import type { LoggedExercise } from "@/lib/db/types";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
-import { ExercisePickerDialog } from "@/components/exercises/exercise-picker-dialog";
 
 interface ExerciseCardProps {
   exercise: LoggedExercise;
@@ -22,7 +21,7 @@ interface ExerciseCardProps {
   onUpdateSet: (index: number, data: any) => void;
   onCompleteSet: (index: number) => void;
   onRemove: () => void;
-  onSwap: (newExerciseId: string) => void;
+  onSwapRequest: () => void;
 }
 
 export function ExerciseCard({
@@ -36,10 +35,9 @@ export function ExerciseCard({
   onUpdateSet,
   onCompleteSet,
   onRemove,
-  onSwap,
+  onSwapRequest,
 }: ExerciseCardProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [showSwap, setShowSwap] = useState(false);
   const t = useT();
   const { muscleGroupLabel } = useFormat();
 
@@ -71,7 +69,7 @@ export function ExerciseCard({
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
-                  onClick={() => setShowSwap(true)}
+                  onClick={onSwapRequest}
                   className="rounded-lg p-1.5 text-muted-foreground/50 hover:bg-muted transition-colors"
                 >
                   <Shuffle className="h-4 w-4" />
@@ -139,17 +137,6 @@ export function ExerciseCard({
           </div>
         </motion.div>
       </div>
-
-      <ExercisePickerDialog
-        open={showSwap}
-        onOpenChange={setShowSwap}
-        title={t.workout.swapExercise}
-        excludeIds={new Set([exercise.exerciseId])}
-        onSelect={(newId) => {
-          onSwap(newId);
-          setShowSwap(false);
-        }}
-      />
     </>
   );
 }

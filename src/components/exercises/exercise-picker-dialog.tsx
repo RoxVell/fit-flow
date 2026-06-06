@@ -37,6 +37,32 @@ export function ExercisePickerDialog({
   emptyMessageAllExcluded,
   showAddAction = false,
 }: ExercisePickerDialogProps) {
+  if (!open) return null;
+
+  return (
+    <ExercisePickerDialogContent
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      excludeIds={excludeIds}
+      onSelect={onSelect}
+      emptyMessage={emptyMessage}
+      emptyMessageAllExcluded={emptyMessageAllExcluded}
+      showAddAction={showAddAction}
+    />
+  );
+}
+
+function ExercisePickerDialogContent({
+  open,
+  onOpenChange,
+  title,
+  excludeIds,
+  onSelect,
+  emptyMessage,
+  emptyMessageAllExcluded,
+  showAddAction = false,
+}: ExercisePickerDialogProps) {
   const locale = useLocale();
   const ui = exerciseUi[locale];
   const [search, setSearch] = useState("");
