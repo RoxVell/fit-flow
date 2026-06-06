@@ -267,8 +267,14 @@ export function useActiveWorkout(
     if (hasFinishedRef.current) return;
     hasFinishedRef.current = true;
     setIsAbandoning(true);
-    await clearDraft();
-    router.replace("/workout");
+    try {
+      await clearDraft();
+      router.replace("/workout");
+    } catch (err) {
+      console.warn("[abandonWorkout] clearDraft failed", err);
+      hasFinishedRef.current = false;
+      setIsAbandoning(false);
+    }
   };
 
   const toggleSetCompleted = (exerciseId: string, setIndex: number) => {
