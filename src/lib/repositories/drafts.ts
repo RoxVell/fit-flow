@@ -50,11 +50,8 @@ export function updateDraftExercises(
 }
 
 export async function clearDraft(): Promise<void> {
-  await saveDraft({
-    activeWorkoutId: null,
-    sessionId: null,
-    exercises: [],
-    startedAt: null,
+  await enqueueDraftWrite(async () => {
+    await db.workoutDrafts.delete(DRAFT_ID);
   });
 }
 

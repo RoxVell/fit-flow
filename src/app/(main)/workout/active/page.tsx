@@ -84,7 +84,24 @@ function ActiveWorkoutContent({
     );
   }
 
-  if (!activeWorkoutId && !showTriumph) {
+  if (showTriumph) {
+    return (
+      <AnimatePresence>
+        <TriumphScreen
+          records={newRecords}
+          volume={triumphData?.volume ?? 0}
+          duration={
+            triumphData
+              ? formatDuration(triumphData.minutes)
+              : formatDuration(minutes)
+          }
+          onClose={handleCloseTriumph}
+        />
+      </AnimatePresence>
+    );
+  }
+
+  if (!activeWorkoutId) {
     return (
       <div className="flex items-center justify-center h-full p-4">
         <p className="text-muted-foreground">{t.workout.starting}</p>
@@ -269,21 +286,6 @@ function ActiveWorkoutContent({
           </div>
         </div>
       )}
-
-      <AnimatePresence>
-        {showTriumph && (
-          <TriumphScreen
-            records={newRecords}
-            volume={triumphData?.volume ?? 0}
-            duration={
-              triumphData
-                ? formatDuration(triumphData.minutes)
-                : formatDuration(minutes)
-            }
-            onClose={handleCloseTriumph}
-          />
-        )}
-      </AnimatePresence>
     </>
   );
 }
