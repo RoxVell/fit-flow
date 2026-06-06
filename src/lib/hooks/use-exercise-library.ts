@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { filterManifest } from "@/lib/exercises/filter";
 import {
+  ensureManifestLoaded,
   fetchExerciseDetail,
   fetchManifest,
+  getCachedManifest,
+  getManifestLoadError,
+  setCachedManifest,
+  setManifestLoadError,
+  subscribeExerciseLibraryCacheClear,
 } from "@/lib/exercises/library-client";
 import { pickLocalized } from "@/lib/exercises/locale";
 import { useLocale } from "@/lib/stores/locale-store";
@@ -15,30 +21,28 @@ import type {
   ExerciseManifestItem,
 } from "@/lib/exercises/types";
 
-let cachedManifest: ExerciseManifestItem[] | null = null;
-let manifestLoadError: Error | null = null;
-
 export function useExerciseManifest() {
   const [manifest, setManifest] = useState<ExerciseManifestItem[] | null>(
-    cachedManifest
+    getCachedManifest
   );
-  const [error, setError] = useState<Error | null>(manifestLoadError);
-  const [loading, setLoading] = useState(!cachedManifest && !manifestLoadError);
+  const [error, setError] = useState<Error | null>(getManifestLoadError);
+  const [loading, setLoading] = useState(
+    () => !getCachedManifest() && !getManifestLoadError()
+  );
 
-  useEffect(() => {
-    if (cachedManifest) return;
+  const loadManifest = useCallback(() => {
     let cancelled = false;
     setLoading(true);
     fetchManifest()
       .then((data) => {
         if (cancelled) return;
-        cachedManifest = data;
+        setCachedManifest(data);
         setManifest(data);
         setError(null);
       })
       .catch((err: Error) => {
         if (cancelled) return;
-        manifestLoadError = err;
+        setManifestLoadError(err);
         setError(err);
       })
       .finally(() => {
@@ -48,6 +52,19 @@ export function useExerciseManifest() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (getCachedManifest()) return;
+    return loadManifest();
+  }, [loadManifest]);
+
+  useEffect(() => {
+    return subscribeExerciseLibraryCacheClear(() => {
+      setManifest(null);
+      setError(null);
+      loadManifest();
+    });
+  }, [loadManifest]);
 
   return { manifest, loading, error };
 }
@@ -167,14 +184,10 @@ export function useExerciseMapFromLibrary() {
 export function getCachedManifestItem(
   id: string
 ): ExerciseManifestItem | undefined {
-  return cachedManifest?.find((e) => e.id === id);
+  return getCachedManifest()?.find((e) => e.id === id);
 }
 
-export async function ensureManifestLoaded(): Promise<ExerciseManifestItem[]> {
-  if (cachedManifest) return cachedManifest;
-  cachedManifest = await fetchManifest();
-  return cachedManifest;
-}
+export { ensureManifestLoaded };
 
 export async function getManifestItemBodyPart(
   id: string

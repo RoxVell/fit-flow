@@ -12,10 +12,42 @@ let manifestPromise: Promise<ExerciseManifestItem[]> | null = null;
 let metaPromise: Promise<ExerciseLibraryMeta> | null = null;
 const detailCache = new Map<BodyPart, Promise<Record<string, ExerciseDetail>>>();
 
+let cachedManifest: ExerciseManifestItem[] | null = null;
+let manifestLoadError: Error | null = null;
+
+const cacheClearListeners = new Set<() => void>();
+
+export function getCachedManifest(): ExerciseManifestItem[] | null {
+  return cachedManifest;
+}
+
+export function getManifestLoadError(): Error | null {
+  return manifestLoadError;
+}
+
+export function setCachedManifest(data: ExerciseManifestItem[] | null): void {
+  cachedManifest = data;
+  if (data) manifestLoadError = null;
+}
+
+export function setManifestLoadError(err: Error | null): void {
+  manifestLoadError = err;
+}
+
+export function subscribeExerciseLibraryCacheClear(
+  listener: () => void
+): () => void {
+  cacheClearListeners.add(listener);
+  return () => cacheClearListeners.delete(listener);
+}
+
 export function clearExerciseLibraryCache() {
   manifestPromise = null;
   metaPromise = null;
   detailCache.clear();
+  cachedManifest = null;
+  manifestLoadError = null;
+  cacheClearListeners.forEach((listener) => listener());
 }
 
 export async function fetchManifest(): Promise<ExerciseManifestItem[]> {
@@ -73,4 +105,12 @@ export async function fetchExerciseDetail(
 ): Promise<ExerciseDetail | undefined> {
   const chunk = await fetchBodyPartDetails(bodyPart);
   return chunk[id];
+}
+
+export async function ensureManifestLoaded(): Promise<ExerciseManifestItem[]> {
+  const cached = getCachedManifest();
+  if (cached) return cached;
+  const data = await fetchManifest();
+  setCachedManifest(data);
+  return data;
 }
