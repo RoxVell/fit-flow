@@ -4,8 +4,6 @@ import type { ProgramEntity } from "./types";
 
 const LIBRARY_SCHEMA_VERSION = 3;
 
-const LEGACY_EXERCISE_ID = /^ex\d+$/;
-
 declare global {
   // eslint-disable-next-line no-var
   var __fitflow_seed_promise__: Promise<void> | undefined;
@@ -20,15 +18,6 @@ function getSeedPromise(): Promise<void> {
   return p;
 }
 
-async function hasLegacyProgramExerciseIds(): Promise<boolean> {
-  const rows = await db.programs.toArray();
-  return rows.some((p) =>
-    p.sessions.some((s) =>
-      s.exercises.some((e) => LEGACY_EXERCISE_ID.test(e.exerciseId))
-    )
-  );
-}
-
 export async function ensureSeeded(): Promise<void> {
   if (typeof window === "undefined") return;
   await runLibraryMigration();
@@ -41,33 +30,26 @@ export async function ensureSeeded(): Promise<void> {
 
 async function runLibraryMigration(): Promise<void> {
   const meta = await getAppMeta();
-  const legacyPrograms = await hasLegacyProgramExerciseIds();
-  const versionBump = meta.schemaVersion < LIBRARY_SCHEMA_VERSION;
+  if (meta.schemaVersion >= LIBRARY_SCHEMA_VERSION) return;
 
-  if (!versionBump && !legacyPrograms) return;
-
-  if (versionBump) {
-    await db.transaction(
-      "rw",
-      [
-        db.exercises,
-        db.programs,
-        db.workoutLogs,
-        db.personalRecords,
-        db.workoutDrafts,
-        db.meta,
-      ],
-      async () => {
-        await db.exercises.clear();
-        await db.workoutLogs.clear();
-        await db.personalRecords.clear();
-        await db.workoutDrafts.clear();
-        await db.programs.clear();
-      }
-    );
-  } else if (legacyPrograms) {
-    await db.programs.clear();
-  }
+  await db.transaction(
+    "rw",
+    [
+      db.exercises,
+      db.programs,
+      db.workoutLogs,
+      db.personalRecords,
+      db.workoutDrafts,
+      db.meta,
+    ],
+    async () => {
+      await db.exercises.clear();
+      await db.workoutLogs.clear();
+      await db.personalRecords.clear();
+      await db.workoutDrafts.clear();
+      await db.programs.clear();
+    }
+  );
 
   delete globalThis.__fitflow_seed_promise__;
   await setAppMeta({ schemaVersion: LIBRARY_SCHEMA_VERSION });

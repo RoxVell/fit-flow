@@ -18,7 +18,7 @@ import {
 import {
   matchesUnilateralFilter,
   toLibraryFilters,
-} from "@/lib/exercises/legacy-filters";
+} from "@/lib/exercises/filter-adapter";
 import { attachExercisesToSessions } from "@/lib/repositories/exercises";
 import { bestE1RM, bestWeight, volume } from "@/lib/training-metrics";
 import {

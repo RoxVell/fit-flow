@@ -104,12 +104,9 @@ Seed programs reference fixed UUIDs in `src/lib/db/seed-exercise-ids.ts` (derive
 
 **Dexie schema v3** (`src/lib/db/seed-loader.ts`):
 
-- On upgrade, clears legacy `ex1`–`ex35` data: `exercises`, `workoutLogs`, `personalRecords`, `workoutDrafts`, `programs`
-- Re-seeds default programs with library UUIDs
+- On schema upgrade, clears `exercises`, `workoutLogs`, `personalRecords`, `workoutDrafts`, `programs` and re-seeds default programs with library UUIDs
 
-Existing users lose local workout history on first load after upgrade — intentional break for the library migration.
-
-The `exercises` Dexie store is legacy; the catalog is no longer seeded there. `getExerciseById` still falls back to Dexie for old IDs.
+The `exercises` Dexie store is unused for the catalog; exercises are resolved from the static manifest.
 
 ## i18n (UI strings)
 

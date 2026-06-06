@@ -30,7 +30,7 @@ export function ThemeToggle() {
             type="button"
             onClick={() => setTheme(t.value)}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-md px-3.5 py-2 text-sm font-medium transition-all",
+              "inline-flex h-9 items-center justify-center rounded-md px-3.5 text-sm font-medium transition-all",
               isActive
                 ? "bg-card text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"

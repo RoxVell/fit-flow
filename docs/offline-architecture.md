@@ -20,7 +20,7 @@ User data is **never** stored in Service Worker caches. SW caches static assets 
 
 | Store | Purpose |
 |-------|---------|
-| `exercises` | Legacy exercise store (catalog is now static JSON; see [exercise-library-and-i18n.md](./exercise-library-and-i18n.md)) |
+| `exercises` | Unused for catalog (exercises come from static JSON; see [exercise-library-and-i18n.md](./exercise-library-and-i18n.md)) |
 | `programs` | Programs with nested `sessions` |
 | `workoutLogs` | Logs with nested `exercises` / `sets` |
 | `bodyMeasurements` | Body metrics |
