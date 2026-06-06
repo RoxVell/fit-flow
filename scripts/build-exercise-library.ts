@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 
 type RawExercise = {
@@ -89,6 +89,21 @@ function build() {
     join(root, "data/raw/biblioteka-uprazhneniy.json");
   const outDir = join(root, "public/exercises");
   const detailsDir = join(outDir, "details");
+  const manifestPath = join(outDir, "manifest.json");
+
+  const hasSources = existsSync(enPath) && existsSync(ruPath);
+  if (!hasSources) {
+    if (existsSync(manifestPath)) {
+      console.log(
+        "Exercise source JSON not found (data/raw/ is local-only); using committed public/exercises/*.json"
+      );
+      return;
+    }
+    console.error(
+      `Missing exercise sources:\n  ${enPath}\n  ${ruPath}\nAnd no committed manifest at ${manifestPath}`
+    );
+    process.exit(1);
+  }
 
   const enExercises = loadExercises(enPath);
   const ruExercises = loadExercises(ruPath);
