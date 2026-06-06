@@ -1,3 +1,5 @@
+import type { MuscleGroup } from "@/lib/db/types";
+
 export type Locale = "en" | "ru";
 
 export type LocalizedString = { en: string; ru: string };
@@ -17,6 +19,8 @@ export type BodyPart =
 export type LibraryMechanics = "COMPOUND" | "ISOLATION";
 export type LibraryLaterality = "BILATERAL" | "UNILATERAL" | "ALTERNATING";
 
+export type MuscleWeights = Partial<Record<MuscleGroup, number>>;
+
 export type ExerciseManifestItem = {
   id: string;
   name: LocalizedString;
@@ -27,6 +31,7 @@ export type ExerciseManifestItem = {
   weightType: string;
   tags: string[];
   thumbnailUri: string | null;
+  muscleWeights?: MuscleWeights;
 };
 
 export type ExerciseDetail = ExerciseManifestItem & {

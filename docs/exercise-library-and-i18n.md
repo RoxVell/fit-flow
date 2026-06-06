@@ -60,8 +60,11 @@ If sources are missing but `manifest.json` exists, the script exits successfully
   weightType: string;
   tags: string[];
   thumbnailUri: string | null;
+  muscleWeights?: Partial<Record<MuscleGroup, number>>; // max % per group, from exerciseMuscles at build time
 }
 ```
+
+`muscleWeights` is computed in `scripts/build-exercise-library.ts` via `muscleWeightsFromLibrary()` (`src/lib/exercises/muscle-map.ts`). The dashboard heatmap (`useDashboardStats`) adds `(percent / 100) × completedSets` per group — e.g. leg curl counts toward hamstrings, glutes, and calves, not only quads.
 
 **Detail** adds `description`, `instructions`, `tips`, `commonMistakes`, media URLs, and `exerciseMuscles`.
 
@@ -77,7 +80,9 @@ If sources are missing but `manifest.json` exists, the script exits successfully
 
 ### Service Worker (`src/app/sw.ts`)
 
-`/exercises/*` uses **CacheFirst** (`exercise-library` cache, 30 days). After the first online visit, manifest and detail chunks work offline.
+`/exercises/*` uses **CacheFirst** (`exercise-library` cache, 30 days). After the first online visit, manifest and detail chunks work offline. On each new SW `activate`, the `exercise-library` cache is deleted so redeploys pick up rebuilt JSON; in-memory client cache is cleared via `clearExerciseLibraryCache()` in `ServiceWorkerRegister`.
+
+Thumbnail images (`api.smartworkout.app`) stay **NetworkOnly** — offline list shows a Dumbbell placeholder via `ExerciseThumbnail` `onError` fallback.
 
 ### Hooks
 
@@ -96,7 +101,7 @@ Program hooks (`usePrograms`, `useActiveProgram`, `useProgram`) wait for manifes
 - `ExerciseLibraryList` — virtualized list, filters, opens detail sheet
 - `ExerciseDetailSheet` — fullscreen dialog: video, muscles, instructions/tips/mistakes tabs
 - `ExerciseVideo` — theme-aware dark/light video URLs
-- `ExerciseThumbnail` — Next/Image with remote `api.smartworkout.app` assets
+- `ExerciseThumbnail` — native `<img>` with Dumbbell placeholder when `src` is missing or load fails
 
 ## Programs & data migration
 

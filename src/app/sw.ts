@@ -118,4 +118,8 @@ const serwist = new Serwist({
   },
 });
 
+self.addEventListener("activate", (event) => {
+  event.waitUntil(caches.delete("exercise-library"));
+});
+
 serwist.addEventListeners();

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { Serwist } from "@serwist/window";
+import { clearExerciseLibraryCache } from "@/lib/exercises/library-client";
 
 type Event = "waiting" | "controlling" | "activated";
 
@@ -29,6 +30,7 @@ export function ServiceWorkerRegister() {
         listeners.controlling.forEach((l) => l());
       });
       sw.addEventListener("activated", () => {
+        clearExerciseLibraryCache();
         listeners.activated.forEach((l) => l());
       });
     };

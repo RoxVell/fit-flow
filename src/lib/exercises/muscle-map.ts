@@ -1,3 +1,4 @@
+import type { MuscleGroup } from "@/lib/db/types";
 import type { Muscle } from "react-body-highlighter";
 
 /** Maps library muscle keys to react-body-highlighter slugs with engagement weight. */
@@ -35,7 +36,44 @@ const LIBRARY_TO_HIGHLIGHTER: Record<string, { slug: Muscle; weight: number }> =
   ABS_OBLIQUES: { slug: "obliques", weight: 1 },
 };
 
+/** Maps react-body-highlighter slugs to dashboard MuscleGroup keys. */
+const HIGHLIGHTER_SLUG_TO_MUSCLE_GROUP: Partial<Record<Muscle, MuscleGroup>> = {
+  chest: "chest",
+  "upper-back": "back",
+  "lower-back": "back",
+  trapezius: "traps",
+  "front-deltoids": "shoulders",
+  "back-deltoids": "shoulders",
+  biceps: "biceps",
+  triceps: "triceps",
+  forearm: "forearms",
+  quadriceps: "quads",
+  hamstring: "hamstrings",
+  gluteal: "glutes",
+  calves: "calves",
+  abs: "abs",
+  obliques: "abs",
+};
+
 export type MuscleEngagement = { name: string; percent: number };
+
+/** Max engagement percent per MuscleGroup for heatmap weighting. */
+export function muscleWeightsFromLibrary(
+  exerciseMuscles: Record<string, number>
+): Partial<Record<MuscleGroup, number>> {
+  const byGroup: Partial<Record<MuscleGroup, number>> = {};
+
+  for (const [key, percent] of Object.entries(exerciseMuscles)) {
+    if (percent <= 0) continue;
+    const mapping = LIBRARY_TO_HIGHLIGHTER[key];
+    if (!mapping) continue;
+    const group = HIGHLIGHTER_SLUG_TO_MUSCLE_GROUP[mapping.slug];
+    if (!group) continue;
+    byGroup[group] = Math.max(byGroup[group] ?? 0, percent);
+  }
+
+  return byGroup;
+}
 
 export function topMuscles(
   exerciseMuscles: Record<string, number>,

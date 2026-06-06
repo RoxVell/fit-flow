@@ -1,5 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
+import { muscleWeightsFromLibrary } from "../src/lib/exercises/muscle-map";
+import type { MuscleWeights } from "../src/lib/exercises/types";
 
 type RawExercise = {
   id: string;
@@ -35,6 +37,7 @@ type ManifestItem = {
   weightType: string;
   tags: string[];
   thumbnailUri: string | null;
+  muscleWeights: MuscleWeights;
 };
 
 type ExerciseDetail = ManifestItem & {
@@ -149,6 +152,7 @@ function build() {
       weightType: en.weightType,
       tags: en.tags,
       thumbnailUri,
+      muscleWeights: muscleWeightsFromLibrary(en.exerciseMuscles ?? {}),
     };
 
     const detail: ExerciseDetail = {

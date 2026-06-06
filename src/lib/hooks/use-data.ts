@@ -173,7 +173,10 @@ export function useDashboardStats(): DashboardStats | undefined {
     const exerciseMap = new Map(
       manifest.map((item) => [
         item.id,
-        { muscleGroup: bodyPartToMuscleGroup(item.bodyPart), secondaryMuscles: [] as MuscleGroup[] },
+        {
+          muscleWeights: item.muscleWeights,
+          fallbackGroup: bodyPartToMuscleGroup(item.bodyPart),
+        },
       ])
     );
     const weekAgo = new Date();
@@ -227,12 +230,17 @@ export function useDashboardStats(): DashboardStats | undefined {
       for (const ex of log.exercises) {
         const ref = exerciseMap.get(ex.exerciseId);
         if (!ref) continue;
-        const completed = ex.sets.filter((s) => s.completed).length;
-        if (completed > 0) {
-          heatmapData[ref.muscleGroup] += completed;
-          for (const sec of ref.secondaryMuscles) {
-            heatmapData[sec] += completed;
+        const completedSets = ex.sets.filter((s) => s.completed);
+        if (completedSets.length === 0) continue;
+
+        const weights = ref.muscleWeights;
+        if (weights && Object.keys(weights).length > 0) {
+          const setCount = completedSets.length;
+          for (const [group, percent] of Object.entries(weights)) {
+            heatmapData[group as MuscleGroup] += (percent / 100) * setCount;
           }
+        } else {
+          heatmapData[ref.fallbackGroup] += completedSets.length;
         }
       }
     }
