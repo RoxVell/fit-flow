@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Dumbbell, Search, SlidersHorizontal } from "lucide-react";
 import { ExerciseThumbnail } from "@/components/exercises/exercise-thumbnail";
@@ -52,12 +52,16 @@ export function ExerciseLibraryList() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const { exercises, loading } = useExerciseLibrary({
-    search: search || undefined,
-    bodyPart,
-    equipment,
-    mechanics,
-  });
+  const filters = useMemo(
+    () => ({
+      search: search || undefined,
+      bodyPart,
+      equipment,
+      mechanics,
+    }),
+    [search, bodyPart, equipment, mechanics]
+  );
+  const { exercises, loading } = useExerciseLibrary(filters);
 
   const parentRef = useRef<HTMLDivElement>(null);
   const items = exercises ?? [];

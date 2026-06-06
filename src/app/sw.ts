@@ -36,6 +36,20 @@ const serwist = new Serwist({
       handler: networkOnlyApi,
     },
     {
+      matcher: ({ url }) => url.pathname.startsWith("/exercises/"),
+      handler: new CacheFirst({
+        cacheName: "exercise-library",
+        plugins: [
+          new CacheableResponsePlugin({ statuses: [0, 200] }),
+          new ExpirationPlugin({
+            maxEntries: 20,
+            maxAgeSeconds: 60 * 60 * 24 * 30,
+            purgeOnQuotaError: true,
+          }),
+        ],
+      }),
+    },
+    {
       matcher: ({ request }) => request.destination === "image",
       handler: new StaleWhileRevalidate({
         cacheName: "images",

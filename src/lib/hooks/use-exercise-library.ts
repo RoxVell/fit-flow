@@ -56,10 +56,21 @@ export function useExerciseLibrary(filters?: ExerciseLibraryFilters) {
   const locale = useLocale();
   const { manifest, loading, error } = useExerciseManifest();
 
+  const stableFilters = useMemo(
+    () => filters,
+    [
+      filters?.search,
+      filters?.bodyPart,
+      filters?.equipment,
+      filters?.mechanics,
+      filters?.tag,
+    ]
+  );
+
   const items = useMemo(() => {
     if (!manifest) return undefined;
-    return filterManifest(manifest, filters, locale);
-  }, [manifest, filters, locale]);
+    return filterManifest(manifest, stableFilters, locale);
+  }, [manifest, stableFilters, locale]);
 
   return { exercises: items, loading, error };
 }
