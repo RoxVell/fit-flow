@@ -28,8 +28,8 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="absolute bottom-0 left-0 right-0 z-50 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto grid h-[4.25rem] max-w-lg grid-cols-5 items-center px-0.5">
+    <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="mx-auto grid h-16 grid-cols-5 items-center px-0.5">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           const Icon = item.icon;
@@ -50,7 +50,7 @@ export function BottomNav() {
               {isWorkout && showWorkoutDot && (
                 <span
                   aria-hidden="true"
-                  className="absolute top-0.5 right-1 h-1.5 w-1.5 rounded-full bg-green-500 sm:right-2"
+                  className="absolute top-0.5 right-3 h-1.5 w-1.5 rounded-full bg-green-500 sm:right-2"
                 />
               )}
               {isWorkout && showWorkoutDot && (

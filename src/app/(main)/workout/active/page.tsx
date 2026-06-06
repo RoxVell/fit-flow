@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useState } from "react";
+import { Suspense, use, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -12,24 +12,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWorkoutStore } from "@/lib/store/workout-store";
-import { useExercises } from "@/lib/hooks/use-data";
 import { useActiveWorkout } from "@/lib/hooks/use-active-workout";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
 import { useT } from "@/lib/i18n/use-t";
 import { ExerciseCard } from "@/components/workout/exercise-card";
+import { ExercisePickerDialog } from "@/components/exercises/exercise-picker-dialog";
 import { RestTimer } from "@/components/workout/rest-timer";
 import { TriumphScreen } from "@/components/workout/triumph-screen";
 import { formatDuration } from "@/lib/utils/calculations";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { useFormat } from "@/lib/i18n/use-format";
 
 function ActiveWorkoutContent({
   searchParams,
@@ -39,9 +29,7 @@ function ActiveWorkoutContent({
   const { session: sessionId } = use(searchParams);
   const restStore = useWorkoutStore();
   const t = useT();
-  const { muscleGroupLabel } = useFormat();
   const { getName } = useExerciseLookup();
-  const allExercises = useExercises();
   const {
     exerciseMap,
     previousSetsMap,
@@ -61,6 +49,7 @@ function ActiveWorkoutContent({
     setShowConfirmFinish,
     abandonWorkout,
     showTriumph,
+    isAbandoning,
     newRecords,
     triumphData,
     handleCloseTriumph,
@@ -74,10 +63,20 @@ function ActiveWorkoutContent({
   } = useActiveWorkout(sessionId);
 
   const [showAddExercise, setShowAddExercise] = useState(false);
-  const [addSearch, setAddSearch] = useState("");
+  const [swapTargetLoggedExerciseId, setSwapTargetLoggedExerciseId] = useState<
+    string | null
+  >(null);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
 
-  if (!activeWorkoutId && !showTriumph) {
+  const swapTargetExerciseId = useMemo(() => {
+    if (!swapTargetLoggedExerciseId) return null;
+    return (
+      exercises.find((ex) => ex.id === swapTargetLoggedExerciseId)?.exerciseId ??
+      null
+    );
+  }, [exercises, swapTargetLoggedExerciseId]);
+
+  if (isAbandoning) {
     return (
       <div className="flex items-center justify-center h-full p-4">
         <p className="text-muted-foreground">{t.workout.starting}</p>
@@ -85,9 +84,36 @@ function ActiveWorkoutContent({
     );
   }
 
-  const addableExercises = allExercises?.filter(
-    (e) => !exercises.some((se) => se.exerciseId === e.id)
-  );
+  if (showTriumph) {
+    return (
+      <AnimatePresence>
+        <TriumphScreen
+          records={newRecords}
+          volume={triumphData?.volume ?? 0}
+          duration={
+            triumphData
+              ? formatDuration(triumphData.minutes)
+              : formatDuration(minutes)
+          }
+          onClose={handleCloseTriumph}
+        />
+      </AnimatePresence>
+    );
+  }
+
+  if (!activeWorkoutId) {
+    return (
+      <div className="flex items-center justify-center h-full p-4">
+        <p className="text-muted-foreground">{t.workout.starting}</p>
+      </div>
+    );
+  }
+
+  const excludedExerciseIds = new Set(exercises.map((ex) => ex.exerciseId));
+
+  const handleSwapDialogOpenChange = (open: boolean) => {
+    if (!open) setSwapTargetLoggedExerciseId(null);
+  };
 
   return (
     <>
@@ -147,66 +173,44 @@ function ActiveWorkoutContent({
                   onUpdateSet={(idx, data) => updateSet(ex.id, idx, data)}
                   onCompleteSet={(idx) => toggleSetCompleted(ex.id, idx)}
                   onRemove={() => removeExercise(ex.id)}
-                  onSwap={(newId) => swapExercise(ex.id, newId)}
+                  onSwapRequest={() => setSwapTargetLoggedExerciseId(ex.id)}
                 />
               </motion.div>
             );
           })}
         </AnimatePresence>
 
-        <Dialog open={showAddExercise} onOpenChange={setShowAddExercise}>
-          <Button
-            variant="outline"
-            className="w-full gap-2 border-dashed"
-            onClick={() => setShowAddExercise(true)}
-          >
-            <Plus className="h-4 w-4" />
-            {t.workout.addExercise}
-          </Button>
-          <DialogContent className="max-h-[80vh]">
-            <DialogHeader>
-              <DialogTitle>{t.workout.addExercise}</DialogTitle>
-            </DialogHeader>
-            <Input
-              placeholder={t.workout.searchExercises}
-              value={addSearch}
-              onChange={(e) => setAddSearch(e.target.value)}
-              className="mb-2"
-            />
-            <ScrollArea className="max-h-[50vh]">
-              <div className="space-y-1">
-                {(addSearch
-                  ? allExercises?.filter(
-                      (e) =>
-                        e.name.toLowerCase().includes(addSearch.toLowerCase()) ||
-                        e.muscleGroup.includes(addSearch.toLowerCase())
-                    )
-                  : addableExercises
-                )?.map((ex) => (
-                  <button
-                    key={ex.id}
-                    className="w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-muted transition-colors flex items-center justify-between"
-                    onClick={() => {
-                      addExercise(ex.id);
-                      setShowAddExercise(false);
-                      setAddSearch("");
-                    }}
-                  >
-                    <div>
-                      <span className="font-medium">{ex.name}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {muscleGroupLabel(ex.muscleGroup)}
-                      </span>
-                    </div>
-                    <Badge variant="outline" className="text-[10px]">
-                      {t.workout.add}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
+        <Button
+          variant="outline"
+          className="w-full gap-2 border-dashed"
+          onClick={() => setShowAddExercise(true)}
+        >
+          <Plus className="h-4 w-4" />
+          {t.workout.addExercise}
+        </Button>
+
+        {showAddExercise ? (
+          <ExercisePickerDialog
+            open={showAddExercise}
+            onOpenChange={setShowAddExercise}
+            title={t.workout.addExercise}
+            excludeIds={excludedExerciseIds}
+            onSelect={addExercise}
+          />
+        ) : null}
+
+        {swapTargetLoggedExerciseId && swapTargetExerciseId ? (
+          <ExercisePickerDialog
+            open={swapTargetLoggedExerciseId != null}
+            onOpenChange={handleSwapDialogOpenChange}
+            title={t.workout.swapExercise}
+            excludeIds={new Set([swapTargetExerciseId])}
+            onSelect={(newId) => {
+              swapExercise(swapTargetLoggedExerciseId, newId);
+              setSwapTargetLoggedExerciseId(null);
+            }}
+          />
+        ) : null}
       </div>
 
       <AnimatePresence>
@@ -272,28 +276,16 @@ function ActiveWorkoutContent({
               <Button variant="outline" onClick={() => setShowAbandonConfirm(false)}>
                 {t.workout.cancel}
               </Button>
-              <Button variant="destructive" onClick={abandonWorkout}>
+              <Button
+                variant="destructive"
+                onClick={() => void abandonWorkout()}
+              >
                 {t.workout.abandon}
               </Button>
             </div>
           </div>
         </div>
       )}
-
-      <AnimatePresence>
-        {showTriumph && (
-          <TriumphScreen
-            records={newRecords}
-            volume={triumphData?.volume ?? 0}
-            duration={
-              triumphData
-                ? formatDuration(triumphData.minutes)
-                : formatDuration(minutes)
-            }
-            onClose={handleCloseTriumph}
-          />
-        )}
-      </AnimatePresence>
     </>
   );
 }

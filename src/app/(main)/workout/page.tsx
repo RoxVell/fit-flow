@@ -10,6 +10,7 @@ import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { startWorkoutDraft } from "@/lib/workout/start-session-draft";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,10 @@ export default function WorkoutPlanPage() {
     }
   }, [draft, router]);
 
+  const [starting, setStarting] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
+
   const recommendedId = useMemo(() => {
     if (!program) return null;
     return (
@@ -41,8 +46,6 @@ export default function WorkoutPlanPage() {
     );
   }, [program, today]);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showPicker, setShowPicker] = useState(false);
   const effectiveId = selectedId ?? recommendedId;
 
   const selectedSession = useMemo(() => {
@@ -135,7 +138,21 @@ export default function WorkoutPlanPage() {
 
       <Button
         className="w-full gap-2 h-12 text-base font-semibold"
-        onClick={() => router.push(`/workout/active?session=${effectiveId}`)}
+        disabled={!selectedSession || starting}
+        onClick={() => {
+          if (!selectedSession || starting) return;
+          setStarting(true);
+          void startWorkoutDraft(selectedSession)
+            .then(() => {
+              router.push(`/workout/active?session=${selectedSession.id}`);
+            })
+            .catch((err) => {
+              console.warn("[startWorkout] failed", err);
+            })
+            .finally(() => {
+              setStarting(false);
+            });
+        }}
       >
         <Play className="h-5 w-5" fill="currentColor" />
         {t.workout.startWorkout}

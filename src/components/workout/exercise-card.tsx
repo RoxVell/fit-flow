@@ -7,17 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SetRow } from "./set-row";
 import type { LoggedExercise } from "@/lib/db/types";
-import { useExercises } from "@/lib/hooks/use-data";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ExerciseCardProps {
   exercise: LoggedExercise;
@@ -30,7 +21,7 @@ interface ExerciseCardProps {
   onUpdateSet: (index: number, data: any) => void;
   onCompleteSet: (index: number) => void;
   onRemove: () => void;
-  onSwap: (newExerciseId: string) => void;
+  onSwapRequest: () => void;
 }
 
 export function ExerciseCard({
@@ -44,16 +35,11 @@ export function ExerciseCard({
   onUpdateSet,
   onCompleteSet,
   onRemove,
-  onSwap,
+  onSwapRequest,
 }: ExerciseCardProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [showSwap, setShowSwap] = useState(false);
-  const [swapSearch, setSwapSearch] = useState("");
   const t = useT();
   const { muscleGroupLabel } = useFormat();
-  const swapExercises = useExercises({
-    search: swapSearch || undefined,
-  });
 
   return (
     <>
@@ -83,7 +69,7 @@ export function ExerciseCard({
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
-                  onClick={() => setShowSwap(true)}
+                  onClick={onSwapRequest}
                   className="rounded-lg p-1.5 text-muted-foreground/50 hover:bg-muted transition-colors"
                 >
                   <Shuffle className="h-4 w-4" />
@@ -151,38 +137,6 @@ export function ExerciseCard({
           </div>
         </motion.div>
       </div>
-
-      <Dialog open={showSwap} onOpenChange={setShowSwap}>
-        <DialogContent className="max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>{t.workout.swapExercise}</DialogTitle>
-          </DialogHeader>
-          <Input
-            placeholder={t.workout.searchExercises}
-            value={swapSearch}
-            onChange={(e) => setSwapSearch(e.target.value)}
-          />
-          <ScrollArea className="max-h-[50vh]">
-            <div className="space-y-1">
-              {swapExercises?.map((ex) => (
-                <button
-                  key={ex.id}
-                  className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
-                  onClick={() => {
-                    onSwap(ex.id);
-                    setShowSwap(false);
-                  }}
-                >
-                  <span className="font-medium">{ex.name}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {muscleGroupLabel(ex.muscleGroup)}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

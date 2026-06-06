@@ -12,7 +12,8 @@ import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
 import { createPRsFromWorkout } from "@/lib/repositories/records";
 import { createPersonalRecord } from "@/lib/repositories/records";
 import { createWorkoutLog } from "@/lib/repositories/workouts";
-import { clearDraft, initDraft, updateDraftExercises } from "@/lib/repositories/drafts";
+import { clearDraft, updateDraftExercises } from "@/lib/repositories/drafts";
+import { generateId } from "@/lib/utils/calculations";
 import { volume } from "@/lib/training-metrics";
 import type {
   Exercise,
@@ -40,8 +41,9 @@ export interface UseActiveWorkoutResult {
   confirmFinish: () => void;
   showConfirmFinish: boolean;
   setShowConfirmFinish: (b: boolean) => void;
-  abandonWorkout: () => void;
+  abandonWorkout: () => Promise<void>;
   showTriumph: boolean;
+  isAbandoning: boolean;
   newRecords: PersonalRecord[];
   triumphData: { volume: number; minutes: number; seconds: number } | null;
   handleCloseTriumph: () => void;
@@ -78,8 +80,8 @@ export function useActiveWorkout(
     seconds: number;
   } | null>(null);
   const [lastActiveExerciseId, setLastActiveExerciseId] = useState<string | null>(null);
+  const [isAbandoning, setIsAbandoning] = useState(false);
   const hasFinishedRef = useRef(false);
-  const hasBootstrapped = useRef(false);
 
   const nowSec = useSyncExternalStore(
     (cb) => {
@@ -103,49 +105,11 @@ export function useActiveWorkout(
   const elapsed = frozenElapsed ?? computedElapsed;
 
   useEffect(() => {
-    if (hasBootstrapped.current) return;
     if (draft === undefined) return;
+    if (hasFinishedRef.current || showTriumph || isAbandoning) return;
     if (draft?.activeWorkoutId) return;
-    if (!sessionId) {
-      router.replace("/workout");
-      return;
-    }
-    if (program === undefined) return;
-    if (!program) {
-      router.replace("/workout");
-      return;
-    }
-
-    const session = program.sessions.find((s) => s.id === sessionId);
-    if (!session) {
-      router.replace("/workout");
-      return;
-    }
-
-    const initialExercises = session.exercises
-      .filter((se) => se.exerciseId)
-      .map((se) => {
-        const leId = crypto.randomUUID();
-        return {
-          id: leId,
-          exerciseId: se.exerciseId,
-          workoutLogId: sessionId,
-          sortOrder: se.sortOrder,
-          sets: Array.from({ length: se.targetSets }, (_, si) => ({
-            id: crypto.randomUUID(),
-            loggedExerciseId: leId,
-            type: si === 0 ? ("warmup" as const) : ("working" as const),
-            setOrder: si,
-            reps: 0,
-            weight: 0,
-            completed: false,
-          })),
-        };
-      });
-
-    hasBootstrapped.current = true;
-    void initDraft(sessionId, sessionId, initialExercises, new Date().toISOString());
-  }, [sessionId, program, draft, router]);
+    router.replace("/workout");
+  }, [draft, router, showTriumph, isAbandoning]);
 
   const previousSetsMap = useMemo(() => {
     const map = new Map<string, ({ weight: number; reps: number } | null)[]>();
@@ -231,7 +195,6 @@ export function useActiveWorkout(
       });
     }
 
-    void clearDraft();
     setNewRecords(records);
     setTriumphData({
       volume: capturedVolume,
@@ -239,6 +202,7 @@ export function useActiveWorkout(
       seconds: capturedSeconds,
     });
     setShowTriumph(true);
+    void clearDraft();
   };
 
   const handleFinish = () => {
@@ -260,9 +224,18 @@ export function useActiveWorkout(
     router.push("/dashboard");
   };
 
-  const abandonWorkout = () => {
-    void clearDraft();
-    router.push("/workout");
+  const abandonWorkout = async () => {
+    if (hasFinishedRef.current) return;
+    hasFinishedRef.current = true;
+    setIsAbandoning(true);
+    try {
+      await clearDraft();
+      router.replace("/workout");
+    } catch (err) {
+      console.warn("[abandonWorkout] clearDraft failed", err);
+      hasFinishedRef.current = false;
+      setIsAbandoning(false);
+    }
   };
 
   const toggleSetCompleted = (exerciseId: string, setIndex: number) => {
@@ -291,7 +264,7 @@ export function useActiveWorkout(
 
   const addExercise = (exerciseId: string) => {
     void updateDraftExercises((current) => {
-      const id = crypto.randomUUID();
+      const id = generateId();
       return [
         ...current,
         {
@@ -301,7 +274,7 @@ export function useActiveWorkout(
           sortOrder: current.length,
           sets: [
             {
-              id: crypto.randomUUID(),
+              id: generateId(),
               loggedExerciseId: id,
               type: "working",
               setOrder: 0,
@@ -329,7 +302,7 @@ export function useActiveWorkout(
         if (e.id !== loggedExerciseId) return e;
         const lastSet = e.sets[e.sets.length - 1];
         const newSet: LoggedSet = {
-          id: crypto.randomUUID(),
+          id: generateId(),
           loggedExerciseId: e.id,
           type: "working",
           setOrder: (lastSet?.setOrder ?? -1) + 1,
@@ -400,6 +373,7 @@ export function useActiveWorkout(
     setShowConfirmFinish,
     abandonWorkout,
     showTriumph,
+    isAbandoning,
     newRecords,
     triumphData,
     handleCloseTriumph,
