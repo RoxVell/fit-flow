@@ -90,7 +90,7 @@ export function useActiveProgram() {
   return useLiveQuery(async () => {
     const active = await db.programs.filter((p) => p.isActive && !p.deletedAt).first();
     if (!active) return null;
-    if (!manifest) return null;
+    if (!manifest) return undefined;
     const map = buildExerciseMapFromManifest(manifest, locale);
     return {
       ...active,

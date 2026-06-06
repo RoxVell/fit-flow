@@ -133,7 +133,7 @@ function build() {
     const tips = mergeLocalizedList(en.tips.en, ru?.tips.ru);
     const commonMistakes = mergeLocalizedList(
       en.commonMistakes.en,
-      en.commonMistakes.ru ?? ru?.commonMistakes.ru
+      ru?.commonMistakes.ru
     );
 
     const thumbnailUri =
