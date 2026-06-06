@@ -17,6 +17,9 @@ export const exerciseUi: Record<
     mechanics: string;
     exercises: string;
     exerciseCount: (n: number) => string;
+    recentExercises: string;
+    allExercises: string;
+    usageTimes: (n: number) => string;
   }
 > = {
   en: {
@@ -34,6 +37,9 @@ export const exerciseUi: Record<
     mechanics: "Mechanics",
     exercises: "Exercises",
     exerciseCount: (n) => `${n} exercises`,
+    recentExercises: "Recent exercises",
+    allExercises: "All exercises",
+    usageTimes: (n) => `${n} times`,
   },
   ru: {
     searchPlaceholder: "Поиск упражнений...",
@@ -50,5 +56,8 @@ export const exerciseUi: Record<
     mechanics: "Механика",
     exercises: "Упражнения",
     exerciseCount: (n) => `${n} упражнений`,
+    recentExercises: "Недавние упражнения",
+    allExercises: "Все упражнения",
+    usageTimes: (n) => `${n} раз`,
   },
 };

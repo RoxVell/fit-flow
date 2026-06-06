@@ -65,7 +65,7 @@ export function RecentPRs() {
                 <p className="text-sm font-bold">
                   {pr.value} {prUnit}
                 </p>
-                {absDelta !== null && (
+                {absDelta !== null && absDelta !== 0 && (
                   <p className="flex items-center gap-0.5 text-[11px] text-green-500 justify-end">
                     <TrendingUp className="h-3 w-3" />
                     +{absDelta} {prUnit}

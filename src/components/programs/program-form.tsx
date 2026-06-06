@@ -9,6 +9,7 @@ import { useExercises } from "@/lib/hooks/use-data";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
+import { ExercisePickerDialog } from "@/components/exercises/exercise-picker-dialog";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -16,7 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Plus,
   Minus,
@@ -28,7 +28,6 @@ import {
   Calendar,
   List,
   GripVertical,
-  Search,
 } from "lucide-react";
 import {
   DndContext,
@@ -620,7 +619,11 @@ function SessionEditorContent({
       <ExercisePickerDialog
         open={showExercisePicker}
         onOpenChange={setShowExercisePicker}
-        selectedIds={new Set(session.exercises.map((e) => e.exerciseId))}
+        title={t.programs.addExercise}
+        excludeIds={new Set(session.exercises.map((e) => e.exerciseId))}
+        emptyMessage={t.programs.noMatchingExercises}
+        emptyMessageAllExcluded={t.programs.allExercisesAdded}
+        showAddAction
         onSelect={(exerciseId) => {
           onUpdate({
             exercises: [
@@ -628,7 +631,6 @@ function SessionEditorContent({
               { exerciseId, targetSets: 3, targetReps: "" },
             ],
           });
-          setShowExercisePicker(false);
         }}
       />
     </div>
@@ -717,78 +719,5 @@ function SortableExerciseRow({
         </div>
       </div>
     </div>
-  );
-}
-
-function ExercisePickerDialog({
-  open,
-  onOpenChange,
-  selectedIds,
-  onSelect,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  selectedIds: Set<string>;
-  onSelect: (exerciseId: string) => void;
-}) {
-  const t = useT();
-  const { muscleGroupLabel } = useFormat();
-  const [search, setSearch] = useState("");
-  const exercises = useExercises({ search: search || undefined });
-
-  const filtered = useMemo(
-    () => exercises?.filter((e) => !selectedIds.has(e.id)) || [],
-    [exercises, selectedIds]
-  );
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle>{t.programs.addExercise}</DialogTitle>
-        </DialogHeader>
-        <div className="relative mb-2">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t.workout.searchExercises}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <ScrollArea className="max-h-[50vh]">
-          <div className="space-y-0.5">
-            {filtered.map((ex) => (
-              <button
-                key={ex.id}
-                type="button"
-                className="w-full flex items-center gap-3 rounded-lg px-3 py-3 text-left text-sm hover:bg-accent transition-colors"
-                onClick={() => onSelect(ex.id)}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <Dumbbell className="h-4 w-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{ex.name}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <Badge variant="secondary" className="text-[10px] font-normal px-1.5 py-0">
-                      {muscleGroupLabel(ex.muscleGroup)}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-muted-foreground/20">
-                  <Plus className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-              </button>
-            ))}
-            {filtered.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-6">
-                {search ? t.programs.noMatchingExercises : t.programs.allExercisesAdded}
-              </p>
-            )}
-          </div>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
   );
 }
