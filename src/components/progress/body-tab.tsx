@@ -11,23 +11,27 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useBodyMeasurements } from "@/lib/hooks/use-data";
+import { useT } from "@/lib/i18n/use-t";
+import { useFormat } from "@/lib/i18n/use-format";
 
 const COLORS = ["var(--color-primary)", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
-const measurementConfig = [
-  { key: "weight", label: "Weight (kg)", color: COLORS[0] },
-  { key: "chest", label: "Chest (cm)", color: COLORS[1] },
-  { key: "waist", label: "Waist (cm)", color: COLORS[2] },
-  { key: "arms", label: "Arms (cm)", color: COLORS[3] },
-  { key: "thighs", label: "Thighs (cm)", color: COLORS[4] },
-  { key: "calves", label: "Calves (cm)", color: COLORS[5] },
-];
-
 export function BodyTab() {
   const measurements = useBodyMeasurements();
+  const t = useT();
+  const { formatChartDate } = useFormat();
+
+  const measurementConfig = [
+    { key: "weight", label: t.progress.bodyMeasurements.weight, color: COLORS[0] },
+    { key: "chest", label: t.progress.bodyMeasurements.chest, color: COLORS[1] },
+    { key: "waist", label: t.progress.bodyMeasurements.waist, color: COLORS[2] },
+    { key: "arms", label: t.progress.bodyMeasurements.arms, color: COLORS[3] },
+    { key: "thighs", label: t.progress.bodyMeasurements.thighs, color: COLORS[4] },
+    { key: "calves", label: t.progress.bodyMeasurements.calves, color: COLORS[5] },
+  ];
 
   const chartData = measurements?.map((m) => ({
-    date: new Date(m.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    date: formatChartDate(m.date),
     weight: m.weight,
     bodyFat: m.bodyFat,
     chest: m.chest,
@@ -43,7 +47,7 @@ export function BodyTab() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Body Weight</CardTitle>
+          <CardTitle className="text-sm font-medium">{t.progress.bodyWeight}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-48 outline-none">

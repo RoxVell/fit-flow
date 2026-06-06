@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { LoggedSet, SetType } from "@/lib/db/types";
+import { useT } from "@/lib/i18n/use-t";
 
 interface SetRowProps {
   set: LoggedSet;
@@ -17,13 +18,15 @@ interface SetRowProps {
   onComplete: () => void;
 }
 
-const setTypeConfig: Record<SetType, { label: string; color: string }> = {
-  working: { label: "W", color: "bg-primary/15 text-primary border-primary/25" },
-  warmup: { label: "U", color: "bg-blue-500/15 text-blue-500 border-blue-500/25" },
-  dropset: { label: "D", color: "bg-red-500/15 text-red-500 border-red-500/25" },
-};
-
 export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComplete }: SetRowProps) {
+  const t = useT();
+
+  const setTypeConfig: Record<SetType, { label: string; color: string }> = {
+    working: { label: t.workout.setTypeWorking, color: "bg-primary/15 text-primary border-primary/25" },
+    warmup: { label: t.workout.setTypeWarmup, color: "bg-blue-500/15 text-blue-500 border-blue-500/25" },
+    dropset: { label: t.workout.setTypeDropset, color: "bg-red-500/15 text-red-500 border-red-500/25" },
+  };
+
   const cycleType = () => {
     const types: SetType[] = ["working", "warmup", "dropset"];
     const idx = types.indexOf(set.type);
@@ -71,7 +74,7 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
               {previousSet.weight}×{previousSet.reps}
             </span>
           ) : (
-            <span className="text-sm text-muted-foreground/50 w-20 shrink-0 text-right">—</span>
+            <span className="text-sm text-muted-foreground/50 w-20 shrink-0 text-right">{t.common.emDash}</span>
           )}
 
           <div className="flex-1" />
@@ -79,48 +82,37 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
           <Input
             type="number"
             inputMode="decimal"
-            value={set.weight === 0 ? "" : set.weight}
-            onChange={(e) => {
-              const v = e.target.value;
-              onUpdate({ weight: v === "" ? 0 : parseFloat(v) || 0 });
-            }}
-            className="h-8 w-16 shrink-0 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-muted-foreground/30"
-            placeholder={previousSet ? String(previousSet.weight) : "kg"}
+            value={set.weight || ""}
+            onChange={(e) => onUpdate({ weight: parseFloat(e.target.value) || 0 })}
+            className="h-8 w-14 shrink-0 text-center text-sm tabular-nums px-1"
+            placeholder="0"
           />
 
-          <span className="w-3 shrink-0 text-center text-sm text-muted-foreground/40">×</span>
+          <span className="text-muted-foreground/40 text-xs shrink-0">×</span>
 
           <Input
             type="number"
             inputMode="numeric"
-            value={set.reps === 0 ? "" : set.reps}
-            onChange={(e) => {
-              const v = e.target.value;
-              onUpdate({ reps: v === "" ? 0 : parseInt(v, 10) || 0 });
-            }}
-            className="h-8 w-12 shrink-0 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-muted-foreground/30"
-            placeholder={previousSet ? String(previousSet.reps) : "r"}
+            value={set.reps || ""}
+            onChange={(e) => onUpdate({ reps: parseInt(e.target.value) || 0 })}
+            className="h-8 w-10 shrink-0 text-center text-sm tabular-nums px-1"
+            placeholder="0"
           />
 
           <button
-            onClick={canToggleComplete ? onComplete : undefined}
+            onClick={() => canToggleComplete && onComplete()}
             disabled={!canToggleComplete}
-            aria-pressed={set.completed}
-            aria-label={set.completed ? "Mark set incomplete" : "Mark set complete"}
             className={cn(
-              "ml-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-all",
+              "ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors",
               set.completed
-                ? "border-primary text-primary"
-                : canToggleComplete
-                  ? "border-muted-foreground/30 hover:border-primary/50"
-                  : "border-muted-foreground/10 text-muted-foreground/20 cursor-not-allowed"
+                ? "border-green-500 bg-green-500/15 text-green-500"
+                : "border-muted-foreground/20 text-muted-foreground/30",
+              canToggleComplete && !set.completed && "hover:border-green-500/50 hover:text-green-500/50"
             )}
           >
-            {set.completed && (
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                <path d="M5 13l4 4L19 7" />
-              </svg>
-            )}
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="3">
+              <path d="M5 13l4 4L19 7" />
+            </svg>
           </button>
         </div>
 

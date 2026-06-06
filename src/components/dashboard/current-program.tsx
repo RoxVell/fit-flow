@@ -5,6 +5,9 @@ import { ArrowRight, Calendar } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { WorkoutSession } from "@/lib/db/types";
+import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
+import { useT } from "@/lib/i18n/use-t";
+import { useFormat } from "@/lib/i18n/use-format";
 import Link from "next/link";
 
 interface CurrentProgramProps {
@@ -13,18 +16,21 @@ interface CurrentProgramProps {
 }
 
 export function CurrentProgram({ programName, session }: CurrentProgramProps) {
+  const { getName } = useExerciseLookup();
+  const t = useT();
+  const { dayLabels } = useFormat();
+
   if (!session) {
     return (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center gap-2 py-6 text-center">
           <Calendar className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">No workout scheduled today</p>
+          <p className="text-sm text-muted-foreground">{t.dashboard.noWorkoutToday}</p>
         </CardContent>
       </Card>
     );
   }
 
-  const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const today = new Date().getDay();
   const isToday = session.dayOfWeek === today || session.dayOfWeek % 7 === today;
 
@@ -43,7 +49,7 @@ export function CurrentProgram({ programName, session }: CurrentProgramProps) {
                     {dayLabels[session.dayOfWeek % 7]}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
-                    {session.exercises.length} exercises
+                    {t.dashboard.exercisesCount(session.exercises.length)}
                   </span>
                 </div>
               </div>
@@ -52,7 +58,8 @@ export function CurrentProgram({ programName, session }: CurrentProgramProps) {
             <div className="mt-3 flex flex-wrap gap-1">
               {session.exercises.slice(0, 4).map((se) => (
                 <Badge key={se.id} variant="outline" className="text-[10px] font-normal">
-                  {se.exercise?.name || "..."}
+                  {se.exercise?.name ||
+                    getName(se.exerciseId, t.programs.unknownExercise)}
                 </Badge>
               ))}
               {session.exercises.length > 4 && (

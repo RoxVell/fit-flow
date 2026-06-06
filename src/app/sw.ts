@@ -32,6 +32,10 @@ const serwist = new Serwist({
       handler: networkOnlyApi,
     },
     {
+      matcher: ({ url }) => url.hostname === "api.smartworkout.app",
+      handler: networkOnlyApi,
+    },
+    {
       matcher: ({ request }) => request.destination === "image",
       handler: new StaleWhileRevalidate({
         cacheName: "images",

@@ -20,6 +20,9 @@
 # production
 /build
 
+# exercise library source dumps (run npm run build:exercises)
+/data/raw/
+
 # misc
 .DS_Store
 *.pem

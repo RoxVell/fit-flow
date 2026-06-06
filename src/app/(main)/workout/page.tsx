@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { Play, Dumbbell, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useActiveProgram, useWorkoutDraft } from "@/lib/hooks/use-data";
+import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
+import { useT } from "@/lib/i18n/use-t";
+import { useFormat } from "@/lib/i18n/use-format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
@@ -14,12 +17,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
 export default function WorkoutPlanPage() {
   const router = useRouter();
+  const t = useT();
+  const { dayLabels } = useFormat();
   const program = useActiveProgram();
   const draft = useWorkoutDraft();
+  const { getName } = useExerciseLookup();
   const today = new Date().getDay();
 
   useEffect(() => {
@@ -61,8 +65,9 @@ export default function WorkoutPlanPage() {
       <div className="flex flex-col items-center justify-center gap-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] h-full">
         <Dumbbell className="h-12 w-12 text-muted-foreground" />
         <p className="text-sm text-muted-foreground text-center">
-          No active program found.<br />
-          Create one in the Programs tab.
+          {t.workout.noActiveProgram}
+          <br />
+          {t.workout.createInPrograms}
         </p>
       </div>
     );
@@ -73,9 +78,9 @@ export default function WorkoutPlanPage() {
   return (
     <div className="space-y-6 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <div>
-        <h1 className="text-2xl font-bold">Workout</h1>
+        <h1 className="text-2xl font-bold">{t.workout.title}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          {program.name} &middot; {program.daysPerWeek} days / week
+          {program.name} &middot; {program.daysPerWeek} {t.workout.daysPerWeek}
         </p>
       </div>
 
@@ -88,14 +93,14 @@ export default function WorkoutPlanPage() {
           <div>
             <p className="text-sm font-semibold">{selectedSession.name}</p>
             <p className="text-xs text-muted-foreground">
-              {DAY_LABELS[selectedSession.dayOfWeek % 7]} &middot;{" "}
-              {selectedSession.exercises.length} exercises
+              {dayLabels[selectedSession.dayOfWeek % 7]} &middot;{" "}
+              {t.workout.exerciseCount(selectedSession.exercises.length)}
             </p>
           </div>
           <div className="flex items-center gap-2">
             {selectedSession.id === recommendedId && (
               <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                Today
+                {t.workout.today}
               </span>
             )}
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -105,7 +110,7 @@ export default function WorkoutPlanPage() {
 
       <section>
         <h2 className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Exercises ({exercises.length})
+          {t.workout.exercises} ({exercises.length})
         </h2>
         <div className="overflow-hidden rounded-xl border bg-card">
           {exercises.map((se, i) => (
@@ -117,7 +122,8 @@ export default function WorkoutPlanPage() {
               )}
             >
               <span className="text-sm font-medium">
-                {se.exercise?.name || "Unknown"}
+                {se.exercise?.name ||
+                  getName(se.exerciseId, t.workout.unknownExercise)}
               </span>
               <span className="text-sm text-muted-foreground">
                 {se.targetSets}&times;{se.targetReps}
@@ -132,13 +138,13 @@ export default function WorkoutPlanPage() {
         onClick={() => router.push(`/workout/active?session=${effectiveId}`)}
       >
         <Play className="h-5 w-5" fill="currentColor" />
-        Start Workout
+        {t.workout.startWorkout}
       </Button>
 
       <Dialog open={showPicker} onOpenChange={setShowPicker}>
         <DialogContent className="max-h-[70vh]">
           <DialogHeader>
-            <DialogTitle>Change Day</DialogTitle>
+            <DialogTitle>{t.workout.changeDay}</DialogTitle>
           </DialogHeader>
           <div className="space-y-1">
             {program.sessions.map((s) => {
@@ -169,12 +175,13 @@ export default function WorkoutPlanPage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium">{s.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {DAY_LABELS[s.dayOfWeek % 7]} &middot; {s.exercises.length} exercises
+                      {dayLabels[s.dayOfWeek % 7]} &middot;{" "}
+                      {t.workout.exerciseCount(s.exercises.length)}
                     </p>
                   </div>
                   {s.id === recommendedId && (
                     <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                      Today
+                      {t.workout.today}
                     </span>
                   )}
                 </button>

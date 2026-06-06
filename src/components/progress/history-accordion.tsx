@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ChevronDown, TrendingUp, TrendingDown, Minus, Maximize2, Minimize2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/use-t";
+import { useFormat } from "@/lib/i18n/use-format";
 
 interface HistorySet {
   weight: number;
@@ -22,14 +24,19 @@ interface HistoryAccordionProps {
   sessions: HistorySession[];
 }
 
-const setTypeLabel: Record<string, string> = {
-  working: "",
-  warmup: "warm-up",
-  dropset: "drop",
-};
-
 export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
+  const t = useT();
+  const { formatHistoryDate } = useFormat();
   const [openSet, setOpenSet] = useState<Set<number>>(new Set());
+
+  const setTypeLabel = useMemo(
+    () => ({
+      working: "",
+      warmup: t.progress.warmupSet,
+      dropset: t.progress.dropsetSet,
+    }),
+    [t]
+  );
 
   const toggle = useCallback((i: number) => {
     setOpenSet((prev) => {
@@ -54,11 +61,11 @@ export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">History</CardTitle>
+          <CardTitle className="text-sm font-medium">{t.progress.history}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
-            No data yet
+            {t.progress.noData}
           </div>
         </CardContent>
       </Card>
@@ -73,7 +80,7 @@ export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">History</CardTitle>
+          <CardTitle className="text-sm font-medium">{t.progress.history}</CardTitle>
           <button
             type="button"
             onClick={toggleAll}
@@ -81,11 +88,11 @@ export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
           >
             {allOpen ? (
               <>
-                <Minimize2 className="h-3.5 w-3.5" /> Collapse all
+                <Minimize2 className="h-3.5 w-3.5" /> {t.progress.collapseAll}
               </>
             ) : (
               <>
-                <Maximize2 className="h-3.5 w-3.5" /> Expand all
+                <Maximize2 className="h-3.5 w-3.5" /> {t.progress.expandAll}
               </>
             )}
           </button>
@@ -106,15 +113,11 @@ export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
                   className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left hover:bg-muted/20 transition-colors"
                 >
                   <span className="text-sm text-muted-foreground">
-                    {new Date(session.date).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
+                    {formatHistoryDate(session.date)}
                   </span>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-sm font-semibold tabular-nums">
-                      {session.bestE1RM.toFixed(1)} kg
+                      {session.bestE1RM.toFixed(1)} {t.dashboard.kg}
                     </span>
                     {delta !== null && (
                       <span
@@ -173,11 +176,11 @@ export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
                               {s.setOrder + 1}
                             </span>
                             <span className="tabular-nums">
-                              {s.weight} kg × {s.reps}
+                              {s.weight} {t.dashboard.kg} × {s.reps}
                             </span>
-                            {setTypeLabel[s.type] && (
+                            {setTypeLabel[s.type as keyof typeof setTypeLabel] && (
                               <span className="text-[10px] text-muted-foreground/40 italic">
-                                {setTypeLabel[s.type]}
+                                {setTypeLabel[s.type as keyof typeof setTypeLabel]}
                               </span>
                             )}
                           </div>

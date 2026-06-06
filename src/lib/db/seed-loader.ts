@@ -1,9 +1,10 @@
-import { db } from "./dexie";
-import { exercises, programs } from "./seed";
-import type {
-  ExerciseEntity,
-  ProgramEntity,
-} from "./types";
+import { db, getAppMeta, setAppMeta } from "./dexie";
+import { programs } from "./seed";
+import type { ProgramEntity } from "./types";
+
+const LIBRARY_SCHEMA_VERSION = 3;
+
+const LEGACY_EXERCISE_ID = /^ex\d+$/;
 
 declare global {
   // eslint-disable-next-line no-var
@@ -19,34 +20,70 @@ function getSeedPromise(): Promise<void> {
   return p;
 }
 
+async function hasLegacyProgramExerciseIds(): Promise<boolean> {
+  const rows = await db.programs.toArray();
+  return rows.some((p) =>
+    p.sessions.some((s) =>
+      s.exercises.some((e) => LEGACY_EXERCISE_ID.test(e.exerciseId))
+    )
+  );
+}
+
 export async function ensureSeeded(): Promise<void> {
   if (typeof window === "undefined") return;
-  const meta = await db.meta.get("app");
+  await runLibraryMigration();
+  const meta = await getAppMeta();
   if (meta?.initialized) return;
-  const count = await db.exercises.count();
+  const count = await db.programs.count();
   if (count > 0) return;
   await getSeedPromise();
+}
+
+async function runLibraryMigration(): Promise<void> {
+  const meta = await getAppMeta();
+  const legacyPrograms = await hasLegacyProgramExerciseIds();
+  const versionBump = meta.schemaVersion < LIBRARY_SCHEMA_VERSION;
+
+  if (!versionBump && !legacyPrograms) return;
+
+  if (versionBump) {
+    await db.transaction(
+      "rw",
+      [
+        db.exercises,
+        db.programs,
+        db.workoutLogs,
+        db.personalRecords,
+        db.workoutDrafts,
+        db.meta,
+      ],
+      async () => {
+        await db.exercises.clear();
+        await db.workoutLogs.clear();
+        await db.personalRecords.clear();
+        await db.workoutDrafts.clear();
+        await db.programs.clear();
+      }
+    );
+  } else if (legacyPrograms) {
+    await db.programs.clear();
+  }
+
+  delete globalThis.__fitflow_seed_promise__;
+  await setAppMeta({ schemaVersion: LIBRARY_SCHEMA_VERSION });
+  await doSeed();
 }
 
 async function doSeed(): Promise<void> {
   if (typeof window === "undefined") return;
   const now = new Date().toISOString();
-  const exerciseRows: ExerciseEntity[] = exercises.map((e) => ({
-    ...e,
-    revision: 1,
-    updatedAt: now,
-  }));
   const programRows: ProgramEntity[] = programs.map((p) => ({
     ...p,
     revision: 1,
     updatedAt: now,
   }));
 
-  const existingExercises = await db.exercises.count();
   const existingPrograms = await db.programs.count();
-  if (existingExercises === 0) {
-    await db.exercises.bulkPut(exerciseRows);
-  }
   if (existingPrograms === 0) {
     await db.programs.bulkPut(programRows);
   }
@@ -81,5 +118,6 @@ export async function resetAllData(): Promise<void> {
     }
   );
   delete globalThis.__fitflow_seed_promise__;
+  await setAppMeta({ schemaVersion: LIBRARY_SCHEMA_VERSION });
   await doSeed();
 }

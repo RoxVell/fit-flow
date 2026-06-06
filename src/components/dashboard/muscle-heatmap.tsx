@@ -3,6 +3,7 @@
 import BodyModel from "react-body-highlighter";
 import type { MuscleGroup } from "@/lib/db/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useT } from "@/lib/i18n/use-t";
 
 interface MuscleHeatmapProps {
   data: Partial<Record<MuscleGroup, number>>;
@@ -24,6 +25,7 @@ const muscleMap: Partial<Record<MuscleGroup, string>> = {
 };
 
 export function MuscleHeatmap({ data }: MuscleHeatmapProps) {
+  const t = useT();
   const exercises = Object.entries(data)
     .filter(([_, freq]) => freq > 0)
     .map(([muscle, freq]) => {
@@ -35,7 +37,7 @@ export function MuscleHeatmap({ data }: MuscleHeatmapProps) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">Muscle Load</CardTitle>
+        <CardTitle className="text-sm font-medium">{t.dashboard.muscleLoad}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex justify-center gap-2">
@@ -56,9 +58,9 @@ export function MuscleHeatmap({ data }: MuscleHeatmapProps) {
         </div>
         <div className="mt-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
           <span className="h-2 w-4 rounded bg-[#fde68a]" />
-          <span>Light</span>
+          <span>{t.dashboard.light}</span>
           <span className="h-2 w-4 rounded bg-[#ea580c]" />
-          <span>Heavy</span>
+          <span>{t.dashboard.heavy}</span>
         </div>
       </CardContent>
     </Card>

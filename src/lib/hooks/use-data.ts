@@ -6,68 +6,112 @@ import { isActiveRecord, withoutDeleted } from "@/lib/db/active-records";
 import { db } from "@/lib/db/dexie";
 import type {
   DashboardStats,
+  Exercise,
   ExerciseFilters,
   MuscleGroup,
 } from "@/lib/db/types";
 import {
-  attachExercisesToSessions,
-  filterExercises,
-} from "@/lib/repositories/exercises";
-import type { ProgramEntity } from "@/lib/db/types";
+  bodyPartToMuscleGroup,
+  buildExerciseMapFromManifest,
+  manifestToExercise,
+} from "@/lib/exercises/adapter";
+import {
+  matchesUnilateralFilter,
+  toLibraryFilters,
+} from "@/lib/exercises/legacy-filters";
+import { attachExercisesToSessions } from "@/lib/repositories/exercises";
 import { bestE1RM, bestWeight, volume } from "@/lib/training-metrics";
+import {
+  useExerciseLibrary,
+  useExerciseManifest,
+} from "@/lib/hooks/use-exercise-library";
+import { useLocale } from "@/lib/stores/locale-store";
 
-async function attachPrograms(programs: ProgramEntity[]) {
-  const exercises = withoutDeleted(await db.exercises.toArray());
-  const map = new Map(exercises.map((e) => [e.id, e]));
-  return programs.map((p) => ({
-    ...p,
-    sessions: attachExercisesToSessions(p.sessions, map),
-  }));
-}
+export function useExercises(filters?: ExerciseFilters): Exercise[] | undefined {
+  const locale = useLocale();
+  const { manifest, loading: manifestLoading } = useExerciseManifest();
+  const libraryFilters = useMemo(
+    () => toLibraryFilters(filters),
+    [
+      filters?.muscleGroup,
+      filters?.equipment,
+      filters?.category,
+      filters?.search,
+    ]
+  );
+  const { exercises: manifestItems, loading: filterLoading } =
+    useExerciseLibrary(libraryFilters);
 
-export function useExercises(filters?: ExerciseFilters) {
-  return useLiveQuery(async () => {
-    const all = withoutDeleted(await db.exercises.toArray());
-    return filterExercises(all, filters);
-  }, [
-    filters?.muscleGroup,
-    filters?.equipment,
-    filters?.category,
-    filters?.unilateral,
-    filters?.search,
-  ]);
+  return useMemo(() => {
+    if (manifestLoading || filterLoading || !manifest || !manifestItems) {
+      return undefined;
+    }
+    let result = manifestItems.map((item) => manifestToExercise(item, locale));
+    if (filters?.unilateral !== undefined) {
+      result = result.filter((e) =>
+        matchesUnilateralFilter(
+          e.unilateral ? "UNILATERAL" : "BILATERAL",
+          filters.unilateral
+        )
+      );
+    }
+    return result;
+  }, [manifestItems, manifestLoading, filterLoading, manifest, locale, filters?.unilateral]);
 }
 
 export function useExercise(id: string) {
-  return useLiveQuery(async () => {
-    const exercise = await db.exercises.get(id);
-    return isActiveRecord(exercise) ? exercise : null;
-  }, [id]);
+  const locale = useLocale();
+  const { manifest, loading } = useExerciseManifest();
+
+  return useMemo(() => {
+    if (loading || !manifest) return undefined;
+    const item = manifest.find((e) => e.id === id);
+    return item ? manifestToExercise(item, locale) : null;
+  }, [manifest, loading, id, locale]);
 }
 
 export function usePrograms() {
-  return useLiveQuery(
-    async () => attachPrograms(withoutDeleted(await db.programs.toArray())),
-    []
-  );
+  const locale = useLocale();
+  const { manifest } = useExerciseManifest();
+  return useLiveQuery(async () => {
+    const raw = withoutDeleted(await db.programs.toArray());
+    if (!manifest) return undefined;
+    const map = buildExerciseMapFromManifest(manifest, locale);
+    return raw.map((p) => ({
+      ...p,
+      sessions: attachExercisesToSessions(p.sessions, map),
+    }));
+  }, [locale, manifest]);
 }
 
 export function useActiveProgram() {
+  const locale = useLocale();
+  const { manifest } = useExerciseManifest();
   return useLiveQuery(async () => {
     const active = await db.programs.filter((p) => p.isActive && !p.deletedAt).first();
     if (!active) return null;
-    const [program] = await attachPrograms([active]);
-    return program;
-  }, []);
+    if (!manifest) return null;
+    const map = buildExerciseMapFromManifest(manifest, locale);
+    return {
+      ...active,
+      sessions: attachExercisesToSessions(active.sessions, map),
+    };
+  }, [locale, manifest]);
 }
 
 export function useProgram(id: string) {
+  const locale = useLocale();
+  const { manifest } = useExerciseManifest();
   return useLiveQuery(async () => {
     const program = await db.programs.get(id);
     if (!isActiveRecord(program)) return null;
-    const [attached] = await attachPrograms([program]);
-    return attached;
-  }, [id]);
+    if (!manifest) return undefined;
+    const map = buildExerciseMapFromManifest(manifest, locale);
+    return {
+      ...program,
+      sessions: attachExercisesToSessions(program.sessions, map),
+    };
+  }, [id, locale, manifest]);
 }
 
 export function useWorkoutLogs(limit = 20) {
@@ -121,12 +165,17 @@ export function useDashboardStats(): DashboardStats | undefined {
   const logs = useWorkoutLogs(100);
   const measurements = useBodyMeasurements();
   const programs = usePrograms();
-  const exercises = useExercises();
+  const { manifest } = useExerciseManifest();
 
   return useMemo(() => {
-    if (!logs || !measurements || !programs || !exercises) return undefined;
+    if (!logs || !measurements || !programs || !manifest) return undefined;
 
-    const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
+    const exerciseMap = new Map(
+      manifest.map((item) => [
+        item.id,
+        { muscleGroup: bodyPartToMuscleGroup(item.bodyPart), secondaryMuscles: [] as MuscleGroup[] },
+      ])
+    );
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     const thisWeek = logs.filter((l) => new Date(l.startedAt) >= weekAgo);
@@ -203,7 +252,7 @@ export function useDashboardStats(): DashboardStats | undefined {
       nextSession,
       heatmapData,
     };
-  }, [logs, measurements, programs, exercises]);
+  }, [logs, measurements, programs, manifest]);
 }
 
 export function useExerciseHistory(exerciseId: string) {

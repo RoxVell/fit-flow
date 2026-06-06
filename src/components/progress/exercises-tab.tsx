@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { SEED_EXERCISES } from "@/lib/db/seed-exercise-ids";
 import {
   LineChart,
   Line,
@@ -27,16 +28,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { HistoryAccordion } from "@/components/progress/history-accordion";
+import { useT } from "@/lib/i18n/use-t";
+import { useFormat } from "@/lib/i18n/use-format";
 
 export function ExercisesTab() {
+  const t = useT();
+  const { formatChartDate } = useFormat();
   const allExercises = useExercises();
-  const [selectedId, setSelectedId] = useState("ex1");
+  const [selectedId, setSelectedId] = useState<string>(SEED_EXERCISES.barbellBenchPress);
+
+  useEffect(() => {
+    if (allExercises?.length && !allExercises.some((e) => e.id === selectedId)) {
+      setSelectedId(allExercises[0].id);
+    }
+  }, [allExercises, selectedId]);
   const history = useExerciseHistory(selectedId);
   const detailedHistory = useExerciseDetailedHistory(selectedId);
   const [chartType, setChartType] = useState<"1rm" | "volume">("1rm");
 
   const chartData = history?.map((h) => ({
-    date: new Date(h.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    date: formatChartDate(h.date),
     estimated1RM: Math.round(h.estimated1RM * 10) / 10,
     volume: Math.round(h.volume),
   }));
@@ -49,7 +60,7 @@ export function ExercisesTab() {
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">Exercise Progress</CardTitle>
+          <CardTitle className="text-sm font-medium">{t.progress.exerciseProgress}</CardTitle>
           <Select value={selectedId} onValueChange={(v) => v && setSelectedId(v)}>
             <SelectTrigger className="w-40 h-7 text-xs">
               <SelectValue>{selectedExercise?.name}</SelectValue>
@@ -66,8 +77,8 @@ export function ExercisesTab() {
         <CardContent>
           <Tabs value={chartType} onValueChange={(v) => setChartType(v as typeof chartType)}>
             <TabsList className="mb-3">
-              <TabsTrigger value="1rm" className="text-xs">e1RM</TabsTrigger>
-              <TabsTrigger value="volume" className="text-xs">Volume</TabsTrigger>
+              <TabsTrigger value="1rm" className="text-xs">{t.dashboard.prE1rm}</TabsTrigger>
+              <TabsTrigger value="volume" className="text-xs">{t.progress.chartVolume}</TabsTrigger>
             </TabsList>
           </Tabs>
           <div className="h-48 outline-none">
@@ -119,7 +130,7 @@ export function ExercisesTab() {
               </ResponsiveContainer>
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                No data yet
+                {t.progress.noData}
               </div>
             )}
           </div>

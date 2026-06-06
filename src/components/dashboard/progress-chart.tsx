@@ -14,6 +14,8 @@ import { useWorkoutLogs } from "@/lib/hooks/use-data";
 import { e1RM } from "@/lib/training-metrics";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/use-t";
+import { useFormat } from "@/lib/i18n/use-format";
 
 function getMonday(date: Date): Date {
   const d = new Date(date);
@@ -24,17 +26,25 @@ function getMonday(date: Date): Date {
   return d;
 }
 
-const periods = [
-  { value: "4w", label: "4W", days: 28 },
-  { value: "8w", label: "8W", days: 56 },
-  { value: "all", label: "All", days: Infinity },
-] as const;
+const periodDays = [
+  { value: "4w" as const, days: 28 },
+  { value: "8w" as const, days: 56 },
+  { value: "all" as const, days: Infinity },
+];
 
-type Period = (typeof periods)[number]["value"];
+type Period = (typeof periodDays)[number]["value"];
 
 export function ProgressChart() {
   const logs = useWorkoutLogs(50);
   const [period, setPeriod] = useState<Period>("8w");
+  const t = useT();
+  const { formatChartDate } = useFormat();
+
+  const periods = [
+    { value: "4w" as const, label: t.progress.period4w, days: 28 },
+    { value: "8w" as const, label: t.progress.period8w, days: 56 },
+    { value: "all" as const, label: t.progress.periodAll, days: Infinity },
+  ];
 
   const chartData = useMemo(() => {
     if (!logs || logs.length === 0) return null;
@@ -73,7 +83,7 @@ export function ProgressChart() {
 
     if (sortedWeeks.length < 2) return null;
 
-    const selected = periods.find((p) => p.value === period)!;
+    const selected = periodDays.find((p) => p.value === period)!;
     let filteredWeeks = sortedWeeks;
     if (selected.days !== Infinity) {
       const cutoff = new Date();
@@ -101,14 +111,13 @@ export function ProgressChart() {
 
       const progress = count > 0 ? total / count : 100;
 
-      const d = new Date(weekStart);
-      const label = `${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+      const label = formatChartDate(weekStart);
 
       return { week: label, progress: Math.round(progress * 10) / 10 };
     });
 
     return result;
-  }, [logs, period]);
+  }, [logs, period, formatChartDate]);
 
   const change = useMemo(() => {
     if (!chartData || chartData.length < 2) return null;
@@ -124,7 +133,7 @@ export function ProgressChart() {
     <div className="rounded-xl border bg-card p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-sm font-heading font-medium">General progress</p>
+          <p className="text-sm font-heading font-medium">{t.progress.generalProgress}</p>
           <p className="text-lg font-bold flex items-center gap-1">
             {isPositive ? (
               <TrendingUp className="h-5 w-5 text-green-500" />
@@ -183,7 +192,7 @@ export function ProgressChart() {
                 fontSize: "12px",
                 color: "var(--color-popover-foreground)",
               }}
-              formatter={(value) => [`${value}%`, "Прогресс"]}
+              formatter={(value) => [`${value}%`, t.progress.title]}
               cursor={{ stroke: "var(--color-border)", strokeWidth: 1 }}
             />
             <Area

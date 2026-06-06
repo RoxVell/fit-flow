@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { useWorkoutStore } from "@/lib/store/workout-store";
 import { useExercises } from "@/lib/hooks/use-data";
 import { useActiveWorkout } from "@/lib/hooks/use-active-workout";
+import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
+import { useT } from "@/lib/i18n/use-t";
 import { ExerciseCard } from "@/components/workout/exercise-card";
 import { RestTimer } from "@/components/workout/rest-timer";
 import { TriumphScreen } from "@/components/workout/triumph-screen";
@@ -27,7 +29,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { MUSCLE_GROUP_LABELS } from "@/lib/utils/constants";
+import { useFormat } from "@/lib/i18n/use-format";
 
 function ActiveWorkoutContent({
   searchParams,
@@ -36,6 +38,9 @@ function ActiveWorkoutContent({
 }) {
   const { session: sessionId } = use(searchParams);
   const restStore = useWorkoutStore();
+  const t = useT();
+  const { muscleGroupLabel } = useFormat();
+  const { getName } = useExerciseLookup();
   const allExercises = useExercises();
   const {
     exerciseMap,
@@ -75,7 +80,7 @@ function ActiveWorkoutContent({
   if (!activeWorkoutId && !showTriumph) {
     return (
       <div className="flex items-center justify-center h-full p-4">
-        <p className="text-muted-foreground">Starting workout...</p>
+        <p className="text-muted-foreground">{t.workout.starting}</p>
       </div>
     );
   }
@@ -108,11 +113,11 @@ function ActiveWorkoutContent({
               <span className="tabular-nums text-foreground">{totalSetsCount}</span>
               <span className="text-muted-foreground/60">·</span>
               <span className="tabular-nums">{totalVolume.toLocaleString()}</span>
-              <span>kg</span>
+              <span>{t.dashboard.kg}</span>
             </div>
             <Button variant="default" size="sm" className="gap-1" onClick={handleFinish}>
               <StopCircle className="h-4 w-4" />
-              Finish
+              {t.workout.finish}
             </Button>
           </div>
         </div>
@@ -133,7 +138,7 @@ function ActiveWorkoutContent({
               >
                 <ExerciseCard
                   exercise={ex}
-                  exerciseName={exercise?.name || "Unknown"}
+                  exerciseName={exercise?.name || getName(ex.exerciseId, t.workout.unknownExercise)}
                   muscleGroup={exercise?.muscleGroup || "chest"}
                   previousSets={previousSetsMap.get(ex.id) || []}
                   isActive={ex.id === activeExerciseId}
@@ -156,14 +161,14 @@ function ActiveWorkoutContent({
             onClick={() => setShowAddExercise(true)}
           >
             <Plus className="h-4 w-4" />
-            Add Exercise
+            {t.workout.addExercise}
           </Button>
           <DialogContent className="max-h-[80vh]">
             <DialogHeader>
-              <DialogTitle>Add Exercise</DialogTitle>
+              <DialogTitle>{t.workout.addExercise}</DialogTitle>
             </DialogHeader>
             <Input
-              placeholder="Search exercises..."
+              placeholder={t.workout.searchExercises}
               value={addSearch}
               onChange={(e) => setAddSearch(e.target.value)}
               className="mb-2"
@@ -190,11 +195,11 @@ function ActiveWorkoutContent({
                     <div>
                       <span className="font-medium">{ex.name}</span>
                       <span className="ml-2 text-xs text-muted-foreground">
-                        {MUSCLE_GROUP_LABELS[ex.muscleGroup]}
+                        {muscleGroupLabel(ex.muscleGroup)}
                       </span>
                     </div>
                     <Badge variant="outline" className="text-[10px]">
-                      Add
+                      {t.workout.add}
                     </Badge>
                   </button>
                 ))}
@@ -216,12 +221,14 @@ function ActiveWorkoutContent({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-sm rounded-xl bg-popover p-4 shadow-lg">
             <h3 className="text-lg font-medium mb-2">
-              {completedSetsCount === 0 ? "No completed sets" : "Incomplete Sets"}
+              {completedSetsCount === 0
+                ? t.workout.noCompletedSets
+                : t.workout.incompleteSets}
             </h3>
             <p className="text-base text-muted-foreground mb-3">
               {completedSetsCount === 0
-                ? "Complete at least one set to save this workout, or discard it."
-                : `${completedSetsCount} of ${totalSetsCount} sets complete`}
+                ? t.workout.noCompletedSetsDesc
+                : t.workout.incompleteSetsDesc(completedSetsCount, totalSetsCount)}
             </p>
             <div className="w-full bg-muted rounded-full h-1.5 mb-5">
               <div
@@ -239,14 +246,14 @@ function ActiveWorkoutContent({
                   setShowAbandonConfirm(true);
                 }}
               >
-                Discard
+                {t.workout.discard}
               </Button>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setShowConfirmFinish(false)}>
-                  Cancel
+                  {t.workout.cancel}
                 </Button>
                 {completedSetsCount > 0 && (
-                  <Button onClick={confirmFinish}>Finish Anyway</Button>
+                  <Button onClick={confirmFinish}>{t.workout.finishAnyway}</Button>
                 )}
               </div>
             </div>
@@ -257,16 +264,16 @@ function ActiveWorkoutContent({
       {showAbandonConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-xs rounded-xl bg-popover p-4 shadow-lg">
-            <h3 className="text-lg font-medium mb-2">Abandon workout?</h3>
+            <h3 className="text-lg font-medium mb-2">{t.workout.abandonTitle}</h3>
             <p className="text-base text-muted-foreground mb-5">
-              Your progress won&apos;t be saved.
+              {t.workout.abandonDesc}
             </p>
             <div className="flex gap-3 justify-end">
               <Button variant="outline" onClick={() => setShowAbandonConfirm(false)}>
-                Cancel
+                {t.workout.cancel}
               </Button>
               <Button variant="destructive" onClick={abandonWorkout}>
-                Abandon
+                {t.workout.abandon}
               </Button>
             </div>
           </div>
@@ -291,19 +298,22 @@ function ActiveWorkoutContent({
   );
 }
 
+function ActiveWorkoutLoading() {
+  const t = useT();
+  return (
+    <div className="flex items-center justify-center h-full p-4">
+      <p className="text-muted-foreground">{t.common.loading}</p>
+    </div>
+  );
+}
+
 export default function ActiveWorkoutPage({
   searchParams,
 }: {
   searchParams: Promise<{ session?: string }>;
 }) {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center h-full p-4">
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<ActiveWorkoutLoading />}>
       <ActiveWorkoutContent searchParams={searchParams} />
     </Suspense>
   );

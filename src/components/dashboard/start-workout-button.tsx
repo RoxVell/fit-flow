@@ -2,9 +2,12 @@
 
 import { motion } from "framer-motion";
 import { Dumbbell, Play } from "lucide-react";
+import { useT } from "@/lib/i18n/use-t";
 import Link from "next/link";
 
 export function StartWorkoutButton() {
+  const t = useT();
+
   return (
     <Link href="/workout" className="block px-2">
       <motion.div
@@ -20,7 +23,7 @@ export function StartWorkoutButton() {
           transition={{ repeat: Infinity, duration: 2.5, ease: "easeOut" }}
         />
         <Dumbbell className="relative h-7 w-7" />
-        <span className="relative text-lg font-bold">Start Workout</span>
+        <span className="relative text-lg font-bold">{t.workout.startWorkout}</span>
         <Play className="relative h-5 w-5" fill="currentColor" />
       </motion.div>
     </Link>

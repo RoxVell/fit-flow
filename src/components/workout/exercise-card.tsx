@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SetRow } from "./set-row";
 import type { LoggedExercise } from "@/lib/db/types";
-import { MUSCLE_GROUP_LABELS } from "@/lib/utils/constants";
 import { useExercises } from "@/lib/hooks/use-data";
+import { useT } from "@/lib/i18n/use-t";
+import { useFormat } from "@/lib/i18n/use-format";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +49,8 @@ export function ExerciseCard({
   const [collapsed, setCollapsed] = useState(false);
   const [showSwap, setShowSwap] = useState(false);
   const [swapSearch, setSwapSearch] = useState("");
+  const t = useT();
+  const { muscleGroupLabel } = useFormat();
   const swapExercises = useExercises({
     search: swapSearch || undefined,
   });
@@ -74,9 +77,7 @@ export function ExerciseCard({
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-sm truncate">{exerciseName}</p>
                   <Badge variant="secondary" className="text-[10px] shrink-0">
-                    {MUSCLE_GROUP_LABELS[
-                      muscleGroup as keyof typeof MUSCLE_GROUP_LABELS
-                    ] || muscleGroup}
+                    {muscleGroupLabel(muscleGroup)}
                   </Badge>
                 </div>
               </div>
@@ -103,13 +104,13 @@ export function ExerciseCard({
             {!collapsed && (
               <div>
                 <div className="flex items-center gap-1 px-2 pt-1.5 pb-0.5 text-sm text-muted-foreground/50 font-medium">
-                  <span className="w-5 shrink-0 text-center">Set</span>
-                  <span className="w-7 shrink-0 text-center">T</span>
-                  <span className="w-20 shrink-0 text-right">Previous</span>
+                  <span className="w-5 shrink-0 text-center">{t.workout.set}</span>
+                  <span className="w-7 shrink-0 text-center">{t.workout.setTypeCol}</span>
+                  <span className="w-20 shrink-0 text-right">{t.workout.previous}</span>
                   <span className="flex-1" />
-                  <span className="w-14 shrink-0 text-center">Kg</span>
+                  <span className="w-14 shrink-0 text-center">{t.workout.kg}</span>
                   <span className="w-3 shrink-0 text-center" />
-                  <span className="w-10 shrink-0 text-center">Reps</span>
+                  <span className="w-10 shrink-0 text-center">{t.workout.reps}</span>
                   <span className="w-7 shrink-0 ml-1" />
                 </div>
                 <AnimatePresence mode="popLayout">
@@ -139,7 +140,7 @@ export function ExerciseCard({
                   className="w-full gap-1 text-xs h-9 rounded-xl border-t border-border/80 hover:bg-accent/50 text-muted-foreground/60 hover:text-foreground"
                   onClick={onAddSet}
                 >
-                  <Plus className="h-3.5 w-3.5" /> Add Set
+                  <Plus className="h-3.5 w-3.5" /> {t.workout.addSet}
                 </Button>
               </div>
             )}
@@ -154,10 +155,10 @@ export function ExerciseCard({
       <Dialog open={showSwap} onOpenChange={setShowSwap}>
         <DialogContent className="max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Swap Exercise</DialogTitle>
+            <DialogTitle>{t.workout.swapExercise}</DialogTitle>
           </DialogHeader>
           <Input
-            placeholder="Search exercises..."
+            placeholder={t.workout.searchExercises}
             value={swapSearch}
             onChange={(e) => setSwapSearch(e.target.value)}
           />
@@ -174,7 +175,7 @@ export function ExerciseCard({
                 >
                   <span className="font-medium">{ex.name}</span>
                   <span className="ml-2 text-xs text-muted-foreground">
-                    {MUSCLE_GROUP_LABELS[ex.muscleGroup]}
+                    {muscleGroupLabel(ex.muscleGroup)}
                   </span>
                 </button>
               ))}
