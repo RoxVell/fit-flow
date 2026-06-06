@@ -5,16 +5,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ProgramForm } from "@/components/programs/program-form";
 import { useProgram } from "@/lib/hooks/use-data";
 import { createProgram, updateProgram } from "@/lib/repositories/programs";
+import { useT } from "@/lib/i18n/use-t";
 
 function CreateProgramInner() {
   const router = useRouter();
+  const t = useT();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
   const existingProgram = useProgram(editId || "");
   if (editId && existingProgram === undefined) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading program...</p>
+        <p className="text-sm text-muted-foreground">{t.programs.loadingProgram}</p>
       </div>
     );
   }

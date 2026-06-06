@@ -1,6 +1,14 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
+import { headers } from "next/headers";
+import {
+  localeBootstrapScript,
+  LOCALE_COOKIE,
+  getServerLocale,
+} from "@/lib/i18n/locale-cookie";
+import type { Locale } from "@/lib/exercises/types";
 import { ServiceWorkerRegister } from "@/components/shared/service-worker-register";
 import { OfflineBanner } from "@/components/shared/offline-banner";
 import { InstallPrompt } from "@/components/shared/install-prompt";
@@ -34,19 +42,29 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const headerStore = await headers();
+  const initialLocale: Locale = getServerLocale(
+    cookieStore.get(LOCALE_COOKIE)?.value,
+    headerStore.get("accept-language")
+  );
+
   return (
     <html
-      lang="en"
+      lang={initialLocale}
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: localeBootstrapScript }} />
+      </head>
       <body className="min-h-full flex flex-col text-foreground">
-        <Providers>
+        <Providers initialLocale={initialLocale}>
           <BlockOne />
           <ServiceWorkerRegister />
           <OfflineBanner />

@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { useWorkoutStore } from "@/lib/store/workout-store";
 import {
   useActiveProgram,
-  useExercises,
   useWorkoutDraft,
   useWorkoutLogs,
 } from "@/lib/hooks/use-data";
+import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
 import { createPRsFromWorkout } from "@/lib/repositories/records";
 import { createPersonalRecord } from "@/lib/repositories/records";
 import { createWorkoutLog } from "@/lib/repositories/workouts";
@@ -60,7 +60,7 @@ export function useActiveWorkout(
   const router = useRouter();
   const restStore = useWorkoutStore();
   const draft = useWorkoutDraft();
-  const allExercises = useExercises();
+  const { exerciseMap } = useExerciseLookup();
   const program = useActiveProgram();
   const workoutLogs = useWorkoutLogs(10);
 
@@ -146,11 +146,6 @@ export function useActiveWorkout(
     hasBootstrapped.current = true;
     void initDraft(sessionId, sessionId, initialExercises, new Date().toISOString());
   }, [sessionId, program, draft, router]);
-
-  const exerciseMap = useMemo(
-    () => new Map((allExercises ?? []).map((e) => [e.id, e])),
-    [allExercises]
-  );
 
   const previousSetsMap = useMemo(() => {
     const map = new Map<string, ({ weight: number; reps: number } | null)[]>();

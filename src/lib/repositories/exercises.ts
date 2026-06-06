@@ -1,6 +1,14 @@
-import { isActiveRecord, withoutDeleted } from "@/lib/db/active-records";
+import { isActiveRecord } from "@/lib/db/active-records";
 import { db } from "@/lib/db/dexie";
 import { ensureSeeded } from "@/lib/db/seed-loader";
+import {
+  buildExerciseMapFromManifest,
+  manifestToExercise,
+} from "@/lib/exercises/adapter";
+import { filterManifest } from "@/lib/exercises/filter";
+import { toLibraryFilters } from "@/lib/exercises/legacy-filters";
+import { ensureManifestLoaded } from "@/lib/hooks/use-exercise-library";
+import { getActiveLocale } from "@/lib/i18n/locale-context";
 import type { Exercise, ExerciseEntity, ExerciseFilters } from "@/lib/db/types";
 
 export function filterExercises(
@@ -38,19 +46,44 @@ export function filterExercises(
 
 export async function getExercises(filters?: ExerciseFilters): Promise<ExerciseEntity[]> {
   await ensureSeeded();
-  const all = withoutDeleted(await db.exercises.toArray());
-  return filterExercises(all, filters) as ExerciseEntity[];
+  const manifest = await ensureManifestLoaded();
+  const locale = getActiveLocale();
+  const libraryFilters = toLibraryFilters(filters);
+  const filtered = filterManifest(manifest, libraryFilters, locale);
+  return filtered.map((item) => ({
+    ...manifestToExercise(item, locale),
+    revision: 1,
+    updatedAt: new Date().toISOString(),
+  }));
 }
 
 export async function getExerciseById(id: string): Promise<ExerciseEntity | undefined> {
   await ensureSeeded();
-  const exercise = await db.exercises.get(id);
-  return isActiveRecord(exercise) ? exercise : undefined;
+  const manifest = await ensureManifestLoaded();
+  const locale = getActiveLocale();
+  const item = manifest.find((e) => e.id === id);
+  if (!item) {
+    const legacy = await db.exercises.get(id);
+    return isActiveRecord(legacy) ? legacy : undefined;
+  }
+  return {
+    ...manifestToExercise(item, locale),
+    revision: 1,
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 export async function getExerciseMap(): Promise<Map<string, ExerciseEntity>> {
-  const all = withoutDeleted(await db.exercises.toArray());
-  return new Map(all.map((e) => [e.id, e]));
+  const manifest = await ensureManifestLoaded();
+  const locale = getActiveLocale();
+  const map = buildExerciseMapFromManifest(manifest, locale);
+  const now = new Date().toISOString();
+  return new Map(
+    [...map.entries()].map(([id, exercise]) => [
+      id,
+      { ...exercise, revision: 1, updatedAt: now },
+    ])
+  );
 }
 
 export function attachExercisesToSessions<

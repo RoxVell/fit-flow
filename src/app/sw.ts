@@ -32,6 +32,24 @@ const serwist = new Serwist({
       handler: networkOnlyApi,
     },
     {
+      matcher: ({ url }) => url.hostname === "api.smartworkout.app",
+      handler: networkOnlyApi,
+    },
+    {
+      matcher: ({ url }) => url.pathname.startsWith("/exercises/"),
+      handler: new CacheFirst({
+        cacheName: "exercise-library",
+        plugins: [
+          new CacheableResponsePlugin({ statuses: [0, 200] }),
+          new ExpirationPlugin({
+            maxEntries: 20,
+            maxAgeSeconds: 60 * 60 * 24 * 30,
+            purgeOnQuotaError: true,
+          }),
+        ],
+      }),
+    },
+    {
       matcher: ({ request }) => request.destination === "image",
       handler: new StaleWhileRevalidate({
         cacheName: "images",
@@ -98,6 +116,10 @@ const serwist = new Serwist({
       },
     ],
   },
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(caches.delete("exercise-library"));
 });
 
 serwist.addEventListeners();

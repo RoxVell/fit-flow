@@ -2,21 +2,21 @@
 
 import { Trophy, Dumbbell, TrendingUp } from "lucide-react";
 import { usePersonalRecords } from "@/lib/hooks/use-data";
-
-const prLabels: Record<string, string> = {
-  weight: "Max Weight",
-  volume: "Volume",
-  estimated_1rm: "e1RM",
-};
-
-const prUnits: Record<string, string> = {
-  weight: "kg",
-  volume: "kg",
-  estimated_1rm: "kg",
-};
+import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
+import { useT } from "@/lib/i18n/use-t";
 
 export function RecentPRs() {
   const records = usePersonalRecords();
+  const t = useT();
+  const { getName } = useExerciseLookup();
+
+  const prLabels: Record<string, string> = {
+    weight: t.dashboard.prMaxWeight,
+    volume: t.dashboard.prVolume,
+    estimated_1rm: t.dashboard.prE1rm,
+  };
+
+  const prUnit = t.dashboard.kg;
 
   if (!records || records.length === 0) return null;
 
@@ -28,7 +28,7 @@ export function RecentPRs() {
     <div className="rounded-xl border bg-card p-4">
       <div className="flex items-center gap-2 mb-3">
         <Trophy className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-semibold">Recent PRs</h2>
+        <h2 className="text-sm font-semibold">{t.dashboard.recentPRs}</h2>
       </div>
       <div className="space-y-2">
         {sorted.slice(0, 5).map((pr) => {
@@ -53,7 +53,9 @@ export function RecentPRs() {
               <div className="flex items-center gap-2 min-w-0">
                 <Dumbbell className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{pr.exerciseName}</p>
+                  <p className="text-sm font-medium truncate">
+                    {getName(pr.exerciseId, pr.exerciseName)}
+                  </p>
                   <p className="text-[11px] text-muted-foreground">
                     {prLabels[pr.type] || pr.type}
                   </p>
@@ -61,12 +63,12 @@ export function RecentPRs() {
               </div>
               <div className="text-right shrink-0 min-w-0">
                 <p className="text-sm font-bold">
-                  {pr.value} {prUnits[pr.type] || ""}
+                  {pr.value} {prUnit}
                 </p>
                 {absDelta !== null && (
                   <p className="flex items-center gap-0.5 text-[11px] text-green-500 justify-end">
                     <TrendingUp className="h-3 w-3" />
-                    +{absDelta} {prUnits[pr.type] || ""}
+                    +{absDelta} {prUnit}
                     {pctDelta !== null && (
                       <span className="text-green-500/70">
                         (+{pctDelta.toFixed(1)}%)

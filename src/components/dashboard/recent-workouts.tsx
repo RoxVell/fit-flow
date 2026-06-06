@@ -4,13 +4,8 @@ import { CalendarDays } from "lucide-react";
 import { useWorkoutLogs } from "@/lib/hooks/use-data";
 import { formatDuration } from "@/lib/utils/calculations";
 import { volume } from "@/lib/training-metrics";
-
-function formatWorkoutDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
+import { useT } from "@/lib/i18n/use-t";
+import { useFormat } from "@/lib/i18n/use-format";
 
 function getDurationMinutes(startedAt: string, endedAt?: string) {
   if (!endedAt) return null;
@@ -20,6 +15,8 @@ function getDurationMinutes(startedAt: string, endedAt?: string) {
 
 export function RecentWorkouts() {
   const logs = useWorkoutLogs(10);
+  const t = useT();
+  const { formatShortDate } = useFormat();
 
   if (!logs) return null;
 
@@ -30,16 +27,16 @@ export function RecentWorkouts() {
     <div className="overflow-hidden rounded-xl border bg-card">
       <div className="flex items-center gap-2 p-4 pb-2">
         <CalendarDays className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-semibold">Recent Workouts</h2>
+        <h2 className="text-sm font-semibold">{t.dashboard.recentWorkouts}</h2>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-xs text-muted-foreground">
-              <th className="px-4 py-2 text-left font-medium">Date</th>
-              <th className="px-4 py-2 text-left font-medium">Session</th>
-              <th className="px-4 py-2 text-right font-medium">Time</th>
-              <th className="px-4 py-2 text-right font-medium">Volume</th>
+              <th className="px-4 py-2 text-left font-medium">{t.dashboard.date}</th>
+              <th className="px-4 py-2 text-left font-medium">{t.dashboard.session}</th>
+              <th className="px-4 py-2 text-right font-medium">{t.dashboard.time}</th>
+              <th className="px-4 py-2 text-right font-medium">{t.dashboard.volume}</th>
             </tr>
           </thead>
           <tbody>
@@ -57,16 +54,18 @@ export function RecentWorkouts() {
                   className="border-b border-border/50 last:border-0"
                 >
                   <td className="whitespace-nowrap px-4 py-2.5 text-muted-foreground">
-                    {formatWorkoutDate(log.startedAt)}
+                    {formatShortDate(log.startedAt)}
                   </td>
                   <td className="max-w-[7rem] truncate px-4 py-2.5 font-medium">
-                    {log.sessionName || "Workout"}
+                    {log.sessionName || t.dashboard.workoutFallback}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right text-muted-foreground">
-                    {duration != null ? formatDuration(duration) : "—"}
+                    {duration != null ? formatDuration(duration) : t.common.emDash}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right font-medium">
-                    {totalVolume > 0 ? `${Math.round(totalVolume)} kg` : "—"}
+                    {totalVolume > 0
+                      ? `${Math.round(totalVolume)} ${t.dashboard.kg}`
+                      : t.common.emDash}
                   </td>
                 </tr>
               );

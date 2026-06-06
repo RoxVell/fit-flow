@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useExercises } from "@/lib/hooks/use-data";
-import { MUSCLE_GROUP_LABELS, EQUIPMENT_LABELS } from "@/lib/utils/constants";
+import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
+import { useT } from "@/lib/i18n/use-t";
+import { useFormat } from "@/lib/i18n/use-format";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -44,16 +46,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-
-const DAY_OPTIONS = [
-  { value: 1, label: "Mon" },
-  { value: 2, label: "Tue" },
-  { value: 3, label: "Wed" },
-  { value: 4, label: "Thu" },
-  { value: 5, label: "Fri" },
-  { value: 6, label: "Sat" },
-  { value: 0, label: "Sun" },
-];
 
 interface ExerciseEntry {
   exerciseId: string;
@@ -96,6 +88,8 @@ interface ProgramFormProps {
 }
 
 export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initialData }: ProgramFormProps) {
+  const t = useT();
+  const { dayOptions, muscleGroupLabel } = useFormat();
   const [name, setName] = useState(initialData?.name ?? "");
   const [description, setDescription] = useState(initialData?.description ?? "");
   const [sessions, setSessions] = useState<SessionEntry[]>(
@@ -141,12 +135,12 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
 
   const addSession = () => {
     const usedDays = new Set(sessions.map((s) => s.dayOfWeek));
-    const nextDay = DAY_OPTIONS.find((d) => !usedDays.has(d.value));
+    const nextDay = dayOptions.find((d) => !usedDays.has(d.value));
     const idx = sessions.length;
     setSessions([
       ...sessions,
       {
-        name: `Session ${idx + 1}`,
+        name: t.programs.sessionDefaultName(idx + 1),
         dayOfWeek: nextDay?.value ?? 0,
         exercises: [],
       },
@@ -176,9 +170,11 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
           className="flex items-center gap-1 text-sm text-muted-foreground active:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back
+          {t.programs.back}
         </button>
-        <h1 className="text-base font-semibold">{isEditMode ? "Edit Program" : "New Program"}</h1>
+        <h1 className="text-base font-semibold">
+          {isEditMode ? t.programs.editProgram : t.programs.newProgram}
+        </h1>
         <button
           type="button"
           onClick={handleSave}
@@ -189,7 +185,7 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
           )}
         >
           <Check className="h-4 w-4" />
-          {isEditMode ? "Update" : "Save"}
+          {isEditMode ? t.programs.update : t.programs.save}
         </button>
       </div>
 
@@ -199,25 +195,25 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
           {/* Info section */}
           <section>
             <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Program Info
+              {t.programs.programInfo}
             </div>
             <div className="overflow-hidden rounded-xl border bg-card">
               <div className="space-y-0 divide-y divide-border">
                 <div className="px-4 py-3.5">
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Name</label>
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">{t.programs.name}</label>
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Push/Pull/Legs"
+                    placeholder={t.programs.namePlaceholder}
                     className="border-0 bg-muted/50 px-3 py-2 text-sm"
                   />
                 </div>
                 <div className="px-4 py-3.5">
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Description</label>
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">{t.programs.description}</label>
                   <Textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Brief description of the program"
+                    placeholder={t.programs.descriptionPlaceholder}
                     rows={2}
                     className="border-0 bg-muted/50 px-3 py-2 text-sm resize-none"
                   />
@@ -230,7 +226,7 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
           <section>
             <div className="mb-2 flex items-center justify-between px-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Sessions ({sessions.length})
+                {t.programs.sessionsHeader(sessions.length)}
               </span>
               <button
                 type="button"
@@ -238,16 +234,16 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
                 className="flex items-center gap-1 text-xs font-medium text-primary"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Add Session
+                {t.programs.addSession}
               </button>
             </div>
 
             {sessions.length === 0 ? (
               <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/20 py-10">
                 <Calendar className="h-8 w-8 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground/60">No sessions yet</p>
+                <p className="text-sm text-muted-foreground/60">{t.programs.noSessionsYet}</p>
                 <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={addSession}>
-                  <Plus className="h-3 w-3" /> Create First Session
+                  <Plus className="h-3 w-3" /> {t.programs.createFirstSession}
                 </Button>
               </div>
             ) : (
@@ -268,13 +264,13 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium">{s.name}</p>
                         <Badge variant="secondary" className="text-[10px] font-normal px-1.5 py-0">
-                          {DAY_OPTIONS.find((d) => d.value === s.dayOfWeek)?.label}
+                          {dayOptions.find((d) => d.value === s.dayOfWeek)?.label}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {s.exercises.length > 0
-                          ? `${s.exercises.length} exercise${s.exercises.length !== 1 ? "s" : ""}`
-                          : "No exercises"}
+                          ? t.programs.sessionExercises(s.exercises.length)
+                          : t.programs.noExercisesYet}
                       </p>
                     </div>
                     <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
@@ -309,9 +305,11 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
           className="flex items-center gap-1 text-sm text-muted-foreground active:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back
+          {t.programs.back}
         </button>
-        <h1 className="text-base font-semibold">{isEditMode ? "Edit Program" : "New Program"}</h1>
+        <h1 className="text-base font-semibold">
+          {isEditMode ? t.programs.editProgram : t.programs.newProgram}
+        </h1>
         <button
           type="button"
           onClick={handleSave}
@@ -322,7 +320,7 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
           )}
         >
           <Check className="h-4 w-4" />
-          {isEditMode ? "Update" : "Save"}
+          {isEditMode ? t.programs.update : t.programs.save}
         </button>
       </div>
 
@@ -332,25 +330,25 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
           {/* Info section */}
           <section>
             <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Program Info
+              {t.programs.programInfo}
             </div>
             <div className="overflow-hidden rounded-xl border bg-card">
               <div className="space-y-0 divide-y divide-border">
                 <div className="px-4 py-3.5">
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Name</label>
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">{t.programs.name}</label>
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Push/Pull/Legs"
+                    placeholder={t.programs.namePlaceholder}
                     className="border-0 bg-muted/50 px-3 py-2 text-sm"
                   />
                 </div>
                 <div className="px-4 py-3.5">
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Description</label>
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">{t.programs.description}</label>
                   <Textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Brief description of the program"
+                    placeholder={t.programs.descriptionPlaceholder}
                     rows={2}
                     className="border-0 bg-muted/50 px-3 py-2 text-sm resize-none"
                   />
@@ -363,7 +361,7 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
           <section>
             <div className="mb-2 flex items-center justify-between px-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Sessions ({sessions.length})
+                {t.programs.sessionsHeader(sessions.length)}
               </span>
               <button
                 type="button"
@@ -371,16 +369,16 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
                 className="flex items-center gap-1 text-xs font-medium text-primary"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Add Session
+                {t.programs.addSession}
               </button>
             </div>
 
             {sessions.length === 0 ? (
               <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/20 py-10">
                 <Calendar className="h-8 w-8 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground/60">No sessions yet</p>
+                <p className="text-sm text-muted-foreground/60">{t.programs.noSessionsYet}</p>
                 <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={addSession}>
-                  <Plus className="h-3 w-3" /> Create First Session
+                  <Plus className="h-3 w-3" /> {t.programs.createFirstSession}
                 </Button>
               </div>
             ) : (
@@ -401,13 +399,13 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium">{s.name}</p>
                         <Badge variant="secondary" className="text-[10px] font-normal px-1.5 py-0">
-                          {DAY_OPTIONS.find((d) => d.value === s.dayOfWeek)?.label}
+                          {dayOptions.find((d) => d.value === s.dayOfWeek)?.label}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {s.exercises.length > 0
-                          ? `${s.exercises.length} exercise${s.exercises.length !== 1 ? "s" : ""}`
-                          : "No exercises"}
+                          ? t.programs.sessionExercises(s.exercises.length)
+                          : t.programs.noExercisesYet}
                       </p>
                     </div>
                     <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
@@ -491,8 +489,11 @@ function SessionEditorContent({
   onUpdate: (data: Partial<SessionEntry>) => void;
   onDelete: () => void;
 }) {
+  const t = useT();
+  const { dayOptions } = useFormat();
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const exercises = useExercises();
+  const { getName } = useExerciseLookup();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -514,24 +515,24 @@ function SessionEditorContent({
   return (
     <div className="flex flex-col max-h-[85vh] overflow-hidden">
       <DialogHeader className="px-4 pt-4 pb-0 shrink-0">
-        <DialogTitle>Edit Session</DialogTitle>
+        <DialogTitle>{t.programs.editSession}</DialogTitle>
       </DialogHeader>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="space-y-5">
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-2 block">Name</label>
+            <label className="text-xs font-medium text-muted-foreground mb-2 block">{t.programs.sessionName}</label>
             <Input
               value={session.name}
               onChange={(e) => onUpdate({ name: e.target.value })}
-              placeholder="Session name"
+              placeholder={t.programs.sessionName}
             />
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-2 block">Day of Week</label>
+            <label className="text-xs font-medium text-muted-foreground mb-2 block">{t.programs.dayOfWeek}</label>
             <div className="flex gap-1.5">
-              {DAY_OPTIONS.map((d) => (
+              {dayOptions.map((d) => (
                 <button
                   key={d.value}
                   type="button"
@@ -553,7 +554,7 @@ function SessionEditorContent({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">
-                Exercises ({session.exercises.length})
+                {t.programs.exercisesHeader(session.exercises.length)}
               </span>
               <button
                 type="button"
@@ -561,14 +562,14 @@ function SessionEditorContent({
                 className="flex items-center gap-1 text-xs font-medium text-primary"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Add
+                {t.workout.add}
               </button>
             </div>
 
             {session.exercises.length === 0 ? (
               <div className="rounded-lg border border-dashed bg-muted/20 py-6 text-center">
                 <Dumbbell className="mx-auto h-6 w-6 text-muted-foreground/40 mb-1" />
-                <p className="text-xs text-muted-foreground/60">No exercises added yet</p>
+                <p className="text-xs text-muted-foreground/60">{t.programs.noExercisesYet}</p>
               </div>
             ) : (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -579,7 +580,10 @@ function SessionEditorContent({
                         key={ex.exerciseId}
                         id={ex.exerciseId}
                         index={i}
-                        exerciseName={exercises?.find((e) => e.id === ex.exerciseId)?.name || "Unknown"}
+                        exerciseName={
+                          exercises?.find((e) => e.id === ex.exerciseId)?.name ||
+                          getName(ex.exerciseId, t.programs.unknownExercise)
+                        }
                         targetSets={ex.targetSets}
                         targetReps={ex.targetReps}
                         onUpdate={(data) => {
@@ -609,7 +613,7 @@ function SessionEditorContent({
           onClick={onDelete}
         >
           <Trash2 className="h-3.5 w-3.5" />
-          Delete Session
+          {t.programs.deleteSession}
         </Button>
       </div>
 
@@ -648,6 +652,7 @@ function SortableExerciseRow({
   onUpdate: (data: Partial<ExerciseEntry>) => void;
   onRemove: () => void;
 }) {
+  const t = useT();
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id });
 
   const style = {
@@ -683,7 +688,7 @@ function SortableExerciseRow({
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-0 rounded-lg bg-muted">
-            <span className="text-xs font-medium text-muted-foreground pl-2">Sets</span>
+            <span className="text-xs font-medium text-muted-foreground pl-2">{t.programs.sets}</span>
             <button
               type="button"
               onClick={() => onUpdate({ targetSets: Math.max(1, targetSets - 1) })}
@@ -701,12 +706,12 @@ function SortableExerciseRow({
             </button>
           </div>
           <div className="flex items-center gap-1 rounded-lg bg-muted px-2 py-1">
-            <span className="text-xs font-medium text-muted-foreground">Reps</span>
+            <span className="text-xs font-medium text-muted-foreground">{t.programs.reps}</span>
             <Input
               value={targetReps}
               onChange={(e) => onUpdate({ targetReps: e.target.value })}
               className="h-5 w-14 border-0 bg-transparent px-0 py-0 text-sm font-semibold tabular-nums outline-none"
-              placeholder="8-12"
+              placeholder={t.programs.repsPlaceholder}
             />
           </div>
         </div>
@@ -726,6 +731,8 @@ function ExercisePickerDialog({
   selectedIds: Set<string>;
   onSelect: (exerciseId: string) => void;
 }) {
+  const t = useT();
+  const { muscleGroupLabel } = useFormat();
   const [search, setSearch] = useState("");
   const exercises = useExercises({ search: search || undefined });
 
@@ -738,12 +745,12 @@ function ExercisePickerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>Add Exercise</DialogTitle>
+          <DialogTitle>{t.programs.addExercise}</DialogTitle>
         </DialogHeader>
         <div className="relative mb-2">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search exercises..."
+            placeholder={t.workout.searchExercises}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -765,9 +772,8 @@ function ExercisePickerDialog({
                   <p className="font-medium truncate">{ex.name}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <Badge variant="secondary" className="text-[10px] font-normal px-1.5 py-0">
-                      {MUSCLE_GROUP_LABELS[ex.muscleGroup]}
+                      {muscleGroupLabel(ex.muscleGroup)}
                     </Badge>
-                    <span className="text-[10px] text-muted-foreground">{EQUIPMENT_LABELS[ex.equipment]}</span>
                   </div>
                 </div>
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-muted-foreground/20">
@@ -777,7 +783,7 @@ function ExercisePickerDialog({
             ))}
             {filtered.length === 0 && (
               <p className="text-xs text-muted-foreground text-center py-6">
-                {search ? "No matching exercises" : "All exercises already added"}
+                {search ? t.programs.noMatchingExercises : t.programs.allExercisesAdded}
               </p>
             )}
           </div>

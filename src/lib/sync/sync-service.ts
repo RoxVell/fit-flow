@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { db, getAppMeta, migrateFromLegacyIdb, setAppMeta } from "@/lib/db/dexie";
 import { ensureSeeded } from "@/lib/db/seed-loader";
+import { ensureManifestLoaded } from "@/lib/hooks/use-exercise-library";
 import { getPending, markSynced, pendingCount } from "./queue";
 import { applyServerChanges } from "./apply-server-changes";
 import type { SyncRequest, SyncResponse } from "./types";
@@ -130,6 +131,7 @@ export function initLocalDb(): Promise<void> {
       await migrateFromLegacyIdb();
       await db.open();
       await ensureSeeded();
+      await ensureManifestLoaded().catch(() => undefined);
     })();
   }
   return initPromise;

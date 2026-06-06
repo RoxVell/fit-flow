@@ -14,13 +14,13 @@ POST /api/sync
 Neon PostgreSQL
 ```
 
-User data is **never** stored in Service Worker caches. SW caches only static assets (JS, CSS, images, pages).
+User data is **never** stored in Service Worker caches. SW caches static assets (JS, CSS, images, pages) and the **exercise catalog** (`/exercises/*.json`). See [exercise-library-and-i18n.md](./exercise-library-and-i18n.md).
 
 ## Dexie Schema (`fitflow_v2`)
 
 | Store | Purpose |
 |-------|---------|
-| `exercises` | Exercise catalog |
+| `exercises` | Legacy exercise store (catalog is now static JSON; see [exercise-library-and-i18n.md](./exercise-library-and-i18n.md)) |
 | `programs` | Programs with nested `sessions` |
 | `workoutLogs` | Logs with nested `exercises` / `sets` |
 | `bodyMeasurements` | Body metrics |
@@ -107,7 +107,7 @@ Single user, single device — no CRDT/OT.
 
 ## Offline Behavior
 
-1. **First launch offline**: local seed for exercises/programs; `meta.initialized = false`
+1. **First launch offline**: exercise catalog from SW cache (`/exercises/`); programs seeded locally; `meta.initialized = false`
 2. **Reads**: always from Dexie via `useLiveQuery`
 3. **Writes**: Dexie first → `syncQueue` → background sync when online
 4. **First launch online**: `POST /api/sync` with `lastPullAt: null` loads server data
