@@ -1,10 +1,12 @@
 "use client";
 
 import BodyModel from "react-body-highlighter";
-import { Loader2 } from "lucide-react";
+import { Loader2, XIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -52,11 +54,21 @@ export function ExerciseDetailSheet({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        showCloseButton
-        className="fixed inset-0 top-0 left-0 flex h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 p-0 sm:max-w-none [&_[data-slot=dialog-close]]:top-1/2 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:-translate-y-1/2"
+        showCloseButton={false}
+        className="fixed inset-0 top-0 left-0 flex h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 p-0 sm:max-w-none"
       >
-        <DialogHeader className="relative flex shrink-0 flex-row items-center border-b px-4 pb-3 pr-12 pt-[max(1rem,env(safe-area-inset-top))]">
-          <DialogTitle className="text-left text-lg leading-snug">{name}</DialogTitle>
+        <DialogHeader className="flex shrink-0 flex-row items-center gap-2 border-b px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))]">
+          <DialogTitle className="min-w-0 flex-1 text-left text-lg leading-snug">
+            {name}
+          </DialogTitle>
+          <DialogClose
+            render={
+              <Button variant="ghost" size="icon-sm" className="shrink-0" />
+            }
+          >
+            <XIcon />
+            <span className="sr-only">Close</span>
+          </DialogClose>
         </DialogHeader>
 
         {loading && (

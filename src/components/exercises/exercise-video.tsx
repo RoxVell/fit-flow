@@ -71,7 +71,7 @@ export function ExerciseVideo({
         loop
         muted
         playsInline
-        controls
+        controls={false}
         preload="metadata"
         className="h-full w-full object-cover"
         onError={() => setFailed(true)}
