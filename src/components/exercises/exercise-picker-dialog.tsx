@@ -21,6 +21,7 @@ interface ExercisePickerDialogProps {
   onOpenChange: (open: boolean) => void;
   title: string;
   excludeIds?: Set<string>;
+  onlyUsed?: boolean;
   onSelect: (exerciseId: string) => void;
   emptyMessage?: string;
   emptyMessageAllExcluded?: string;
@@ -32,6 +33,7 @@ export function ExercisePickerDialog({
   onOpenChange,
   title,
   excludeIds,
+  onlyUsed = false,
   onSelect,
   emptyMessage,
   emptyMessageAllExcluded,
@@ -45,6 +47,7 @@ export function ExercisePickerDialog({
       onOpenChange={onOpenChange}
       title={title}
       excludeIds={excludeIds}
+      onlyUsed={onlyUsed}
       onSelect={onSelect}
       emptyMessage={emptyMessage}
       emptyMessageAllExcluded={emptyMessageAllExcluded}
@@ -58,6 +61,7 @@ function ExercisePickerDialogContent({
   onOpenChange,
   title,
   excludeIds,
+  onlyUsed = false,
   onSelect,
   emptyMessage,
   emptyMessageAllExcluded,
@@ -77,18 +81,21 @@ function ExercisePickerDialogContent({
     if (!open) setSearch("");
   }, [open]);
 
-  const items = useMemo(
-    () => exercises?.filter((e) => !excludeIds?.has(e.id)) ?? [],
-    [exercises, excludeIds]
-  );
+  const items = useMemo(() => {
+    let result = exercises?.filter((e) => !excludeIds?.has(e.id)) ?? [];
+    if (onlyUsed) {
+      result = result.filter((e) => (usageCounts?.get(e.id) ?? 0) > 0);
+    }
+    return result;
+  }, [exercises, excludeIds, onlyUsed, usageCounts]);
 
   const recentItems = useMemo(
-    () => items.filter((e) => (usageCounts?.get(e.id) ?? 0) > 0),
-    [items, usageCounts]
+    () => (onlyUsed ? [] : items.filter((e) => (usageCounts?.get(e.id) ?? 0) > 0)),
+    [items, usageCounts, onlyUsed]
   );
   const otherItems = useMemo(
-    () => items.filter((e) => (usageCounts?.get(e.id) ?? 0) === 0),
-    [items, usageCounts]
+    () => (onlyUsed ? items : items.filter((e) => (usageCounts?.get(e.id) ?? 0) === 0)),
+    [items, usageCounts, onlyUsed]
   );
 
   const handleSelect = (exerciseId: string) => {
@@ -153,7 +160,7 @@ function ExercisePickerDialogContent({
             </p>
           ) : (
             <div className="space-y-0.5">
-              {recentItems.length > 0 && !search.trim() ? (
+              {!onlyUsed && recentItems.length > 0 && !search.trim() ? (
                 <>
                   <p className="px-2 pt-1 pb-1 text-xs font-medium text-muted-foreground">
                     {ui.recentExercises}
@@ -166,7 +173,7 @@ function ExercisePickerDialogContent({
                   ) : null}
                 </>
               ) : null}
-              {(search.trim() ? items : otherItems).map(renderItem)}
+              {(search.trim() || onlyUsed ? items : otherItems).map(renderItem)}
             </div>
           )}
         </div>

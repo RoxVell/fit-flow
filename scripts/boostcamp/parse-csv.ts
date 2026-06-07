@@ -17,7 +17,7 @@ function parseCsvLine(line: string): string[] {
       }
       continue;
     }
-    if (char === "," && !inQuotes) {
+    if (char === ";" && !inQuotes) {
       fields.push(current);
       current = "";
       continue;
@@ -127,16 +127,17 @@ export function getUniqueExerciseNames(rows: BoostcampRow[]): string[] {
   return [...new Set(rows.map((row) => row.exercise))].sort();
 }
 
-/** Boostcamp exports dates as DD/MM/YY */
+/** Boostcamp exports dates as DD.MM.YY */
 export function parseBoostcampDate(date: string): Date {
-  const match = date.match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
+  const match = date.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+
   if (!match) {
     throw new Error(`Invalid Boostcamp date format: ${date}`);
   }
 
   const day = Number.parseInt(match[1], 10);
   const month = Number.parseInt(match[2], 10);
-  const year = 2000 + Number.parseInt(match[3], 10);
+  const year = Number.parseInt(match[3], 10);
 
   return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
 }
