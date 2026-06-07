@@ -63,7 +63,7 @@ export default async function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: localeBootstrapScript }} />
       </head>
-      <body className="min-h-full flex flex-col text-foreground">
+      <body className="flex min-h-dvh flex-col text-foreground">
         <Providers initialLocale={initialLocale}>
           <BlockOne />
           <ServiceWorkerRegister />
