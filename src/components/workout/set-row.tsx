@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { LoggedSet, SetType } from "@/lib/db/types";
 import { useT } from "@/lib/i18n/use-t";
+import {
+  formatDecimalForInput,
+  isPartialDecimalInput,
+  parseLocalizedDecimal,
+} from "@/lib/utils/decimal-input";
 
 interface SetRowProps {
   set: LoggedSet;
@@ -35,6 +40,14 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
 
   const config = setTypeConfig[set.type];
   const hasPrefilled = useRef(false);
+  const [weightText, setWeightText] = useState(() => formatDecimalForInput(set.weight));
+  const isWeightFocused = useRef(false);
+
+  useEffect(() => {
+    if (!isWeightFocused.current) {
+      setWeightText(formatDecimalForInput(set.weight));
+    }
+  }, [set.weight]);
 
   useEffect(() => {
     if (!hasPrefilled.current && set.weight === 0 && set.reps === 0 && previousSet) {
@@ -80,10 +93,26 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
           <div className="flex-1" />
 
           <Input
-            type="number"
+            type="text"
             inputMode="decimal"
-            value={set.weight || ""}
-            onChange={(e) => onUpdate({ weight: parseFloat(e.target.value) || 0 })}
+            value={weightText}
+            onFocus={() => {
+              isWeightFocused.current = true;
+            }}
+            onBlur={() => {
+              isWeightFocused.current = false;
+              const parsed = parseLocalizedDecimal(weightText);
+              onUpdate({ weight: parsed });
+              setWeightText(formatDecimalForInput(parsed));
+            }}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (!isPartialDecimalInput(value)) return;
+              setWeightText(value);
+              if (value !== "" && !value.endsWith(",") && !value.endsWith(".")) {
+                onUpdate({ weight: parseLocalizedDecimal(value) });
+              }
+            }}
             className="h-8 w-14 shrink-0 text-center text-sm tabular-nums px-1"
             placeholder="0"
           />
