@@ -175,3 +175,8 @@ Exercise names use `pickLocalized(field, locale)` from `src/lib/exercises/locale
 4. `npm run dev` — library loads from `/exercises/manifest.json`
 5. Toggle language in Settings; verify no hydration flash on reload
 6. Test offline: load app online once, then DevTools → Offline → open Programs → Exercises tab
+
+## Related
+
+- **Body-part labels** (`BODY_PART_LABELS` in `src/lib/exercises/labels.ts`) drive the Progress → General body-part chart. See [progress-charts.md](./progress-charts.md).
+- **Usage counts** (`useExerciseUsageCounts`) power `ExercisePickerDialog` with `onlyUsed` on Progress → Exercises.

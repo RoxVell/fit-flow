@@ -10,7 +10,7 @@ const KNOWN_OVERRIDES: Record<string, string> = {
   "Belt Squat": "Machine Belt Squat",
   "Hip Abductor (Machine)": "Seated Hip Abduction",
   "Hip Adductor (Machine)": "Seated Hip Adduction",
-  "Dip (Weighted)": "Weighted Bench Dips",
+  "Dip (Weighted)": "Weighted Dips",
   "Incline Bench Press (Barbell)": "Incline Barbell Bench Press",
   "Incline Bench Press (Dumbbell)": "Incline Dumbbell Bench Press",
   "Incline Bench Press (Smith Machine)": "Smith Incline Chest Press",
@@ -31,7 +31,7 @@ const KNOWN_OVERRIDES: Record<string, string> = {
   "Chest Supported Row (Dumbbell)": "Wide Grip Chest Supported Row",
   "Incline Curl (Dumbbell)": "Dumbbell Incline Hammer Curl",
   "Partial Calf Raise": "Machine Calf Raises",
-  "Standing Pullover (Cable)": "Dumbbell Lat Pullover",
+  "Standing Pullover (Cable)": "Rope Straight-Arm Lat Pulldown",
   "Wrist Curls": "Barbell Wrist Curl",
   "Reverse Bicep Curl (EZ Bar)": "EZ-Bar Reverse Grip Biceps Curl",
 };

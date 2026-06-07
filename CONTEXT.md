@@ -39,3 +39,19 @@ _Avoid_: estimated 1RM, projected max, one-rep max
 **personal record (PR)**:
 A `PersonalRecord` entry the system emits on workout finish for each completed exercise. Built by `createPRsFromWorkout(loggedExercises, exerciseMap, completedAt)` in `db/queries.ts`: for each completed exercise with `bestWeight > 0` emits a `weight` PR; with `volume > 0` emits a `volume` PR. `PRType` allows a third value (`"estimated_1rm"`) but the function never emits it — the gap is intentional, not a bug, and would need a history lookup to know if a new e1RM is actually a PR. PRs are persisted by the active-workout hook via the outbox; they survive offline finishes.
 _Avoid_: achievement, milestone, best lift
+
+**progress index**:
+Strength progress expressed as a percentage of baseline: `(current e1RM / baseline e1RM) × 100`. Baseline is the best e1RM from the **first week that exercise appears** in history, not the app’s global first week. **100%** means “same as when you first logged this exercise.” Used on General progress, body-part charts, and per-exercise history views. See [docs/progress-charts.md](./docs/progress-charts.md).
+_Avoid_: percent gain, strength score
+
+**body part progress**:
+Weekly and summary progress grouped by catalog `BodyPart` (`CHEST`, `BACK`, `SHOULDERS`, …). Category **current** and **change** are averages of constituent exercises; **change** uses relative percent `(last/first − 1) × 100`. Chart lines use carry-forward so an exercise’s last index counts in later weeks until updated. Component: `BodyPartProgressChart`.
+_Avoid_: muscle group chart, body region stats
+
+**chart period**:
+Time window for progress charts: `1m` (30 days), `2m`, `3m`, `6m`, or `all`. Default `3m`. Defined in `lib/charts/periods.ts`; UI in `ChartPeriodSelector`.
+_Avoid_: date range, zoom level
+
+**focus domain**:
+Y-axis scaling that starts below the data minimum (≈12% padding under range) instead of zero, so small progress/regression is readable on strength charts. `computeFocusDomain` in `lib/charts/domain.ts`.
+_Avoid_: auto scale, zoomed axis
