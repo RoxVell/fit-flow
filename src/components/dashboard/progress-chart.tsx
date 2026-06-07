@@ -11,156 +11,75 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useWorkoutLogs } from "@/lib/hooks/use-data";
-import { e1RM } from "@/lib/training-metrics";
-import { TrendingUp, TrendingDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ChartPeriodSelector } from "@/components/charts/chart-period-selector";
+import { PeriodChangeIndicator } from "@/components/charts/period-change-indicator";
+import { computeFocusDomain, computePeriodChange } from "@/lib/charts/domain";
+import { type ChartPeriod } from "@/lib/charts/periods";
+import {
+  buildWeeklyExerciseBest1RM,
+  buildPerExerciseBaseline,
+  computeOverallProgressSeries,
+  filterWeeksByPeriod,
+  getSortedWeeks,
+} from "@/lib/charts/weekly-progress";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 
-function getMonday(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-const periodDays = [
-  { value: "4w" as const, days: 28 },
-  { value: "8w" as const, days: 56 },
-  { value: "all" as const, days: Infinity },
-];
-
-type Period = (typeof periodDays)[number]["value"];
-
 export function ProgressChart() {
-  const logs = useWorkoutLogs(50);
-  const [period, setPeriod] = useState<Period>("8w");
+  const logs = useWorkoutLogs(200);
+  const [period, setPeriod] = useState<ChartPeriod>("3m");
   const t = useT();
   const { formatChartDate } = useFormat();
 
   const periods = [
-    { value: "4w" as const, label: t.progress.period4w, days: 28 },
-    { value: "8w" as const, label: t.progress.period8w, days: 56 },
-    { value: "all" as const, label: t.progress.periodAll, days: Infinity },
+    { value: "1m" as const, label: t.progress.period1m },
+    { value: "2m" as const, label: t.progress.period2m },
+    { value: "3m" as const, label: t.progress.period3m },
+    { value: "6m" as const, label: t.progress.period6m },
+    { value: "all" as const, label: t.progress.periodAll },
   ];
 
   const chartData = useMemo(() => {
     if (!logs || logs.length === 0) return null;
 
-    const weeksMap = new Map<string, Map<string, number>>();
-
-    for (const log of logs) {
-      if (!log.endedAt) continue;
-      const weekStart = getMonday(new Date(log.endedAt)).toISOString();
-
-      if (!weeksMap.has(weekStart)) {
-        weeksMap.set(weekStart, new Map());
-      }
-      const weekExercises = weeksMap.get(weekStart)!;
-
-      for (const ex of log.exercises) {
-        const completed = ex.sets.filter((s) => s.completed && s.weight > 0 && s.reps > 0);
-        if (completed.length === 0) continue;
-
-        let best1RM = 0;
-        for (const set of completed) {
-          const e1rm = e1RM(set.weight, set.reps);
-          if (e1rm > best1RM) best1RM = e1rm;
-        }
-
-        const current = weekExercises.get(ex.exerciseId) || 0;
-        if (best1RM > current) {
-          weekExercises.set(ex.exerciseId, best1RM);
-        }
-      }
-    }
-
-    const sortedWeeks = [...weeksMap.entries()].sort(
-      ([a], [b]) => new Date(a).getTime() - new Date(b).getTime()
-    );
-
+    const weeksMap = buildWeeklyExerciseBest1RM(logs);
+    const sortedWeeks = getSortedWeeks(weeksMap);
     if (sortedWeeks.length < 2) return null;
 
-    const selected = periodDays.find((p) => p.value === period)!;
-    let filteredWeeks = sortedWeeks;
-    if (selected.days !== Infinity) {
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - selected.days);
-      filteredWeeks = sortedWeeks.filter(
-        ([weekStart]) => new Date(weekStart) >= cutoff
-      );
-    }
-
+    const filteredWeeks = filterWeeksByPeriod(sortedWeeks, period);
     if (filteredWeeks.length < 2) return null;
 
-    const baseline = new Map(sortedWeeks[0][1]);
-
-    const result = filteredWeeks.map(([weekStart, exercises]) => {
-      let total = 0;
-      let count = 0;
-
-      for (const [exId, value] of exercises) {
-        const baseValue = baseline.get(exId);
-        if (baseValue && baseValue > 0) {
-          total += (value / baseValue) * 100;
-          count++;
-        }
-      }
-
-      const progress = count > 0 ? total / count : 100;
-
-      const label = formatChartDate(weekStart);
-
-      return { week: label, progress: Math.round(progress * 10) / 10 };
-    });
-
-    return result;
+    const baseline = buildPerExerciseBaseline(sortedWeeks);
+    return computeOverallProgressSeries(filteredWeeks, baseline, formatChartDate);
   }, [logs, period, formatChartDate]);
 
-  const change = useMemo(() => {
-    if (!chartData || chartData.length < 2) return null;
-    return Math.round((chartData[chartData.length - 1].progress - chartData[0].progress) * 10) / 10;
+  const periodChange = useMemo(() => {
+    if (!chartData?.length) return null;
+    return computePeriodChange(chartData.map((d) => d.progress));
   }, [chartData]);
 
-  if (!chartData || change === null) return null;
+  const yDomain = useMemo(() => {
+    if (!chartData?.length) return undefined;
+    return computeFocusDomain(chartData.map((d) => d.progress));
+  }, [chartData]);
 
-  const isPositive = change >= 0;
+  if (!chartData || periodChange === null) return null;
+
+  const isPositive = periodChange.absolute >= 0;
   const strokeColor = isPositive ? "#22c55e" : "#ef4444";
 
   return (
     <div className="rounded-xl border bg-card p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div>
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="min-w-0">
           <p className="text-sm font-heading font-medium">{t.progress.generalProgress}</p>
-          <p className="text-lg font-bold flex items-center gap-1">
-            {isPositive ? (
-              <TrendingUp className="h-5 w-5 text-green-500" />
-            ) : (
-              <TrendingDown className="h-5 w-5 text-red-500" />
-            )}
-            {isPositive ? "+" : ""}
-            {change}%
-          </p>
+          <PeriodChangeIndicator
+            change={periodChange}
+            variant="percent-points"
+            className="mt-1"
+          />
         </div>
-        <div className="inline-flex items-center rounded-lg border bg-muted/50 p-0.5">
-          {periods.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              onClick={() => setPeriod(p.value)}
-              className={cn(
-                "rounded-md px-2 py-1 text-xs font-medium transition-all",
-                period === p.value
-                  ? "bg-card text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        <ChartPeriodSelector period={period} onChange={setPeriod} labels={periods} />
       </div>
       <div className="h-32">
         <ResponsiveContainer width="100%" height="100%">
@@ -180,7 +99,7 @@ export function ProgressChart() {
             <YAxis
               tick={{ fontSize: 10 }}
               stroke="var(--color-muted-foreground)"
-              domain={["dataMin - 2", "dataMax + 2"]}
+              domain={yDomain}
               tickFormatter={(v) => `${v}%`}
             />
             <Tooltip

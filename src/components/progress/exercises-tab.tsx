@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { SEED_EXERCISES } from "@/lib/db/seed-exercise-ids";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -15,129 +15,225 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChartPeriodSelector } from "@/components/charts/chart-period-selector";
+import { PeriodChangeIndicator } from "@/components/charts/period-change-indicator";
+import { ExercisePickerDialog } from "@/components/exercises/exercise-picker-dialog";
+import { ExerciseThumbnail } from "@/components/exercises/exercise-thumbnail";
 import {
   useExerciseHistory,
   useExerciseDetailedHistory,
-  useExercises,
+  useExercise,
 } from "@/lib/hooks/use-data";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useExerciseUsageCounts } from "@/lib/hooks/use-exercise-usage";
 import { HistoryAccordion } from "@/components/progress/history-accordion";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
+import { computeFocusDomain, computePeriodChange } from "@/lib/charts/domain";
+import { filterByPeriod, type ChartPeriod } from "@/lib/charts/periods";
 
 export function ExercisesTab() {
   const t = useT();
   const { formatChartDate } = useFormat();
-  const allExercises = useExercises();
-  const [selectedId, setSelectedId] = useState<string>(SEED_EXERCISES.barbellBenchPress);
+  const usageCounts = useExerciseUsageCounts();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [chartType, setChartType] = useState<"1rm" | "volume">("1rm");
+  const [period, setPeriod] = useState<ChartPeriod>("3m");
+
+  const periods = [
+    { value: "1m" as const, label: t.progress.period1m },
+    { value: "2m" as const, label: t.progress.period2m },
+    { value: "3m" as const, label: t.progress.period3m },
+    { value: "6m" as const, label: t.progress.period6m },
+    { value: "all" as const, label: t.progress.periodAll },
+  ];
+
+  const usedExerciseIds = useMemo(() => {
+    if (!usageCounts) return undefined;
+    return [...usageCounts.entries()]
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => id);
+  }, [usageCounts]);
 
   useEffect(() => {
-    if (allExercises?.length && !allExercises.some((e) => e.id === selectedId)) {
-      setSelectedId(allExercises[0].id);
+    if (!usedExerciseIds) return;
+    if (usedExerciseIds.length === 0) {
+      setSelectedId(null);
+      return;
     }
-  }, [allExercises, selectedId]);
-  const history = useExerciseHistory(selectedId);
-  const detailedHistory = useExerciseDetailedHistory(selectedId);
-  const [chartType, setChartType] = useState<"1rm" | "volume">("1rm");
+    if (!selectedId || !usedExerciseIds.includes(selectedId)) {
+      setSelectedId(usedExerciseIds[0]);
+    }
+  }, [usedExerciseIds, selectedId]);
 
-  const chartData = history?.map((h) => ({
-    date: formatChartDate(h.date),
-    estimated1RM: Math.round(h.estimated1RM * 10) / 10,
-    volume: Math.round(h.volume),
-  }));
+  const history = useExerciseHistory(selectedId ?? "");
+  const detailedHistory = useExerciseDetailedHistory(selectedId ?? "");
+  const selectedExercise = useExercise(selectedId ?? "");
 
-  const selectedExercise = allExercises?.find((e) => e.id === selectedId);
+  const chartData = useMemo(() => {
+    if (!history) return undefined;
+
+    const filtered = filterByPeriod(
+      history.map((h) => ({ ...h, date: h.date })),
+      period
+    );
+
+    return filtered.map((h) => ({
+      date: formatChartDate(h.date),
+      estimated1RM: Math.round(h.estimated1RM * 10) / 10,
+      volume: Math.round(h.volume),
+    }));
+  }, [history, period, formatChartDate]);
+
+  const dataKey = chartType === "1rm" ? "estimated1RM" : "volume";
+
+  const yDomain = useMemo(() => {
+    if (!chartData?.length) return undefined;
+    return computeFocusDomain(chartData.map((d) => d[dataKey]));
+  }, [chartData, dataKey]);
+
+  const periodChange = useMemo(() => {
+    if (!chartData?.length) return null;
+    return computePeriodChange(chartData.map((d) => d[dataKey]));
+  }, [chartData, dataKey]);
 
   const sessions = detailedHistory || [];
+  const hasUsedExercises = usedExerciseIds && usedExerciseIds.length > 0;
+  const unit = t.workout.kg;
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">{t.progress.exerciseProgress}</CardTitle>
-          <Select value={selectedId} onValueChange={(v) => v && setSelectedId(v)}>
-            <SelectTrigger className="w-40 h-7 text-xs">
-              <SelectValue>{selectedExercise?.name}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {allExercises?.map((ex) => (
-                <SelectItem key={ex.id} value={ex.id} className="text-sm">
-                  {ex.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={chartType} onValueChange={(v) => setChartType(v as typeof chartType)}>
-            <TabsList className="mb-3">
-              <TabsTrigger value="1rm" className="text-xs">{t.dashboard.prE1rm}</TabsTrigger>
-              <TabsTrigger value="volume" className="text-xs">{t.progress.chartVolume}</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <div className="h-48 outline-none">
-            {chartData && chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                {chartType === "1rm" ? (
-                  <LineChart data={chartData} margin={{ top: 5, right: 0, left: -15, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-muted)" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="var(--color-muted-foreground)" />
-                    <YAxis tick={{ fontSize: 10 }} stroke="var(--color-muted-foreground)" />
-                    <Tooltip
-                      wrapperStyle={{ outline: "none" }}
-                      contentStyle={{
-                        backgroundColor: "#1f1f1f",
-                        border: "1px solid #333",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                        color: "#eee",
-                      }}
-                      cursor={{ stroke: "#444", strokeWidth: 1 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="estimated1RM"
-                      stroke="var(--color-primary)"
-                      strokeWidth={2}
-                      dot={{ fill: "var(--color-primary)", r: 3 }}
-                    />
-                  </LineChart>
-                ) : (
-                  <BarChart data={chartData} margin={{ top: 5, right: 0, left: -15, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-muted)" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="var(--color-muted-foreground)" />
-                    <YAxis tick={{ fontSize: 10 }} stroke="var(--color-muted-foreground)" />
-                    <Tooltip
-                      wrapperStyle={{ outline: "none" }}
-                      contentStyle={{
-                        backgroundColor: "#1f1f1f",
-                        border: "1px solid #333",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                        color: "#eee",
-                      }}
-                      cursor={{ fill: "#333" }}
-                    />
-                    <Bar dataKey="volume" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                )}
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                {t.progress.noData}
-              </div>
-            )}
+      {hasUsedExercises ? (
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          className="flex w-full items-center gap-3 rounded-xl border bg-card p-3 text-left transition-colors hover:bg-accent/50 active:bg-accent/80"
+        >
+          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+            <ExerciseThumbnail
+              src={selectedExercise?.imageUrl ?? null}
+              alt={selectedExercise?.name ?? ""}
+            />
           </div>
-        </CardContent>
-      </Card>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">
+              {selectedExercise?.name ?? "…"}
+            </p>
+          </div>
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
+      ) : (
+        <div className="rounded-xl border bg-card p-4 text-center text-sm text-muted-foreground">
+          {t.progress.noData}
+        </div>
+      )}
 
-      <HistoryAccordion sessions={sessions} />
+      {pickerOpen ? (
+        <ExercisePickerDialog
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          title={t.progress.exerciseProgress}
+          onlyUsed
+          onSelect={setSelectedId}
+          emptyMessage={t.progress.noData}
+        />
+      ) : null}
+
+      {selectedId ? (
+        <Card>
+          <CardHeader className="space-y-2 pb-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <CardTitle className="text-sm font-medium">
+                  {t.progress.exerciseProgress}
+                </CardTitle>
+                {periodChange ? (
+                  <PeriodChangeIndicator change={periodChange} unit={unit} className="mt-1" />
+                ) : null}
+              </div>
+              <ChartPeriodSelector
+                period={period}
+                onChange={setPeriod}
+                labels={periods}
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={chartType} onValueChange={(v) => setChartType(v as typeof chartType)}>
+              <TabsList className="mb-3">
+                <TabsTrigger value="1rm" className="text-xs">{t.dashboard.prE1rm}</TabsTrigger>
+                <TabsTrigger value="volume" className="text-xs">{t.progress.chartVolume}</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <div className="h-48 outline-none">
+              {chartData && chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  {chartType === "1rm" ? (
+                    <LineChart data={chartData} margin={{ top: 5, right: 0, left: -15, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-muted)" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="var(--color-muted-foreground)" />
+                      <YAxis
+                        tick={{ fontSize: 10 }}
+                        stroke="var(--color-muted-foreground)"
+                        domain={yDomain}
+                        tickFormatter={(v) => `${v}`}
+                      />
+                      <Tooltip
+                        wrapperStyle={{ outline: "none" }}
+                        contentStyle={{
+                          backgroundColor: "#1f1f1f",
+                          border: "1px solid #333",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          color: "#eee",
+                        }}
+                        cursor={{ stroke: "#444", strokeWidth: 1 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="estimated1RM"
+                        stroke="var(--color-primary)"
+                        strokeWidth={2}
+                        dot={{ fill: "var(--color-primary)", r: 3 }}
+                      />
+                    </LineChart>
+                  ) : (
+                    <BarChart data={chartData} margin={{ top: 5, right: 0, left: -15, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-muted)" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="var(--color-muted-foreground)" />
+                      <YAxis
+                        tick={{ fontSize: 10 }}
+                        stroke="var(--color-muted-foreground)"
+                        domain={yDomain}
+                        tickFormatter={(v) => `${v}`}
+                      />
+                      <Tooltip
+                        wrapperStyle={{ outline: "none" }}
+                        contentStyle={{
+                          backgroundColor: "#1f1f1f",
+                          border: "1px solid #333",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          color: "#eee",
+                        }}
+                        cursor={{ fill: "#333" }}
+                      />
+                      <Bar dataKey="volume" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  {t.progress.noData}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {selectedId ? <HistoryAccordion sessions={sessions} /> : null}
     </div>
   );
 }
