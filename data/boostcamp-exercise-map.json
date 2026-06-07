@@ -1,0 +1,431 @@
+{
+  "Abs Crunch (Machine)": {
+    "exerciseId": "431ad34e-e714-4ef2-9f2f-b629359da2ff",
+    "matchedName": "Machine Abdominal Crunches",
+    "confidence": "medium",
+    "alternatives": [
+      "Assisted Machine Dips",
+      "Chest Supported Machine Row",
+      "Glute Machine Kickback",
+      "Hip Thrust Smith Machine",
+      "Lat Pulldown Machine"
+    ]
+  },
+  "Belt Squat": {
+    "exerciseId": "23d2096a-5a0c-41d7-adc2-698c8e8c60e2",
+    "matchedName": "Machine Belt Squat",
+    "confidence": "medium",
+    "alternatives": []
+  },
+  "Bench Press (Barbell)": {
+    "exerciseId": "dba6c9ac-e99c-4486-5c88-7ff4403c4608",
+    "matchedName": "Barbell Bench Press",
+    "confidence": "high",
+    "alternatives": [
+      "Barbell Bench Press with Chains",
+      "Decline Barbell Bench Press",
+      "Incline Barbell Bench Press",
+      "Barbell Behind Neck Shoulder Press"
+    ]
+  },
+  "Bicep Curl (Machine)": {
+    "exerciseId": "8abe4e5f-c746-4112-b6c7-33d1ec688256",
+    "matchedName": "Machine Biceps Curl",
+    "confidence": "medium",
+    "alternatives": [
+      "Assisted Machine Dips",
+      "Chest Supported Machine Row",
+      "Glute Machine Kickback",
+      "Hip Thrust Smith Machine",
+      "Lat Pulldown Machine"
+    ]
+  },
+  "Cable Crunch": {
+    "exerciseId": "ef7a226a-8ebe-4ed3-b712-33a548503195",
+    "matchedName": "Kneeling Cable Abs Crunches",
+    "confidence": "medium",
+    "alternatives": []
+  },
+  "Calf Raise (Leg Press)": {
+    "exerciseId": "187d7214-9b1e-4f2d-b028-f2aebd561d8b",
+    "matchedName": "Calf Leg Press",
+    "confidence": "medium",
+    "alternatives": [
+      "Leg Press",
+      "Leg Press Wide Stance",
+      "Lever Horizontal Leg Press",
+      "Narrow Stance 45 Degree Leg Press"
+    ]
+  },
+  "Calf Raise (Machine)": {
+    "exerciseId": "c33a0ac1-5d07-d66c-fc7c-8360786726da",
+    "matchedName": "Machine Calf Raises",
+    "confidence": "medium",
+    "alternatives": [
+      "Assisted Machine Dips",
+      "Chest Supported Machine Row",
+      "Glute Machine Kickback",
+      "Hip Thrust Smith Machine"
+    ]
+  },
+  "Chest Press (Machine)": {
+    "exerciseId": "da6b09eb-e55d-42cd-988d-1454658c1a4f",
+    "matchedName": "Machine Chest Press",
+    "confidence": "high",
+    "alternatives": [
+      "Machine Chest Press Hammer Grip",
+      "Assisted Machine Dips",
+      "Chest Supported Machine Row"
+    ]
+  },
+  "Chest Supported Row (Dumbbell)": {
+    "exerciseId": "ae74e375-7d6c-41d6-9e1c-3441ab97bca2",
+    "matchedName": "Incline Chest Supported Barbell Row",
+    "confidence": "medium",
+    "alternatives": [
+      "Alternate Bent Over Dumbbell Reverse Fly",
+      "Alternate Dumbbell Hammer Curl",
+      "Arm Blaster Biceps Dumbbell Curl",
+      "Back Extension With Dumbbell",
+      "Bent Over Dumbbell Lateral Raise"
+    ]
+  },
+  "Dip (Weighted)": {
+    "exerciseId": "0935adff-a0ca-78d8-32f8-11f0f8d211f8",
+    "matchedName": "Weighted Dips",
+    "confidence": "medium",
+    "alternatives": [
+      "Weighted Dips",
+      "Single Leg Weighted Glute Bridge",
+      "Weighted Ab Crunches",
+      "Weighted Back Extension"
+    ]
+  },
+  "Hack Squat": {
+    "exerciseId": "8ae59cb6-8a70-4eb6-b2b3-35abe8060f0f",
+    "matchedName": "Machine Hack Squat",
+    "confidence": "medium",
+    "alternatives": []
+  },
+  "Hip Abductor (Machine)": {
+    "exerciseId": "c0d708f6-00ab-118f-9f7d-e13f27e5458b",
+    "matchedName": "Seated Hip Abduction",
+    "confidence": "medium",
+    "alternatives": [
+      "Assisted Machine Dips",
+      "Chest Supported Machine Row",
+      "Glute Machine Kickback",
+      "Hip Thrust Smith Machine",
+      "Lat Pulldown Machine"
+    ]
+  },
+  "Hip Adductor (Machine)": {
+    "exerciseId": "142bd4e5-6755-42e2-83ad-cbfcf6388dab",
+    "matchedName": "Seated Hip Adduction",
+    "confidence": "medium",
+    "alternatives": [
+      "Assisted Machine Dips",
+      "Chest Supported Machine Row",
+      "Glute Machine Kickback",
+      "Hip Thrust Smith Machine",
+      "Lat Pulldown Machine"
+    ]
+  },
+  "Incline Bench Press (Barbell)": {
+    "exerciseId": "10544e2e-3765-1ba9-b753-c9ccd60b06d4",
+    "matchedName": "Incline Barbell Bench Press",
+    "confidence": "medium",
+    "alternatives": [
+      "Barbell Behind Neck Shoulder Press",
+      "Barbell Bench Press",
+      "Barbell Bench Press with Chains",
+      "Barbell Bent Over Row",
+      "Barbell Bent Over Row From Pin"
+    ]
+  },
+  "Incline Bench Press (Dumbbell)": {
+    "exerciseId": "61505ee2-7f37-fb06-2519-db3b9f20087d",
+    "matchedName": "Incline Dumbbell Bench Press",
+    "confidence": "medium",
+    "alternatives": [
+      "One-Arm Dumbbell Incline Bench Press",
+      "Alternate Bent Over Dumbbell Reverse Fly",
+      "Alternate Dumbbell Hammer Curl",
+      "Arm Blaster Biceps Dumbbell Curl",
+      "Back Extension With Dumbbell"
+    ]
+  },
+  "Incline Bench Press (Smith Machine)": {
+    "exerciseId": "efa13a07-2158-4db6-9ebc-6e852ffa2aef",
+    "matchedName": "Smith Incline Chest Press",
+    "confidence": "medium",
+    "alternatives": [
+      "Hip Thrust Smith Machine",
+      "Smith Machine Good Morning",
+      "Smith Machine Upright Row",
+      "Vertical Leg Press Smith Machine"
+    ]
+  },
+  "Incline Curl (Dumbbell)": {
+    "exerciseId": "d56a3927-61c7-4b1f-9b49-09310388103a",
+    "matchedName": "Seated Incline Biceps Curl",
+    "confidence": "medium",
+    "alternatives": [
+      "Alternate Bent Over Dumbbell Reverse Fly",
+      "Alternate Dumbbell Hammer Curl",
+      "Arm Blaster Biceps Dumbbell Curl",
+      "Back Extension With Dumbbell",
+      "Bent Over Dumbbell Lateral Raise"
+    ]
+  },
+  "Lat Pulldown": {
+    "exerciseId": "2ade8d6c-c91a-430f-96fc-da1d0f696526",
+    "matchedName": "Cable Lat Pulldown",
+    "confidence": "medium",
+    "alternatives": []
+  },
+  "Lateral Raise (Machine)": {
+    "exerciseId": "e8e7d283-5748-9f5d-7fb6-c25feb431c96",
+    "matchedName": "Machine Lateral Raise",
+    "confidence": "high",
+    "alternatives": [
+      "Assisted Machine Dips",
+      "Chest Supported Machine Row",
+      "Glute Machine Kickback",
+      "Hip Thrust Smith Machine"
+    ]
+  },
+  "Leg Extension": {
+    "exerciseId": "8fd1b9d5-ad0c-8fa5-da97-dcb248588ef5",
+    "matchedName": "Seated Leg Extension Machine",
+    "confidence": "medium",
+    "alternatives": []
+  },
+  "Leg Press": {
+    "exerciseId": "ccc8321a-3db5-40a3-b687-0cb47f4ee2c9",
+    "matchedName": "Lever Horizontal Leg Press",
+    "confidence": "high",
+    "alternatives": []
+  },
+  "Leg Press (45 Degrees)": {
+    "exerciseId": "e17ca855-8185-fbc6-bb54-ab9c4334f0f7",
+    "matchedName": "Leg Press",
+    "confidence": "medium",
+    "alternatives": []
+  },
+  "One Arm Lateral Raise (Cable)": {
+    "exerciseId": "0ea2687b-5d78-4041-8ad4-66a6a8848da1",
+    "matchedName": "One-Arm Cable Lateral Raise",
+    "confidence": "medium",
+    "alternatives": [
+      "Bar Cable Biceps Curl",
+      "Bayesian Cable Curl",
+      "Bayesian Cable Curl (Face Away)",
+      "Bayesian Cable Curl Seated",
+      "Cable Bench Press"
+    ]
+  },
+  "Overhead Press (Dumbbell)": {
+    "exerciseId": "5b2bdea5-ceee-a837-596c-fd2f6138ffff",
+    "matchedName": "Seated Dumbbell Shoulder Press",
+    "confidence": "medium",
+    "alternatives": [
+      "Alternate Bent Over Dumbbell Reverse Fly",
+      "Alternate Dumbbell Hammer Curl",
+      "Arm Blaster Biceps Dumbbell Curl",
+      "Back Extension With Dumbbell",
+      "Bent Over Dumbbell Lateral Raise"
+    ]
+  },
+  "Overhead Tricep Extension (Cable)": {
+    "exerciseId": "706acd4f-c5f6-4aa7-95d2-af551214e447",
+    "matchedName": "High Pulley Overhead Triceps Extension",
+    "confidence": "medium",
+    "alternatives": [
+      "Bar Cable Biceps Curl",
+      "Bayesian Cable Curl",
+      "Bayesian Cable Curl (Face Away)",
+      "Bayesian Cable Curl Seated",
+      "Cable Bench Press"
+    ]
+  },
+  "Partial Calf Raise": {
+    "exerciseId": "187d7214-9b1e-4f2d-b028-f2aebd561d8b",
+    "matchedName": "Calf Leg Press",
+    "confidence": "medium",
+    "alternatives": []
+  },
+  "Pec Deck (Machine)": {
+    "exerciseId": "d62736b5-9f97-39cd-7596-1189d05863e9",
+    "matchedName": "Machine Chest Fly",
+    "confidence": "medium",
+    "alternatives": [
+      "Assisted Machine Dips",
+      "Chest Supported Machine Row",
+      "Glute Machine Kickback",
+      "Hip Thrust Smith Machine",
+      "Lat Pulldown Machine"
+    ]
+  },
+  "Preacher Curl (Barbell)": {
+    "exerciseId": "f4a9afdd-ffc5-4eeb-ab69-81b8485e5282",
+    "matchedName": "Machine Preacher Curl",
+    "confidence": "high",
+    "alternatives": [
+      "Barbell Behind Neck Shoulder Press",
+      "Barbell Bench Press",
+      "Barbell Bench Press with Chains",
+      "Barbell Bent Over Row"
+    ]
+  },
+  "Pull-Up (Weighted)": {
+    "exerciseId": "04cc2a5a-b69d-4ef3-b6f8-3e6a6115403b",
+    "matchedName": "Weighted Pull-Up",
+    "confidence": "high",
+    "alternatives": [
+      "Single Leg Weighted Glute Bridge",
+      "Weighted Ab Crunches",
+      "Weighted Back Extension",
+      "Weighted Bench Dips"
+    ]
+  },
+  "Pullover (Machine)": {
+    "exerciseId": "4ba860b1-2e76-45b6-8023-c386bc56e65d",
+    "matchedName": "Machine Pullover",
+    "confidence": "high",
+    "alternatives": [
+      "Assisted Machine Dips",
+      "Chest Supported Machine Row",
+      "Glute Machine Kickback",
+      "Hip Thrust Smith Machine"
+    ]
+  },
+  "Rear Delt Fly (Cable)": {
+    "exerciseId": "8829eb3f-8a44-45c4-8a1b-038acb0e257d",
+    "matchedName": "Cable Rear Delt Fly (Reverse Fly)",
+    "confidence": "medium",
+    "alternatives": [
+      "One-Arm Cable Rear Delt Fly",
+      "Bar Cable Biceps Curl",
+      "Bayesian Cable Curl",
+      "Bayesian Cable Curl (Face Away)"
+    ]
+  },
+  "Reverse Bicep Curl (EZ Bar)": {
+    "exerciseId": "b03f3b8c-b957-4838-b198-eeda7a389132",
+    "matchedName": "EZ-Bar Reverse Grip Biceps Curl",
+    "confidence": "medium",
+    "alternatives": [
+      "Close-grip EZ Bar Curl"
+    ]
+  },
+  "Reverse Pec Deck": {
+    "exerciseId": "5ee2a3f3-0b7a-7527-b3ee-d7d87664862b",
+    "matchedName": "Machine Reverse Flyes",
+    "confidence": "medium",
+    "alternatives": []
+  },
+  "Reverse Wrist Curl (Barbell)": {
+    "exerciseId": "bf409651-d501-4f6f-b314-cd0cc5452063",
+    "matchedName": "Barbell Reverse Wrist Curl",
+    "confidence": "high",
+    "alternatives": [
+      "Barbell Behind Neck Shoulder Press",
+      "Barbell Bench Press",
+      "Barbell Bench Press with Chains",
+      "Barbell Bent Over Row"
+    ]
+  },
+  "Seated Dip (Machine)": {
+    "exerciseId": "ef115bce-70a8-4db5-b917-3e9fc3a89d5c",
+    "matchedName": "Seated Dip Machine",
+    "confidence": "high",
+    "alternatives": [
+      "Assisted Machine Dips",
+      "Chest Supported Machine Row",
+      "Glute Machine Kickback",
+      "Hip Thrust Smith Machine"
+    ]
+  },
+  "Seated Hamstring Curl": {
+    "exerciseId": "3ae8ee86-534c-0824-07b6-e9f105b97c1d",
+    "matchedName": "Seated Leg Curl",
+    "confidence": "medium",
+    "alternatives": []
+  },
+  "Seated Row (Machine)": {
+    "exerciseId": "763906d6-42c5-7f93-c42a-553bdcf8d6f2",
+    "matchedName": "Chest Supported Machine Row",
+    "confidence": "medium",
+    "alternatives": [
+      "Assisted Machine Dips",
+      "Glute Machine Kickback",
+      "Hip Thrust Smith Machine",
+      "Lat Pulldown Machine"
+    ]
+  },
+  "Shoulder Press (Machine)": {
+    "exerciseId": "6b0ffef6-8dd1-4b89-999a-a11d85d9e16f",
+    "matchedName": "Machine Shoulder Press",
+    "confidence": "high",
+    "alternatives": [
+      "Assisted Machine Dips",
+      "Chest Supported Machine Row",
+      "Glute Machine Kickback",
+      "Hip Thrust Smith Machine"
+    ]
+  },
+  "Squat (Barbell)": {
+    "exerciseId": "145b65df-1575-4204-852c-0e3f24b29139",
+    "matchedName": "Barbell Squat",
+    "confidence": "high",
+    "alternatives": [
+      "Barbell Bulgarian Squat",
+      "Barbell Cossack Squat",
+      "Barbell Hack Squat",
+      "Barbell Overhead Squat"
+    ]
+  },
+  "Standing Pullover (Cable)": {
+    "exerciseId": "e2b119ab-ec23-4688-9449-535340f3d4f9",
+    "matchedName": "Dumbbell Lat Pullover",
+    "confidence": "medium",
+    "alternatives": [
+      "Bar Cable Biceps Curl",
+      "Bayesian Cable Curl",
+      "Bayesian Cable Curl (Face Away)",
+      "Bayesian Cable Curl Seated",
+      "Cable Bench Press"
+    ]
+  },
+  "T-Bar Row": {
+    "exerciseId": "59c89f64-4dd9-4590-b70b-4dfc1d395407",
+    "matchedName": "T-Bar Chest Suported Row",
+    "confidence": "medium",
+    "alternatives": []
+  },
+  "Tricep Kickback": {
+    "exerciseId": "a1569ae6-b56a-4769-bee6-682c7d17a110",
+    "matchedName": "One-Arm Cable Triceps Pushdown",
+    "confidence": "medium",
+    "alternatives": []
+  },
+  "Tricep Pushdown (Cable)": {
+    "exerciseId": "a97e86f2-1e9a-2d2a-1968-a886c9c3560a",
+    "matchedName": "Cable Triceps Pushdown",
+    "confidence": "medium",
+    "alternatives": [
+      "Bar Cable Biceps Curl",
+      "Bayesian Cable Curl",
+      "Bayesian Cable Curl (Face Away)",
+      "Bayesian Cable Curl Seated",
+      "Cable Bench Press"
+    ]
+  },
+  "Wrist Curls": {
+    "exerciseId": "d9aea411-b71e-4105-ac8d-82746432c8f0",
+    "matchedName": "Barbell Wrist Curl",
+    "confidence": "medium",
+    "alternatives": []
+  }
+}

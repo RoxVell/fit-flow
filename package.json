@@ -9,7 +9,9 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "build:exercises": "npx tsx scripts/build-exercise-library.ts"
+    "build:exercises": "npx tsx scripts/build-exercise-library.ts",
+    "boostcamp:map": "npx tsx scripts/boostcamp/generate-mapping.ts",
+    "boostcamp:import": "npx tsx scripts/boostcamp/import.ts"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.13.12",
