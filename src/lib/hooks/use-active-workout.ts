@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useWorkoutStore } from "@/lib/store/workout-store";
 import {
   useActiveProgram,
+  usePersonalRecords,
   useWorkoutDraft,
   useWorkoutLogs,
 } from "@/lib/hooks/use-data";
@@ -15,6 +16,7 @@ import { createWorkoutLog } from "@/lib/repositories/workouts";
 import { clearDraft, updateDraftExercises } from "@/lib/repositories/drafts";
 import { generateId } from "@/lib/utils/calculations";
 import { volume } from "@/lib/training-metrics";
+import { buildPreviousSetsMap } from "@/lib/workout/previous-sets";
 import type {
   Exercise,
   LoggedExercise,
@@ -64,7 +66,8 @@ export function useActiveWorkout(
   const draft = useWorkoutDraft();
   const { exerciseMap } = useExerciseLookup();
   const program = useActiveProgram();
-  const workoutLogs = useWorkoutLogs(10);
+  const workoutLogs = useWorkoutLogs(50);
+  const personalRecords = usePersonalRecords();
 
   const exercises = draft?.exercises ?? [];
   const startedAt = draft?.startedAt ?? null;
@@ -112,21 +115,8 @@ export function useActiveWorkout(
   }, [draft, router, showTriumph, isAbandoning]);
 
   const previousSetsMap = useMemo(() => {
-    const map = new Map<string, ({ weight: number; reps: number } | null)[]>();
-    if (!workoutLogs) return map;
-    for (const ex of exercises) {
-      for (const log of workoutLogs) {
-        const loggedEx = log.exercises.find((e) => e.exerciseId === ex.exerciseId);
-        if (loggedEx) {
-          const completed = [...loggedEx.sets]
-            .filter((s) => s.completed)
-            .sort((a, b) => a.setOrder - b.setOrder);
-          map.set(ex.id, completed.map((s) => ({ weight: s.weight, reps: s.reps })));
-          break;
-        }
-      }
-    }
-    return map;
+    if (!workoutLogs) return new Map();
+    return buildPreviousSetsMap(exercises, workoutLogs);
   }, [workoutLogs, exercises]);
 
   const totalVolume = useMemo(
@@ -180,7 +170,12 @@ export function useActiveWorkout(
       exercises,
     };
 
-    const records = createPRsFromWorkout(exercises, exerciseMap, completedAt);
+    const records = createPRsFromWorkout(
+      exercises,
+      exerciseMap,
+      completedAt,
+      personalRecords ?? []
+    );
     const capturedVolume = totalVolume;
     const capturedMinutes = minutes;
     const capturedSeconds = seconds;
