@@ -4,9 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { LoggedSet, SetType } from "@/lib/db/types";
+import type { LoggedSet } from "@/lib/db/types";
 import { useT } from "@/lib/i18n/use-t";
 import {
   formatDecimalForInput,
@@ -26,19 +25,6 @@ interface SetRowProps {
 export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComplete }: SetRowProps) {
   const t = useT();
 
-  const setTypeConfig: Record<SetType, { label: string; color: string }> = {
-    working: { label: t.workout.setTypeWorking, color: "bg-primary/15 text-primary border-primary/25" },
-    warmup: { label: t.workout.setTypeWarmup, color: "bg-blue-500/15 text-blue-500 border-blue-500/25" },
-    dropset: { label: t.workout.setTypeDropset, color: "bg-red-500/15 text-red-500 border-red-500/25" },
-  };
-
-  const cycleType = () => {
-    const types: SetType[] = ["working", "warmup", "dropset"];
-    const idx = types.indexOf(set.type);
-    onUpdate({ type: types[(idx + 1) % types.length] });
-  };
-
-  const config = setTypeConfig[set.type];
   const hasPrefilled = useRef(false);
   const [weightText, setWeightText] = useState(() => formatDecimalForInput(set.weight));
   const isWeightFocused = useRef(false);
@@ -76,18 +62,12 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
             {setNumber}
           </span>
 
-          <button onClick={cycleType} className="w-7 shrink-0">
-            <Badge variant="outline" className={cn("w-full text-center text-[11px] px-0 py-0.5 font-medium", config.color)}>
-              {config.label}
-            </Badge>
-          </button>
-
           {previousSet ? (
-            <span className="text-sm text-foreground tabular-nums w-20 shrink-0 text-right text-muted-foreground/80">
+            <span className="ml-3 text-sm text-foreground tabular-nums w-20 shrink-0 text-right text-muted-foreground/80">
               {previousSet.weight}×{previousSet.reps}
             </span>
           ) : (
-            <span className="text-sm text-muted-foreground/50 w-20 shrink-0 text-right">{t.common.emDash}</span>
+            <span className="ml-3 text-sm text-muted-foreground/50 w-20 shrink-0 text-right">{t.common.emDash}</span>
           )}
 
           <div className="flex-1" />
@@ -132,7 +112,7 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
             onClick={() => canToggleComplete && onComplete()}
             disabled={!canToggleComplete}
             className={cn(
-              "ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors",
+              "ml-[15px] flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors",
               set.completed
                 ? "border-green-500 bg-green-500/15 text-green-500"
                 : "border-muted-foreground/20 text-muted-foreground/30",

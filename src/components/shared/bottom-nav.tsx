@@ -28,37 +28,39 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="z-50 w-full shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto grid h-16 grid-cols-5 items-center px-0.5">
-        {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
-          const Icon = item.icon;
-          const isWorkout = item.href === "/workout";
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "relative flex min-w-0 flex-col items-center gap-0.5 px-0.5 py-1.5 text-[10px] text-xs font-medium leading-tight transition-colors sm:text-[11px]",
-                isActive
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Icon className="h-5 w-5 shrink-0" />
-              <span className="max-w-full truncate text-center">{item.label}</span>
-              {isWorkout && showWorkoutDot && (
-                <span
-                  aria-hidden="true"
-                  className="absolute top-0.5 right-3 h-1.5 w-1.5 rounded-full bg-green-500 sm:right-2"
-                />
-              )}
-              {isWorkout && showWorkoutDot && (
-                <span className="sr-only">{t.nav.activeSession}</span>
-              )}
-            </Link>
-          );
-        })}
+    <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="pb-[env(safe-area-inset-bottom,0px)]">
+        <div className="mx-auto grid h-[4.5rem] grid-cols-5 items-center px-0.5">
+          {navItems.map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            const Icon = item.icon;
+            const isWorkout = item.href === "/workout";
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "relative flex min-w-0 flex-col items-center gap-1 px-0.5 py-2 text-[10px] text-xs font-medium leading-tight transition-colors sm:text-[11px]",
+                  isActive
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Icon className="h-[22px] w-[22px] shrink-0" />
+                <span className="max-w-full truncate text-center">{item.label}</span>
+                {isWorkout && showWorkoutDot && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-0.5 right-3 h-1.5 w-1.5 rounded-full bg-green-500 sm:right-2"
+                  />
+                )}
+                {isWorkout && showWorkoutDot && (
+                  <span className="sr-only">{t.nav.activeSession}</span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );

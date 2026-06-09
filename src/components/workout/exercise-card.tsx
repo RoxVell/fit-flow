@@ -91,13 +91,12 @@ export function ExerciseCard({
               <div>
                 <div className="flex items-center gap-1 px-2 pt-1.5 pb-0.5 text-sm text-muted-foreground/50 font-medium">
                   <span className="w-5 shrink-0 text-center">{t.workout.set}</span>
-                  <span className="w-7 shrink-0 text-center">{t.workout.setTypeCol}</span>
-                  <span className="w-20 shrink-0 text-right">{t.workout.previous}</span>
+                  <span className="ml-3 w-20 shrink-0 text-right">{t.workout.previous}</span>
                   <span className="flex-1" />
                   <span className="w-14 shrink-0 text-center">{t.workout.kg}</span>
                   <span className="w-3 shrink-0 text-center" />
                   <span className="w-10 shrink-0 text-center">{t.workout.reps}</span>
-                  <span className="w-7 shrink-0 ml-1" />
+                  <span className="w-7 shrink-0 ml-[15px]" />
                 </div>
                 <AnimatePresence mode="popLayout">
                   {exercise.sets.map((set, idx) => (

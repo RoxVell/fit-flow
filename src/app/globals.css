@@ -144,9 +144,12 @@
     @apply font-sans;
     font-size: 17px;
     min-height: 100dvh;
+    min-height: -webkit-fill-available;
   }
   body {
     @apply text-foreground;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
   }
 }
 

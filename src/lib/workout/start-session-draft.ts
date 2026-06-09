@@ -17,7 +17,7 @@ export function buildLoggedExercisesFromSession(
         sets: Array.from({ length: se.targetSets }, (_, si) => ({
           id: generateId(),
           loggedExerciseId: leId,
-          type: si === 0 ? ("warmup" as const) : ("working" as const),
+          type: "working" as const,
           setOrder: si,
           reps: 0,
           weight: 0,
