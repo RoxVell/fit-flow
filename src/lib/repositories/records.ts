@@ -106,6 +106,20 @@ export function createPRsFromWorkout(
   return records;
 }
 
+export async function detectNewPRsFromWorkout(
+  loggedExercises: LoggedExercise[],
+  exerciseMap: Map<string, Exercise>,
+  completedAt: string
+): Promise<PersonalRecord[]> {
+  const existingRecords = await getPersonalRecords();
+  return createPRsFromWorkout(
+    loggedExercises,
+    exerciseMap,
+    completedAt,
+    existingRecords
+  );
+}
+
 export async function createPersonalRecord(
   data: Omit<PersonalRecord, "id" | "revision" | "updatedAt">
 ): Promise<PersonalRecordEntity> {

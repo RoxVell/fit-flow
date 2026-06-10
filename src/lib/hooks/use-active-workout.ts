@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { useWorkoutStore } from "@/lib/store/workout-store";
 import {
   useActiveProgram,
-  usePersonalRecords,
   useWorkoutDraft,
   useWorkoutLogs,
 } from "@/lib/hooks/use-data";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
-import { createPRsFromWorkout } from "@/lib/repositories/records";
-import { createPersonalRecord } from "@/lib/repositories/records";
+import {
+  createPersonalRecord,
+  detectNewPRsFromWorkout,
+} from "@/lib/repositories/records";
 import { createWorkoutLog } from "@/lib/repositories/workouts";
 import { clearDraft, updateDraftExercises } from "@/lib/repositories/drafts";
 import { generateId } from "@/lib/utils/calculations";
@@ -67,7 +68,6 @@ export function useActiveWorkout(
   const { exerciseMap } = useExerciseLookup();
   const program = useActiveProgram();
   const workoutLogs = useWorkoutLogs(50);
-  const personalRecords = usePersonalRecords();
 
   const exercises = draft?.exercises ?? [];
   const startedAt = draft?.startedAt ?? null;
@@ -170,34 +170,41 @@ export function useActiveWorkout(
       exercises,
     };
 
-    const records = createPRsFromWorkout(
-      exercises,
-      exerciseMap,
-      completedAt,
-      personalRecords ?? []
-    );
     const capturedVolume = totalVolume;
     const capturedMinutes = minutes;
     const capturedSeconds = seconds;
 
-    void createWorkoutLog(log).catch((err) => {
-      console.warn("[finishWorkout] createWorkoutLog failed", err);
-    });
-    for (const rec of records) {
-      const { id: _id, ...payload } = rec;
-      void createPersonalRecord(payload).catch((err) => {
-        console.warn("[finishWorkout] createPersonalRecord failed", err);
-      });
-    }
+    void (async () => {
+      try {
+        const records = await detectNewPRsFromWorkout(
+          exercises,
+          exerciseMap,
+          completedAt
+        );
 
-    setNewRecords(records);
-    setTriumphData({
-      volume: capturedVolume,
-      minutes: capturedMinutes,
-      seconds: capturedSeconds,
-    });
-    setShowTriumph(true);
-    void clearDraft();
+        await createWorkoutLog(log).catch((err) => {
+          console.warn("[finishWorkout] createWorkoutLog failed", err);
+        });
+        for (const rec of records) {
+          const { id: _id, ...payload } = rec;
+          void createPersonalRecord(payload).catch((err) => {
+            console.warn("[finishWorkout] createPersonalRecord failed", err);
+          });
+        }
+
+        setNewRecords(records);
+        setTriumphData({
+          volume: capturedVolume,
+          minutes: capturedMinutes,
+          seconds: capturedSeconds,
+        });
+        setShowTriumph(true);
+        await clearDraft();
+      } catch (err) {
+        console.warn("[finishWorkout] failed", err);
+        hasFinishedRef.current = false;
+      }
+    })();
   };
 
   const handleFinish = () => {
