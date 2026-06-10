@@ -9,12 +9,15 @@ import {
   useWorkoutLogs,
 } from "@/lib/hooks/use-data";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
-import { createPRsFromWorkout } from "@/lib/repositories/records";
-import { createPersonalRecord } from "@/lib/repositories/records";
+import {
+  createPersonalRecord,
+  detectNewPRsFromWorkout,
+} from "@/lib/repositories/records";
 import { createWorkoutLog } from "@/lib/repositories/workouts";
 import { clearDraft, updateDraftExercises } from "@/lib/repositories/drafts";
 import { generateId } from "@/lib/utils/calculations";
 import { volume } from "@/lib/training-metrics";
+import { buildPreviousSetsMap } from "@/lib/workout/previous-sets";
 import type {
   Exercise,
   LoggedExercise,
@@ -64,7 +67,7 @@ export function useActiveWorkout(
   const draft = useWorkoutDraft();
   const { exerciseMap } = useExerciseLookup();
   const program = useActiveProgram();
-  const workoutLogs = useWorkoutLogs(10);
+  const workoutLogs = useWorkoutLogs(50);
 
   const exercises = draft?.exercises ?? [];
   const startedAt = draft?.startedAt ?? null;
@@ -112,21 +115,8 @@ export function useActiveWorkout(
   }, [draft, router, showTriumph, isAbandoning]);
 
   const previousSetsMap = useMemo(() => {
-    const map = new Map<string, ({ weight: number; reps: number } | null)[]>();
-    if (!workoutLogs) return map;
-    for (const ex of exercises) {
-      for (const log of workoutLogs) {
-        const loggedEx = log.exercises.find((e) => e.exerciseId === ex.exerciseId);
-        if (loggedEx) {
-          const completed = [...loggedEx.sets]
-            .filter((s) => s.completed)
-            .sort((a, b) => a.setOrder - b.setOrder);
-          map.set(ex.id, completed.map((s) => ({ weight: s.weight, reps: s.reps })));
-          break;
-        }
-      }
-    }
-    return map;
+    if (!workoutLogs) return new Map();
+    return buildPreviousSetsMap(exercises, workoutLogs);
   }, [workoutLogs, exercises]);
 
   const totalVolume = useMemo(
@@ -180,29 +170,50 @@ export function useActiveWorkout(
       exercises,
     };
 
-    const records = createPRsFromWorkout(exercises, exerciseMap, completedAt);
     const capturedVolume = totalVolume;
     const capturedMinutes = minutes;
     const capturedSeconds = seconds;
 
-    void createWorkoutLog(log).catch((err) => {
-      console.warn("[finishWorkout] createWorkoutLog failed", err);
-    });
-    for (const rec of records) {
-      const { id: _id, ...payload } = rec;
-      void createPersonalRecord(payload).catch((err) => {
-        console.warn("[finishWorkout] createPersonalRecord failed", err);
-      });
-    }
+    void (async () => {
+      try {
+        await createWorkoutLog(log);
+      } catch (err) {
+        console.warn("[finishWorkout] createWorkoutLog failed", err);
+        hasFinishedRef.current = false;
+        return;
+      }
 
-    setNewRecords(records);
-    setTriumphData({
-      volume: capturedVolume,
-      minutes: capturedMinutes,
-      seconds: capturedSeconds,
-    });
-    setShowTriumph(true);
-    void clearDraft();
+      let records: PersonalRecord[] = [];
+      try {
+        records = await detectNewPRsFromWorkout(
+          exercises,
+          exerciseMap,
+          completedAt
+        );
+        for (const rec of records) {
+          const { id: _id, ...payload } = rec;
+          void createPersonalRecord(payload).catch((err) => {
+            console.warn("[finishWorkout] createPersonalRecord failed", err);
+          });
+        }
+      } catch (err) {
+        console.warn("[finishWorkout] detectNewPRsFromWorkout failed", err);
+      }
+
+      setNewRecords(records);
+      setTriumphData({
+        volume: capturedVolume,
+        minutes: capturedMinutes,
+        seconds: capturedSeconds,
+      });
+      setShowTriumph(true);
+
+      try {
+        await clearDraft();
+      } catch (err) {
+        console.warn("[finishWorkout] clearDraft failed", err);
+      }
+    })();
   };
 
   const handleFinish = () => {

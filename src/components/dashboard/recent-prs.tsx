@@ -68,7 +68,7 @@ export function RecentPRs() {
                 {absDelta !== null && absDelta !== 0 && (
                   <p className="flex items-center gap-0.5 text-[11px] text-green-500 justify-end">
                     <TrendingUp className="h-3 w-3" />
-                    +{absDelta} {prUnit}
+                    +{absDelta.toFixed(2)} {prUnit}
                     {pctDelta !== null && (
                       <span className="text-green-500/70">
                         (+{pctDelta.toFixed(1)}%)

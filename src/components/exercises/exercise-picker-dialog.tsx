@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { ExercisePickerRow } from "@/components/exercises/exercise-picker-row";
 import {
@@ -70,6 +70,7 @@ function ExercisePickerDialogContent({
   const locale = useLocale();
   const ui = exerciseUi[locale];
   const [search, setSearch] = useState("");
+  const listRef = useRef<HTMLDivElement>(null);
 
   const filters = useMemo(
     () => ({ search: search.trim() || undefined }),
@@ -79,6 +80,21 @@ function ExercisePickerDialogContent({
 
   useEffect(() => {
     if (!open) setSearch("");
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!window.matchMedia("(pointer: coarse)").matches) return;
+
+    const frame = requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (active instanceof HTMLInputElement) {
+        active.blur();
+      }
+      listRef.current?.focus({ preventScroll: true });
+    });
+
+    return () => cancelAnimationFrame(frame);
   }, [open]);
 
   const items = useMemo(() => {
@@ -128,7 +144,13 @@ function ExercisePickerDialogContent({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+      <DialogContent
+        className="flex h-[85dvh] max-h-[85dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md"
+        initialFocus={(openType) => {
+          if (openType !== "touch") return true;
+          return listRef.current ?? false;
+        }}
+      >
         <DialogHeader className="shrink-0 px-4 pt-4 pb-2">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -145,7 +167,11 @@ function ExercisePickerDialogContent({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2 pb-4">
+        <div
+          ref={listRef}
+          tabIndex={-1}
+          className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-2 pb-4 outline-none [-webkit-overflow-scrolling:touch]"
+        >
           {loading ? (
             <div className="space-y-1 px-2">
               {Array.from({ length: 8 }).map((_, i) => (

@@ -1,4 +1,4 @@
-import { eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, or, type AnyColumn } from "drizzle-orm";
 import { db } from "./db";
 import {
   bodyMeasurements,
@@ -371,6 +371,42 @@ async function applyChange(change: SyncChange): Promise<ApplyResult> {
   }
 }
 
+const PULL_RETRY_ATTEMPTS = 3;
+const PULL_RETRY_BASE_DELAY_MS = 100;
+
+function changedSince(
+  table: { updatedAt: AnyColumn; deletedAt: AnyColumn },
+  since: Date
+) {
+  return or(
+    gt(table.updatedAt, since),
+    and(isNotNull(table.deletedAt), gt(table.deletedAt, since))
+  );
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  attempts = PULL_RETRY_ATTEMPTS,
+  baseDelayMs = PULL_RETRY_BASE_DELAY_MS
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt < attempts - 1) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, baseDelayMs * 2 ** attempt)
+        );
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 async function pullChanges(lastPullAt: string | null): Promise<ServerChange[]> {
   const since = lastPullAt ? new Date(lastPullAt) : null;
 
@@ -382,24 +418,54 @@ async function pullChanges(lastPullAt: string | null): Promise<ServerChange[]> {
     cardioRows,
     recordRows,
   ] = await Promise.all([
-    since
-      ? db.select().from(exercises).where(gt(exercises.updatedAt, since))
-      : db.select().from(exercises).where(isNull(exercises.deletedAt)),
-    since
-      ? db.select().from(programs).where(gt(programs.updatedAt, since))
-      : db.select().from(programs).where(isNull(programs.deletedAt)),
-    since
-      ? db.select().from(workoutLogs).where(gt(workoutLogs.updatedAt, since))
-      : db.select().from(workoutLogs).where(isNull(workoutLogs.deletedAt)),
-    since
-      ? db.select().from(bodyMeasurements).where(gt(bodyMeasurements.updatedAt, since))
-      : db.select().from(bodyMeasurements).where(isNull(bodyMeasurements.deletedAt)),
-    since
-      ? db.select().from(cardioSessions).where(gt(cardioSessions.updatedAt, since))
-      : db.select().from(cardioSessions).where(isNull(cardioSessions.deletedAt)),
-    since
-      ? db.select().from(personalRecords).where(gt(personalRecords.updatedAt, since))
-      : db.select().from(personalRecords).where(isNull(personalRecords.deletedAt)),
+    withRetry(() =>
+      since
+        ? db.select().from(exercises).where(changedSince(exercises, since))
+        : db.select().from(exercises).where(isNull(exercises.deletedAt))
+    ),
+    withRetry(() =>
+      since
+        ? db.select().from(programs).where(changedSince(programs, since))
+        : db.select().from(programs).where(isNull(programs.deletedAt))
+    ),
+    withRetry(() =>
+      since
+        ? db.select().from(workoutLogs).where(changedSince(workoutLogs, since))
+        : db.select().from(workoutLogs).where(isNull(workoutLogs.deletedAt))
+    ),
+    withRetry(() =>
+      since
+        ? db
+            .select()
+            .from(bodyMeasurements)
+            .where(changedSince(bodyMeasurements, since))
+        : db
+            .select()
+            .from(bodyMeasurements)
+            .where(isNull(bodyMeasurements.deletedAt))
+    ),
+    withRetry(() =>
+      since
+        ? db
+            .select()
+            .from(cardioSessions)
+            .where(changedSince(cardioSessions, since))
+        : db
+            .select()
+            .from(cardioSessions)
+            .where(isNull(cardioSessions.deletedAt))
+    ),
+    withRetry(() =>
+      since
+        ? db
+            .select()
+            .from(personalRecords)
+            .where(changedSince(personalRecords, since))
+        : db
+            .select()
+            .from(personalRecords)
+            .where(isNull(personalRecords.deletedAt))
+    ),
   ]);
 
   return [
@@ -467,8 +533,9 @@ export async function handleSync(
   }
 
   const serverChanges = (await pullChanges(lastPullAt)).filter((sc) => {
-    const id = (sc.entity as { id?: string })?.id;
-    return !id || !appliedEntityIds.has(id);
+    const entity = sc.entity as { id?: string; deletedAt?: string };
+    if (entity.deletedAt) return true;
+    return !entity.id || !appliedEntityIds.has(entity.id);
   });
   const serverTime = new Date().toISOString();
 

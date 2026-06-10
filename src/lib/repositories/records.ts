@@ -6,8 +6,9 @@ import type {
   LoggedExercise,
   PersonalRecord,
   PersonalRecordEntity,
+  PRType,
 } from "@/lib/db/types";
-import { bestWeight, volume } from "@/lib/training-metrics";
+import { bestE1RM, bestWeight, volume } from "@/lib/training-metrics";
 import { enqueueSync } from "@/lib/sync/queue";
 
 export async function getPersonalRecords(): Promise<PersonalRecordEntity[]> {
@@ -15,42 +16,108 @@ export async function getPersonalRecords(): Promise<PersonalRecordEntity[]> {
   return withoutDeleted(await db.personalRecords.toArray());
 }
 
+function bestPreviousValue(
+  existing: PersonalRecord[],
+  exerciseId: string,
+  type: PRType
+): number {
+  return existing
+    .filter((r) => r.exerciseId === exerciseId && r.type === type)
+    .reduce((max, r) => Math.max(max, r.value), 0);
+}
+
+function maybeRecord(
+  records: PersonalRecord[],
+  existing: PersonalRecord[],
+  params: {
+    loggedExerciseId: string;
+    exerciseId: string;
+    exerciseName: string;
+    type: PRType;
+    value: number;
+    completedAt: string;
+    suffix: string;
+    now: number;
+  }
+) {
+  const { value } = params;
+  if (value <= 0) return;
+
+  const previous = bestPreviousValue(existing, params.exerciseId, params.type);
+  if (value <= previous) return;
+
+  records.push({
+    id: `pr-${params.loggedExerciseId}-${params.suffix}-${params.now}`,
+    exerciseId: params.exerciseId,
+    exerciseName: params.exerciseName,
+    type: params.type,
+    value,
+    date: params.completedAt,
+  });
+}
+
 export function createPRsFromWorkout(
   loggedExercises: LoggedExercise[],
   exerciseMap: Map<string, Exercise>,
-  completedAt: string
+  completedAt: string,
+  existingRecords: PersonalRecord[] = []
 ): PersonalRecord[] {
   const records: PersonalRecord[] = [];
   const now = Date.now();
+
   for (const ex of loggedExercises) {
     const exercise = exerciseMap.get(ex.exerciseId);
     if (!exercise) continue;
+
     const completed = ex.sets.filter((s) => s.completed);
     if (completed.length === 0) continue;
-    const maxWeight = bestWeight(completed);
-    const vol = volume(completed);
-    if (maxWeight > 0) {
-      records.push({
-        id: `pr-${ex.id}-w-${now}`,
-        exerciseId: ex.exerciseId,
-        exerciseName: exercise.name,
-        type: "weight",
-        value: maxWeight,
-        date: completedAt,
-      });
-    }
-    if (vol > 0) {
-      records.push({
-        id: `pr-${ex.id}-v-${now}`,
-        exerciseId: ex.exerciseId,
-        exerciseName: exercise.name,
-        type: "volume",
-        value: vol,
-        date: completedAt,
-      });
-    }
+
+    const base = {
+      loggedExerciseId: ex.id,
+      exerciseId: ex.exerciseId,
+      exerciseName: exercise.name,
+      completedAt,
+      now,
+    };
+
+    maybeRecord(records, existingRecords, {
+      ...base,
+      type: "weight",
+      value: bestWeight(completed),
+      suffix: "w",
+    });
+
+    maybeRecord(records, existingRecords, {
+      ...base,
+      type: "volume",
+      value: volume(completed),
+      suffix: "v",
+    });
+
+    const e1rm = Math.round(bestE1RM(completed) * 10) / 10;
+    maybeRecord(records, existingRecords, {
+      ...base,
+      type: "estimated_1rm",
+      value: e1rm,
+      suffix: "e",
+    });
   }
+
   return records;
+}
+
+export async function detectNewPRsFromWorkout(
+  loggedExercises: LoggedExercise[],
+  exerciseMap: Map<string, Exercise>,
+  completedAt: string
+): Promise<PersonalRecord[]> {
+  const existingRecords = await getPersonalRecords();
+  return createPRsFromWorkout(
+    loggedExercises,
+    exerciseMap,
+    completedAt,
+    existingRecords
+  );
 }
 
 export async function createPersonalRecord(

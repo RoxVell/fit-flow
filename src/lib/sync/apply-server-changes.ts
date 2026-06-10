@@ -90,18 +90,23 @@ async function applyEntity(entityType: EntityType, entity: AnyEntity): Promise<v
 
 export async function applyServerChanges(changes: ServerChange[]): Promise<void> {
   for (const change of changes) {
-    const entity = change.entity as AnyEntity & { id: string };
+    const entity = change.entity as AnyEntity & { id: string; deletedAt?: string };
     if (!entity?.id) continue;
 
     const localRevision = await getLocalRevision(change.entityType, entity.id);
+
+    if (entity.deletedAt) {
+      if (localRevision !== null && change.revision < localRevision) {
+        continue;
+      }
+      await applyEntity(change.entityType, entity);
+      continue;
+    }
+
     if (localRevision !== null && localRevision > change.revision) {
       continue;
     }
-    if (
-      localRevision === null &&
-      !entity.deletedAt &&
-      (await hasPendingDelete(change.entityType, entity.id))
-    ) {
+    if (localRevision === null && (await hasPendingDelete(change.entityType, entity.id))) {
       continue;
     }
     await applyEntity(change.entityType, entity);
