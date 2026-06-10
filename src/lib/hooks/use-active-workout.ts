@@ -176,33 +176,42 @@ export function useActiveWorkout(
 
     void (async () => {
       try {
-        const records = await detectNewPRsFromWorkout(
+        await createWorkoutLog(log);
+      } catch (err) {
+        console.warn("[finishWorkout] createWorkoutLog failed", err);
+        hasFinishedRef.current = false;
+        return;
+      }
+
+      let records: PersonalRecord[] = [];
+      try {
+        records = await detectNewPRsFromWorkout(
           exercises,
           exerciseMap,
           completedAt
         );
-
-        await createWorkoutLog(log).catch((err) => {
-          console.warn("[finishWorkout] createWorkoutLog failed", err);
-        });
         for (const rec of records) {
           const { id: _id, ...payload } = rec;
           void createPersonalRecord(payload).catch((err) => {
             console.warn("[finishWorkout] createPersonalRecord failed", err);
           });
         }
+      } catch (err) {
+        console.warn("[finishWorkout] detectNewPRsFromWorkout failed", err);
+      }
 
-        setNewRecords(records);
-        setTriumphData({
-          volume: capturedVolume,
-          minutes: capturedMinutes,
-          seconds: capturedSeconds,
-        });
-        setShowTriumph(true);
+      setNewRecords(records);
+      setTriumphData({
+        volume: capturedVolume,
+        minutes: capturedMinutes,
+        seconds: capturedSeconds,
+      });
+      setShowTriumph(true);
+
+      try {
         await clearDraft();
       } catch (err) {
-        console.warn("[finishWorkout] failed", err);
-        hasFinishedRef.current = false;
+        console.warn("[finishWorkout] clearDraft failed", err);
       }
     })();
   };

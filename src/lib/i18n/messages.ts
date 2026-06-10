@@ -126,7 +126,6 @@ export const messages = {
         `${duration} · ${volume} ${kg} total volume`,
       triumphNewPRs: "New Personal Records",
       triumphDone: "Done",
-      triumphVol: "vol",
     },
     programs: {
       title: "Programs",
@@ -301,7 +300,6 @@ export const messages = {
         `${duration} · ${volume} ${kg} общий объём`,
       triumphNewPRs: "Новые рекорды",
       triumphDone: "Готово",
-      triumphVol: "объём",
     },
     programs: {
       title: "Программы",
