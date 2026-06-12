@@ -2,9 +2,12 @@ import { test as base, expect, type Page } from "@playwright/test";
 
 /**
  * Base test with project-wide setup:
- *  - Blocks the Serwist service-worker route (PWA only — keeps tests fast and deterministic).
- *  - Clears the locale cookie before navigation so the suite always boots in English.
- *  - Default to the English locale.
+ *  - Stubs the Serwist service worker so it can't intercept requests.
+ *  - Strips the locale cookie before navigation so the suite always boots
+ *    in English (the default).
+ *  - Stubs /api/sync to a 200 no-op. The real handler requires a Neon DB
+ *    connection, and the resulting 500 fires the Next.js dev error overlay
+ *    (`<nextjs-portal>`) which intercepts pointer events and breaks clicks.
  */
 export const test = base.extend({
   context: async ({ context }, use) => {
@@ -12,17 +15,41 @@ export const test = base.extend({
       // Strip the locale cookie so messages.ts defaults to English.
       document.cookie = "fitflow-locale=; path=/; max-age=0";
 
-      // Stub out the service-worker registration so it can't intercept requests.
-      // The app calls `navigator.serviceWorker.register(...)` from
-      // ServiceWorkerRegister; we replace it with a no-op before any
-      // client code runs. The property is marked readonly on the public
-      // type, so we cast through `unknown` to mutate it.
+      // Stub the service-worker registration so it can't intercept
+      // requests. The app calls `navigator.serviceWorker.register(...)`
+      // from ServiceWorkerRegister; we replace it with a no-op before any
+      // client code runs. The property is readonly on the public type, so
+      // we cast through `unknown` to mutate it.
       if ("serviceWorker" in navigator) {
         const stub = navigator.serviceWorker as unknown as {
           register: () => Promise<ServiceWorkerRegistration | undefined>;
         };
         stub.register = () => Promise.resolve(undefined);
       }
+
+      // Stub the /api/sync endpoint. The real handler expects a Neon DB
+      // and throws on every call in dev, which fires the Next.js dev
+      // error overlay and breaks the test pointer chain. Resolving with
+      // a 200 + empty server-side response keeps the app's outbox happy
+      // without surfacing any UI error.
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+        const url =
+          typeof input === "string"
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+        if (url.endsWith("/api/sync")) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ changes: [] }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+        }
+        return originalFetch(input, init);
+      };
     });
     await use(context);
   },
