@@ -168,6 +168,11 @@ export const messages = {
       noMatchingExercises: "No matching exercises",
       allExercisesAdded: "All exercises already added",
       loadingProgram: "Loading program...",
+      deleteProgram: "Delete program",
+      deleteProgramConfirm: (name: string) => `Delete "${name}"? This will not affect past workouts.`,
+      delete: "Delete",
+      deleting: "Deleting...",
+      cancel: "Cancel",
     },
     common: {
       loading: "Loading...",
@@ -348,6 +353,11 @@ export const messages = {
       noMatchingExercises: "Ничего не найдено",
       allExercisesAdded: "Все упражнения уже добавлены",
       loadingProgram: "Загрузка программы...",
+      deleteProgram: "Удалить программу",
+      deleteProgramConfirm: (name: string) => `Удалить «${name}»? Прошлые тренировки останутся без изменений.`,
+      delete: "Удалить",
+      deleting: "Удаление...",
+      cancel: "Отмена",
     },
     common: {
       loading: "Загрузка...",

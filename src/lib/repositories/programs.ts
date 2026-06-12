@@ -110,3 +110,22 @@ export async function updateProgram(
   });
   return withAttachedExercises(entity);
 }
+
+export async function deleteProgram(id: string): Promise<void> {
+  const existing = await db.programs.get(id);
+  if (!existing || existing.deletedAt) return;
+  const now = new Date().toISOString();
+  const revision = existing.revision + 1;
+  await enqueueSync({
+    entityType: "program",
+    entityId: id,
+    operation: "delete",
+    revision,
+  });
+  await db.programs.update(id, {
+    deletedAt: now,
+    isActive: false,
+    revision,
+    updatedAt: now,
+  });
+}
