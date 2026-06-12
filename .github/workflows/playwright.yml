@@ -29,8 +29,14 @@ jobs:
           node-version: "22"
           cache: "npm"
 
+      # `npm install` is intentionally used over `npm ci`: the dependency
+      # graph for @playwright/test includes platform-specific optional
+      # binaries (e.g. @emnapi/* for Linux CI runners) that get filtered
+      # out on Windows during local development. `npm install` resolves
+      # the lockfile on the runner so all platform variants end up in
+      # node_modules, while `npm ci` would error on the missing entries.
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
