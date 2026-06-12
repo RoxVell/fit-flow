@@ -6,11 +6,17 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/programs/library");
 });
 
-test("library lists the seeded PPL program and exposes a create button", async ({ page }) => {
+test("library lists the seeded PPL program and exposes a create link", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /^programs$/i })).toBeVisible();
   await expect(page.getByText(/^PPL$/i).first()).toBeVisible();
 
-  await expect(page.getByRole("button", { name: /create|new program/i }).first()).toBeVisible();
+  // The "Create new program" affordance in the library is a Next.js <Link>
+  // wrapping a ShadCN <Button>. Both roles are present in the DOM, but the
+  // outer <a> is the semantically meaningful navigation target — we assert
+  // on `link` so the test stays correct if the inner button is ever removed.
+  await expect(
+    page.getByRole("link", { name: /create|new program/i }),
+  ).toBeVisible();
 });
 
 test("library can switch between programs and exercises views", async ({ page }) => {

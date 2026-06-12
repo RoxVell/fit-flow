@@ -6,6 +6,10 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("root URL redirects to dashboard", async ({ page }) => {
+  // This test overrides the beforeEach nav: it has to hit `/` to actually
+  // exercise the redirect, otherwise it would always pass against the
+  // already-loaded `/dashboard` route.
+  await page.goto("/");
   await expect(page).toHaveURL(/\/dashboard$/);
   // The dashboard greeting renders the user's name ("Anton") on first paint.
   await expect(page.getByText(/Anton/).first()).toBeVisible();
