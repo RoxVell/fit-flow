@@ -6,10 +6,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { usePrograms } from "@/lib/hooks/use-data";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
+import { deleteProgram } from "@/lib/repositories/programs";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 import { ExerciseLibraryList } from "@/components/exercises/exercise-library-list";
-import { Plus, Pencil, Library, LayoutList } from "lucide-react";
+import { Plus, Pencil, Library, LayoutList, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +58,19 @@ function ProgramsView() {
   const { dayLabels } = useFormat();
   const programs = usePrograms();
   const { getName } = useExerciseLookup();
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!pendingDelete || deleting) return;
+    setDeleting(true);
+    try {
+      await deleteProgram(pendingDelete.id);
+    } finally {
+      setDeleting(false);
+      setPendingDelete(null);
+    }
+  };
 
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-24 space-y-4">
@@ -90,12 +105,23 @@ function ProgramsView() {
                     {t.programs.daysSessions(prog.daysPerWeek, prog.sessions.length)}
                   </Badge>
                 </div>
-                <Link href={`/programs/create?edit=${prog.id}`}>
-                  <Button variant="ghost" size="sm" className="gap-1 h-7 text-xs shrink-0">
-                    <Pencil className="h-3 w-3" />
-                    {t.programs.edit}
+                <div className="flex items-center gap-1 shrink-0">
+                  <Link href={`/programs/create?edit=${prog.id}`}>
+                    <Button variant="ghost" size="sm" className="gap-1 h-7 text-xs">
+                      <Pencil className="h-3 w-3" />
+                      {t.programs.edit}
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    aria-label={t.programs.deleteProgram}
+                    onClick={() => setPendingDelete({ id: prog.id, name: prog.name })}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
-                </Link>
+                </div>
               </div>
             </div>
             <div className="border-t divide-y divide-border">
@@ -125,6 +151,19 @@ function ProgramsView() {
           </CardContent>
         </Card>
       ))}
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title={t.programs.deleteProgram}
+        description={t.programs.deleteProgramConfirm(pendingDelete?.name ?? "")}
+        confirmLabel={t.programs.delete}
+        cancelLabel={t.programs.cancel}
+        pendingLabel={t.programs.deleting}
+        destructive
+        pending={deleting}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+        onConfirm={() => void confirmDelete()}
+      />
     </div>
   );
 }
