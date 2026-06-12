@@ -49,3 +49,10 @@ next-env.d.ts
 /public/sw.js.gz
 /public/sw.js.br
 /public/swe-worker-*.js
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
