@@ -6,7 +6,7 @@ import { Plus, Shuffle, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SetRow } from "./set-row";
-import type { LoggedExercise } from "@/lib/db/types";
+import type { LoggedExercise, LoggedSet } from "@/lib/db/types";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 
@@ -18,7 +18,11 @@ interface ExerciseCardProps {
   isActive?: boolean;
   onAddSet: () => void;
   onRemoveSet: (index: number) => void;
-  onUpdateSet: (index: number, data: any) => void;
+  onUpdateSet: (
+    index: number,
+    data: Partial<LoggedSet>,
+    options?: { propagateWeight?: boolean; baselineWeight?: number }
+  ) => void;
   onCompleteSet: (index: number) => void;
   onRemove: () => void;
   onSwapRequest: () => void;
@@ -113,7 +117,7 @@ export function ExerciseCard({
                         setNumber={idx + 1}
                         exerciseName={exerciseName}
                         previousSet={previousSets[idx] || null}
-                        onUpdate={(data) => onUpdateSet(idx, data)}
+                        onUpdate={(data, options) => onUpdateSet(idx, data, options)}
                         onRemove={() => onRemoveSet(idx)}
                         onComplete={() => onCompleteSet(idx)}
                       />

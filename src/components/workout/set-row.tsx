@@ -13,12 +13,17 @@ import {
   parseLocalizedDecimal,
 } from "@/lib/utils/decimal-input";
 
+interface SetUpdateOptions {
+  propagateWeight?: boolean;
+  baselineWeight?: number;
+}
+
 interface SetRowProps {
   set: LoggedSet;
   setNumber: number;
   exerciseName: string;
   previousSet?: { weight: number; reps: number } | null;
-  onUpdate: (data: Partial<LoggedSet>) => void;
+  onUpdate: (data: Partial<LoggedSet>, options?: SetUpdateOptions) => void;
   onRemove: () => void;
   onComplete: () => void;
 }
@@ -29,6 +34,7 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
   const hasPrefilled = useRef(false);
   const [weightText, setWeightText] = useState(() => formatDecimalForInput(set.weight));
   const isWeightFocused = useRef(false);
+  const weightBeforeFocus = useRef(set.weight);
 
   useEffect(() => {
     if (!isWeightFocused.current) {
@@ -80,11 +86,19 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
             value={weightText}
             onFocus={() => {
               isWeightFocused.current = true;
+              weightBeforeFocus.current = set.weight;
+              if (!set.completed) {
+                setWeightText("");
+                onUpdate({ weight: 0 });
+              }
             }}
             onBlur={() => {
               isWeightFocused.current = false;
               const parsed = parseLocalizedDecimal(weightText);
-              onUpdate({ weight: parsed });
+              onUpdate(
+                { weight: parsed },
+                { propagateWeight: true, baselineWeight: weightBeforeFocus.current }
+              );
               setWeightText(formatDecimalForInput(parsed));
             }}
             onChange={(e) => {
@@ -106,6 +120,11 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
             inputMode="numeric"
             aria-label={t.workout.setRepsLabel(exerciseName, setNumber)}
             value={set.reps || ""}
+            onFocus={() => {
+              if (!set.completed) {
+                onUpdate({ reps: 0 });
+              }
+            }}
             onChange={(e) => onUpdate({ reps: parseInt(e.target.value) || 0 })}
             className="h-8 w-10 shrink-0 text-center text-sm tabular-nums px-1"
             placeholder="0"

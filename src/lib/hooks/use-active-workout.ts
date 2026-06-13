@@ -55,7 +55,12 @@ export interface UseActiveWorkoutResult {
   removeExercise: (loggedExerciseId: string) => void;
   addSet: (loggedExerciseId: string) => void;
   removeSet: (loggedExerciseId: string, setIndex: number) => void;
-  updateSet: (loggedExerciseId: string, setIndex: number, data: Partial<LoggedSet>) => void;
+  updateSet: (
+    loggedExerciseId: string,
+    setIndex: number,
+    data: Partial<LoggedSet>,
+    options?: { propagateWeight?: boolean; baselineWeight?: number }
+  ) => void;
   swapExercise: (loggedExerciseId: string, newExerciseId: string) => void;
 }
 
@@ -343,14 +348,31 @@ export function useActiveWorkout(
   const updateSet = (
     loggedExerciseId: string,
     setIndex: number,
-    data: Partial<LoggedSet>
+    data: Partial<LoggedSet>,
+    options?: { propagateWeight?: boolean; baselineWeight?: number }
   ) => {
     void updateDraftExercises((current) =>
       current.map((e) => {
         if (e.id !== loggedExerciseId) return e;
+        const currentSet = e.sets[setIndex];
+        if (!currentSet) return e;
+
+        const newWeight = data.weight ?? currentSet.weight;
+        const baselineWeight = options?.baselineWeight ?? currentSet.weight;
+        const shouldPropagateWeight =
+          options?.propagateWeight &&
+          data.weight !== undefined &&
+          newWeight > baselineWeight;
+
         return {
           ...e,
-          sets: e.sets.map((s, i) => (i === setIndex ? { ...s, ...data } : s)),
+          sets: e.sets.map((s, i) => {
+            if (i === setIndex) return { ...s, ...data };
+            if (shouldPropagateWeight && i > setIndex && !s.completed) {
+              return { ...s, weight: newWeight };
+            }
+            return s;
+          }),
         };
       })
     );

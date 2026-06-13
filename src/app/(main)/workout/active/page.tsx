@@ -170,7 +170,7 @@ function ActiveWorkoutContent({
                   isActive={ex.id === activeExerciseId}
                   onAddSet={() => addSet(ex.id)}
                   onRemoveSet={(idx) => removeSet(ex.id, idx)}
-                  onUpdateSet={(idx, data) => updateSet(ex.id, idx, data)}
+                  onUpdateSet={(idx, data, options) => updateSet(ex.id, idx, data, options)}
                   onCompleteSet={(idx) => toggleSetCompleted(ex.id, idx)}
                   onRemove={() => removeExercise(ex.id)}
                   onSwapRequest={() => setSwapTargetLoggedExerciseId(ex.id)}

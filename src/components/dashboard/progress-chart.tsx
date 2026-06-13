@@ -65,7 +65,7 @@ export function ProgressChart() {
 
   if (!chartData || periodChange === null) return null;
 
-  const isPositive = periodChange.absolute >= 0;
+  const isPositive = periodChange.percent >= 0;
   const strokeColor = isPositive ? "#22c55e" : "#ef4444";
 
   return (

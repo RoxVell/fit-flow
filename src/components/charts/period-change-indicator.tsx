@@ -18,11 +18,13 @@ export function PeriodChangeIndicator({
   variant = "absolute-and-percent",
   className,
 }: PeriodChangeIndicatorProps) {
-  const isPositive = change.absolute > 0;
-  const isNeutral = change.absolute === 0;
+  const isPositive =
+    variant === "percent-points" ? change.percent > 0 : change.absolute > 0;
+  const isNeutral =
+    variant === "percent-points" ? change.percent === 0 : change.absolute === 0;
   const { absoluteLabel, percentLabel } = formatPeriodChange(change, unit);
   const sign = (n: number) => (n > 0 ? "+" : n < 0 ? "" : "");
-  const percentPointsLabel = `${sign(change.absolute)}${change.absolute}%`;
+  const percentOnlyLabel = `${sign(change.percent)}${change.percent}%`;
 
   return (
     <p className={cn("flex items-center gap-1 text-lg font-bold", className)}>
@@ -41,7 +43,7 @@ export function PeriodChangeIndicator({
         )}
       >
         {variant === "percent-points" ? (
-          percentPointsLabel
+          percentOnlyLabel
         ) : (
           <>
             {absoluteLabel}
