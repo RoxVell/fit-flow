@@ -14,69 +14,86 @@ test.beforeEach(async ({ page }) => {
 });
 
 /**
- * Drive the workout plan page into its "no active program" branch by
- * deactivating every program in the fitflow_v2 IDB and reloading.
+ * Deactivate every program in the fitflow_v2 IDB.
  *
- * Why this is non-trivial:
- *  - Going through the live `Dexie` instance the app uses can race
- *    the seed's migration transaction (the migration clears every
- *    table and then re-bulkPuts; we may read between the clear and
- *    the bulkPut on a hot reload).
- *  - A raw `indexedDB.open()` from the test races Dexie's long-lived
- *    read transactions and the writes are not visible to `useLiveQuery`.
- *
- * The workaround used here: open a fresh IDB connection, do the
- * deactivations as a single readwrite transaction, await the
- * transaction's `oncomplete`, then reload the page so the new
- * `useActiveProgram` mount reads the post-deactivation data. The
- * reload is the only reliable signal that the React tree has picked
- * up the writes.
+ * The app's seed loader can re-run its migration on any page load
+ * (`runLibraryMigration` is called from `ensureSeeded`, which is
+ * invoked by several repos). The migration does a `clear()` followed
+ * by a `bulkPut` in *separate* transactions, so there's a brief
+ * window where the programs table is empty. We retry the read in
+ * that case — the migration's clear is brief (a few microseconds),
+ * so a handful of retries is enough to land on a moment when the
+ * rows are visible.
  */
-async function deactivateAllPrograms(page: Page): Promise<string[]> {
-  // Brief settle to let any in-flight seed migrations finish.
-  await page.waitForTimeout(200);
+async function deactivateAllPrograms(
+  page: Page,
+  maxAttempts = 20,
+): Promise<string[]> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const result = await page.evaluate(
+      () =>
+        new Promise<{ ok: true; ids: string[] } | { ok: false }>(
+          (resolve) => {
+            const req = indexedDB.open("fitflow_v2");
+            req.onsuccess = () => {
+              const db = req.result;
+              if (!db.objectStoreNames.contains("programs")) {
+                db.close();
+                return resolve({ ok: false });
+              }
+              const tx = db.transaction("programs", "readwrite");
+              const store = tx.objectStore("programs");
+              const allReq = store.getAll();
+              allReq.onsuccess = () => {
+                const rows = allReq.result as { id: string; isActive: boolean }[];
+                if (rows.length === 0) {
+                  // Migration in flight — abort and let the caller retry.
+                  try {
+                    tx.abort();
+                  } catch {
+                    /* noop */
+                  }
+                  db.close();
+                  resolve({ ok: false });
+                  return;
+                }
+                for (const r of rows) {
+                  r.isActive = false;
+                  store.put(r);
+                }
+                tx.oncomplete = () => {
+                  db.close();
+                  resolve({ ok: true, ids: rows.map((r) => r.id) });
+                };
+                tx.onerror = () => {
+                  db.close();
+                  resolve({ ok: false });
+                };
+                tx.onabort = () => {
+                  db.close();
+                  resolve({ ok: false });
+                };
+              };
+              allReq.onerror = () => {
+                db.close();
+                resolve({ ok: false });
+              };
+            };
+            req.onerror = () => resolve({ ok: false });
+          },
+        ),
+    );
 
-  const ids = await page.evaluate(
-    () =>
-      new Promise<string[]>((resolve, reject) => {
-        const req = indexedDB.open("fitflow_v2");
-        req.onsuccess = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains("programs")) {
-            db.close();
-            return resolve([]);
-          }
-          const tx = db.transaction("programs", "readwrite");
-          const store = tx.objectStore("programs");
-          const allReq = store.getAll();
-          allReq.onsuccess = () => {
-            const rows = allReq.result as { id: string; isActive: boolean }[];
-            for (const r of rows) {
-              r.isActive = false;
-              store.put(r);
-            }
-            tx.oncomplete = () => {
-              db.close();
-              resolve(rows.map((r) => r.id));
-            };
-            tx.onerror = () => {
-              db.close();
-              reject(tx.error);
-            };
-          };
-          allReq.onerror = () => {
-            db.close();
-            reject(allReq.error);
-          };
-        };
-        req.onerror = () => reject(req.error);
-      }),
+    if (result.ok) {
+      return result.ids;
+    }
+
+    await page.waitForTimeout(50);
+  }
+
+  throw new Error(
+    `deactivateAllPrograms: programs table stayed empty for ${maxAttempts} attempts — the seed migration never settled.`,
   );
-
-  // Reload so the next paint's useActiveProgram re-reads from IDB.
-  await page.reload();
-  await waitForSeed(page);
-  return ids;
 }
 
 test("visiting /workout with an in-progress draft redirects to the active screen", async ({
@@ -116,11 +133,16 @@ test("bottom-nav shows the active-session indicator while a draft is open", asyn
 test("workout plan shows an empty state when the only program is inactive", async ({
   page,
 }) => {
-  // Deactivate every program in IDB, then reload so the next paint
-  // reads the updated isActive=false flag from useActiveProgram.
+  // Deactivate every program in IDB. We retry in case the read lands
+  // on the migration's clear-then-bulkPut window. The data is stable
+  // *between* migrations.
   const ids = await deactivateAllPrograms(page);
   expect(ids.length).toBeGreaterThan(0);
 
+  // Navigate (full page load) to /workout. The post-load migration
+  // early-returns on `meta.schemaVersion >= 3`, so the seed is not
+  // re-applied with `isActive: true`. The post-deactivation
+  // `isActive: false` rows are what `useActiveProgram` reads.
   await page.goto("/workout");
   // Localized empty-state copy (en): "No active program found." and
   // "Create one in the programs tab."
