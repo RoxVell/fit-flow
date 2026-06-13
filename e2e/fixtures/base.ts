@@ -76,8 +76,7 @@ export async function waitForSeed(page: Page) {
             return resolve(false);
           }
           const tx = db.transaction("programs", "readonly");
-          const store = tx.objectStore("programs");
-          const countReq = store.count();
+          const countReq = tx.objectStore("programs").count();
           countReq.onsuccess = () => {
             db.close();
             resolve(countReq.result > 0);
