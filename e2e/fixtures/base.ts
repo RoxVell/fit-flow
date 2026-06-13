@@ -3,34 +3,81 @@ import { test as base, expect, type Page } from "@playwright/test";
 /**
  * Base test with project-wide setup:
  *  - Stubs the Serwist service worker so it can't intercept requests.
- *  - Strips the locale cookie before navigation so the suite always boots
- *    in English (the default).
+ *  - Clears all cookies before every test so the suite always boots in
+ *    English (the default). The clear is done in `beforeEach` rather
+ *    than as an init script: a per-load init script would run *after*
+ *    the reload's HTTP response and would silently delete the
+ *    `fitflow-locale` cookie that the previous request set, so any
+ *    client-side reader of `document.cookie` would see no value and
+ *    fall back to the default locale (defeating tests that try to
+ *    verify persistence). Clearing in `beforeEach` keeps the cookie
+ *    intact for the duration of a single test, including across
+ *    reloads.
  *  - Stubs /api/sync to a 200 no-op. The real handler requires a Neon DB
  *    connection, and the resulting 500 fires the Next.js dev error overlay
  *    (`<nextjs-portal>`) which intercepts pointer events and breaks clicks.
+ *
+ * The service-worker stub returns a minimal `ServiceWorkerRegistration`
+ * shape so Serwist's `register()` can call `.addEventListener`,
+ * `.update()`, etc. without throwing. We can't return a fully-typed
+ * ServiceWorkerRegistration (the constructor is not exposed), so a
+ * duck-typed object with the fields Serwist touches is enough.
  */
 export const test = base.extend({
   context: async ({ context }, use) => {
     await context.addInitScript(() => {
-      // Strip the locale cookie so messages.ts defaults to English.
-      document.cookie = "fitflow-locale=; path=/; max-age=0";
-
       // Stub the service-worker registration so it can't intercept
       // requests. The app calls `navigator.serviceWorker.register(...)`
       // from ServiceWorkerRegister; we replace it with a no-op before any
       // client code runs. The property is readonly on the public type, so
       // we cast through `unknown` to mutate it.
+      //
+      // Serwist's `register()` chains `_registration.addEventListener(...)`
+      // (for the `updatefound` event) and `_registration.update()` — see
+      // node_modules/@serwist/window/src/Serwist.ts. The stub must
+      // implement the full `EventTarget` interface (addEventListener,
+      // removeEventListener, dispatchEvent) plus the other fields
+      // Serwist reads, otherwise a `TypeError: ... is not a function`
+      // fires the Next.js dev error overlay which intercepts pointer
+      // events and breaks clicks in the e2e tests.
       if ("serviceWorker" in navigator) {
-        const stub = navigator.serviceWorker as unknown as {
-          register: () => Promise<ServiceWorkerRegistration | undefined>;
+        const stubRegistration = {
+          waiting: null,
+          active: null,
+          installing: null,
+          scope: "/",
+          updateViaCache: "none" as ServiceWorkerUpdateViaCache,
+          pushManager: {
+            subscribe: () => Promise.reject(new Error("stubbed")),
+            getSubscription: () => Promise.resolve(null),
+            permissionState: () =>
+              Promise.resolve("denied" as NotificationPermission),
+          },
+          navigationPreload: {
+            enable: () => Promise.resolve(),
+            disable: () => Promise.resolve(),
+            setHeaderValue: () => Promise.resolve(),
+            getState: () => Promise.resolve(),
+          },
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          dispatchEvent: () => true,
+          update: () => Promise.resolve(),
+          unregister: () => Promise.resolve(true),
+          getNotifications: () => Promise.resolve([]),
+          showNotification: () => Promise.resolve(),
         };
-        stub.register = () => Promise.resolve(undefined);
+        const stub = navigator.serviceWorker as unknown as {
+          register: () => Promise<unknown>;
+        };
+        stub.register = () => Promise.resolve(stubRegistration);
       }
 
       // Stub the /api/sync endpoint. The real handler expects a Neon DB
       // and throws on every call in dev, which fires the Next.js dev
       // error overlay and breaks the test pointer chain. Resolving with
-      // a 200 + empty server-side response keeps the app's outbox happy
+      // a 200 + the empty-but-valid `SyncResponse` shape
+      // (`accepted`/`superseded` arrays) keeps the app's outbox happy
       // without surfacing any UI error.
       const originalFetch = window.fetch.bind(window);
       window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
@@ -42,10 +89,19 @@ export const test = base.extend({
               : input.url;
         if (url.endsWith("/api/sync")) {
           return Promise.resolve(
-            new Response(JSON.stringify({ changes: [] }), {
-              status: 200,
-              headers: { "Content-Type": "application/json" },
-            }),
+            new Response(
+              JSON.stringify({
+                changes: [],
+                accepted: [],
+                superseded: [],
+                serverChanges: [],
+                serverTime: new Date().toISOString(),
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              },
+            ),
           );
         }
         return originalFetch(input, init);
@@ -53,6 +109,10 @@ export const test = base.extend({
     });
     await use(context);
   },
+});
+
+test.beforeEach(async ({ context }) => {
+  await context.clearCookies();
 });
 
 export { expect };
