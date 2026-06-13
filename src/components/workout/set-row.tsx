@@ -16,13 +16,14 @@ import {
 interface SetRowProps {
   set: LoggedSet;
   setNumber: number;
+  exerciseName: string;
   previousSet?: { weight: number; reps: number } | null;
   onUpdate: (data: Partial<LoggedSet>) => void;
   onRemove: () => void;
   onComplete: () => void;
 }
 
-export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComplete }: SetRowProps) {
+export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, onRemove, onComplete }: SetRowProps) {
   const t = useT();
 
   const hasPrefilled = useRef(false);
@@ -75,6 +76,7 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
           <Input
             type="text"
             inputMode="decimal"
+            aria-label={t.workout.setWeightLabel(exerciseName, setNumber)}
             value={weightText}
             onFocus={() => {
               isWeightFocused.current = true;
@@ -102,6 +104,7 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
           <Input
             type="number"
             inputMode="numeric"
+            aria-label={t.workout.setRepsLabel(exerciseName, setNumber)}
             value={set.reps || ""}
             onChange={(e) => onUpdate({ reps: parseInt(e.target.value) || 0 })}
             className="h-8 w-10 shrink-0 text-center text-sm tabular-nums px-1"
@@ -109,8 +112,11 @@ export function SetRow({ set, setNumber, previousSet, onUpdate, onRemove, onComp
           />
 
           <button
+            type="button"
             onClick={() => canToggleComplete && onComplete()}
             disabled={!canToggleComplete}
+            aria-label={t.workout.completeSet(exerciseName, setNumber)}
+            aria-pressed={set.completed}
             className={cn(
               "ml-[15px] flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors",
               set.completed

@@ -9,3 +9,4 @@ Built with Next.js 16, Tailwind CSS v4, ShadCN, TanStack Query, Zustand, Rechart
 - [Offline architecture](./docs/offline-architecture.md)
 - [Exercise library & i18n](./docs/exercise-library-and-i18n.md)
 - [Progress charts](./docs/progress-charts.md) — e1RM index, periods, body-part math, Exercises tab picker
+- [E2E testing](./docs/e2e-testing.md) — Playwright suite, fixtures, debugging, CI
