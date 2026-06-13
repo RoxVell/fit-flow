@@ -140,8 +140,12 @@ npm run test:e2e:headed -- e2e/tests/02-workout-flow.spec.ts
 The repo ships a GitHub Actions workflow at
 [`.github/workflows/playwright.yml`](../.github/workflows/playwright.yml)
 that runs the suite on every push to `main` and on every pull request
-targeting `main`. It uses `ubuntu-latest`, Node 22, and `npm ci` to
-install from the lockfile. Playwright artifacts (`playwright-report/`
-and `test-results/`) are uploaded automatically on failure with a
-7-day retention. `process.env.CI` is set, so the config flips to the
-`github` reporter, retries twice, and serializes workers.
+targeting `main`. It uses `ubuntu-latest`, Node 22, and `npm install`
+to fetch dependencies. (`npm ci` would be the default, but the workflow
+deliberately uses `npm install --no-audit --no-fund` because
+`@playwright/test`'s optional native binaries drift between platforms in
+the lockfile; a comment in the workflow explains this.) Playwright
+artifacts (`playwright-report/` and `test-results/`) are uploaded
+automatically on failure with a 7-day retention. `process.env.CI` is set,
+so the config flips to the `github` reporter, retries twice, and
+serializes workers.
