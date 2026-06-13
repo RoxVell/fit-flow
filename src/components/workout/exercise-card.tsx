@@ -111,6 +111,7 @@ export function ExerciseCard({
                       <SetRow
                         set={set}
                         setNumber={idx + 1}
+                        exerciseName={exerciseName}
                         previousSet={previousSets[idx] || null}
                         onUpdate={(data) => onUpdateSet(idx, data)}
                         onRemove={() => onRemoveSet(idx)}

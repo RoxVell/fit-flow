@@ -42,18 +42,10 @@ test("clicking the dark theme button applies the dark class to <html>", async ({
     .nth(THEME_BUTTON_INDEX.dark)
     .click();
 
-  // next-themes applies attribute="class" — when dark is active and the
-  // system preference is light, the html element gets a `dark` class.
-  // We assert *either* the class is set or the resolved theme is dark
-  // (system may already be dark on the CI runner).
+  // next-themes applies attribute="class" — explicit "dark" choice adds the
+  // class regardless of system preference (pinned to light in playwright.config).
   const htmlClass = (await html.getAttribute("class")) ?? "";
-  const isDark = htmlClass.split(/\s+/).includes("dark");
-  if (!isDark) {
-    // Light/dark system: switching to dark should set the class regardless
-    // of the resolved theme. If it didn't, the test is failing for a real
-    // reason — surface that.
-    expect(isDark).toBe(true);
-  }
+  expect(htmlClass.split(/\s+/)).toContain("dark");
 });
 
 test("theme choice persists across reload", async ({ page }) => {

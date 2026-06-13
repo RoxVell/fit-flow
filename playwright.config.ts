@@ -28,6 +28,8 @@ export default defineConfig({
 
   use: {
     baseURL: BASE_URL,
+    // Pin light mode so next-themes "system" default is deterministic.
+    colorScheme: "light",
     trace: "retain-on-failure",
     video: "retain-on-failure",
     screenshot: "only-on-failure",

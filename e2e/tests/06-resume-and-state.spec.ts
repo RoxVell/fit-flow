@@ -166,13 +166,13 @@ test("the active-session indicator clears after the workout is finished", async 
   await expect(workoutLink.getByText(/active session in progress/i)).toBeVisible();
 
   // Log one set so the finish flow doesn't bail on the "no completed sets" path.
-  const firstWeight = page.locator("input[inputmode='decimal']").first();
+  const firstWeight = page.getByRole("textbox", { name: /set 1 weight/i }).first();
   await firstWeight.fill("60");
   await firstWeight.blur();
-  const firstReps = page.locator("input[inputmode='numeric']").first();
+  const firstReps = page.getByRole("spinbutton", { name: /set 1 reps/i }).first();
   await firstReps.fill("8");
   await firstReps.blur();
-  await page.locator("button.rounded-full.border").first().click();
+  await page.getByRole("button", { name: /complete set 1/i }).first().click();
 
   // Finish the workout.
   await page.getByRole("button", { name: /^Finish$/i }).first().click();

@@ -13,7 +13,7 @@ import { test as base, expect, type Page } from "@playwright/test";
  *    verify persistence). Clearing in `beforeEach` keeps the cookie
  *    intact for the duration of a single test, including across
  *    reloads.
- *  - Stubs /api/sync to a 200 no-op. The real handler requires a Neon DB
+ *  - Routes `/api/sync` to a 200 no-op. The real handler requires a Neon DB
  *    connection, and the resulting 500 fires the Next.js dev error overlay
  *    (`<nextjs-portal>`) which intercepts pointer events and breaks clicks.
  *
@@ -23,8 +23,24 @@ import { test as base, expect, type Page } from "@playwright/test";
  * ServiceWorkerRegistration (the constructor is not exposed), so a
  * duck-typed object with the fields Serwist touches is enough.
  */
+const SYNC_STUB_BODY = JSON.stringify({
+  changes: [],
+  accepted: [],
+  superseded: [],
+  serverChanges: [],
+  serverTime: new Date().toISOString(),
+});
+
 export const test = base.extend({
   context: async ({ context }, use) => {
+    await context.route("**/api/sync", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: SYNC_STUB_BODY,
+      });
+    });
+
     await context.addInitScript(() => {
       // Stub the service-worker registration so it can't intercept
       // requests. The app calls `navigator.serviceWorker.register(...)`
@@ -72,40 +88,6 @@ export const test = base.extend({
         };
         stub.register = () => Promise.resolve(stubRegistration);
       }
-
-      // Stub the /api/sync endpoint. The real handler expects a Neon DB
-      // and throws on every call in dev, which fires the Next.js dev
-      // error overlay and breaks the test pointer chain. Resolving with
-      // a 200 + the empty-but-valid `SyncResponse` shape
-      // (`accepted`/`superseded` arrays) keeps the app's outbox happy
-      // without surfacing any UI error.
-      const originalFetch = window.fetch.bind(window);
-      window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-        const url =
-          typeof input === "string"
-            ? input
-            : input instanceof URL
-              ? input.toString()
-              : input.url;
-        if (url.endsWith("/api/sync")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                changes: [],
-                accepted: [],
-                superseded: [],
-                serverChanges: [],
-                serverTime: new Date().toISOString(),
-              }),
-              {
-                status: 200,
-                headers: { "Content-Type": "application/json" },
-              },
-            ),
-          );
-        }
-        return originalFetch(input, init);
-      };
     });
     await use(context);
   },

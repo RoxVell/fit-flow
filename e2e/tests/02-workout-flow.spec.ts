@@ -53,25 +53,18 @@ test("user can start a workout, log a set, and finish the session", async ({ pag
   // We should now be on the active workout screen.
   await expect(page).toHaveURL(/\/workout\/active/);
 
-  // Wait for the first exercise card to render.
-  await expect(page.locator("input[inputmode='decimal']").first()).toBeVisible({
-    timeout: 10_000,
-  });
-
-  // Fill the first weight input (decimal).
-  const firstWeight = page.locator("input[inputmode='decimal']").first();
+  const firstWeight = page.getByRole("textbox", { name: /set 1 weight/i }).first();
+  await expect(firstWeight).toBeVisible({ timeout: 10_000 });
   await firstWeight.fill("60");
   await firstWeight.blur();
 
-  // Fill the first reps input (numeric).
-  const firstReps = page.locator("input[inputmode='numeric']").first();
+  const firstReps = page.getByRole("spinbutton", { name: /set 1 reps/i }).first();
   await firstReps.fill("8");
   await firstReps.blur();
 
-  // The complete-set button (round checkmark) becomes enabled.
-  const completeButtons = page.locator("button.rounded-full.border");
-  await expect(completeButtons.first()).toBeEnabled();
-  await completeButtons.first().click();
+  const completeSet = page.getByRole("button", { name: /complete set 1/i }).first();
+  await expect(completeSet).toBeEnabled();
+  await completeSet.click();
 
   // Open the finish confirmation.
   await page.getByRole("button", { name: /^Finish$/i }).first().click();
