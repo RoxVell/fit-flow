@@ -144,29 +144,23 @@
     @apply font-sans;
     font-size: 17px;
     min-height: 100dvh;
-    min-height: -webkit-fill-available;
   }
   body {
     @apply text-foreground;
     min-height: 100dvh;
-    min-height: -webkit-fill-available;
   }
 }
 
+/*
+ * On iOS PWA (standalone) -webkit-fill-available reports a stale (too small)
+ * viewport height right after a push navigation, which lifts the bottom nav
+ * off-screen until the user scrolls. 100dvh (dynamic viewport height) does not
+ * have this defect — it self-corrects on navigation and scroll — so we rely on
+ * it instead. Do NOT reintroduce -webkit-fill-available here.
+ */
 .app-shell {
   height: 100dvh;
   min-height: 100dvh;
-}
-
-@supports (-webkit-touch-callout: none) {
-  html {
-    height: -webkit-fill-available;
-  }
-
-  .app-shell {
-    height: -webkit-fill-available;
-    min-height: -webkit-fill-available;
-  }
 }
 
 body {
