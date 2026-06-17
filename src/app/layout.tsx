@@ -8,6 +8,7 @@ import {
   LOCALE_COOKIE,
   getServerLocale,
 } from "@/lib/i18n/locale-cookie";
+import { appHeightBootstrapScript } from "@/lib/pwa/app-height";
 import type { Locale } from "@/lib/exercises/types";
 import { ServiceWorkerRegister } from "@/components/shared/service-worker-register";
 import { OfflineBanner } from "@/components/shared/offline-banner";
@@ -62,6 +63,7 @@ export default async function RootLayout({
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: localeBootstrapScript }} />
+        <script dangerouslySetInnerHTML={{ __html: appHeightBootstrapScript }} />
       </head>
       <body className="flex min-h-dvh flex-col text-foreground">
         <Providers initialLocale={initialLocale}>
