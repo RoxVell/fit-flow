@@ -103,7 +103,7 @@ export function ExerciseLibraryList() {
         </div>
       </div>
 
-      <div ref={parentRef} className="flex-1 overflow-y-auto px-2 pt-1 pb-bottom-nav min-h-0">
+      <div ref={parentRef} className="flex-1 overflow-y-auto px-2 pt-1 min-h-0">
         {loading ? (
           <div className="space-y-1 px-2">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -164,4 +164,4 @@ export function ExerciseLibraryList() {
     </>
   );
 }
-
+

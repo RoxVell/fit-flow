@@ -13,6 +13,7 @@ import { ServiceWorkerRegister } from "@/components/shared/service-worker-regist
 import { OfflineBanner } from "@/components/shared/offline-banner";
 import { InstallPrompt } from "@/components/shared/install-prompt";
 import { UpdateToast } from "@/components/shared/update-toast";
+import { AppViewportHeight, appViewportBootstrapScript } from "@/components/shared/app-viewport-height";
 import "./globals.css";
 import BlockOne from "@/components/ui/block-one";
 
@@ -58,13 +59,15 @@ export default async function RootLayout({
     <html
       lang={initialLocale}
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full overflow-hidden antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: localeBootstrapScript }} />
+        <script dangerouslySetInnerHTML={{ __html: appViewportBootstrapScript }} />
       </head>
-      <body className="flex min-h-dvh flex-col text-foreground">
+      <body className="flex h-full min-h-0 flex-col overflow-hidden text-foreground">
         <Providers initialLocale={initialLocale}>
+          <AppViewportHeight />
           <BlockOne />
           <ServiceWorkerRegister />
           <OfflineBanner />

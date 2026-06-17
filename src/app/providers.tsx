@@ -17,7 +17,9 @@ export function Providers({
     <ThemeProvider>
       <LocaleProvider initialLocale={initialLocale}>
         <TooltipProvider>
-          <SyncProvider>{children}</SyncProvider>
+          <SyncProvider>
+            <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+          </SyncProvider>
         </TooltipProvider>
       </LocaleProvider>
     </ThemeProvider>
