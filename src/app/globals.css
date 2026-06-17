@@ -144,12 +144,10 @@
     @apply font-sans;
     font-size: 17px;
     min-height: 100dvh;
-    min-height: -webkit-fill-available;
   }
   body {
     @apply text-foreground;
     min-height: 100dvh;
-    min-height: -webkit-fill-available;
   }
 }
 
@@ -158,16 +156,14 @@
   min-height: 100dvh;
 }
 
-@supports (-webkit-touch-callout: none) {
-  html {
-    height: -webkit-fill-available;
-  }
-
-  .app-shell {
-    height: -webkit-fill-available;
-    min-height: -webkit-fill-available;
-  }
-}
+/*
+ * Do NOT use -webkit-fill-available for the shell height. On iOS PWA it reports
+ * a stale (too small) layout-viewport height right after a client-side push
+ * navigation, which makes the in-flow bottom nav sit above the real bottom of
+ * the screen with a gap showing the body background underneath. 100dvh
+ * (dynamic viewport height) self-corrects on navigation and scroll, so it is
+ * the only height source we use here.
+ */
 
 body {
   background: var(--body-bg);
