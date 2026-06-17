@@ -151,19 +151,18 @@
   }
 }
 
-.app-shell {
-  height: 100dvh;
-  min-height: 100dvh;
-}
-
 /*
- * Do NOT use -webkit-fill-available for the shell height. On iOS PWA it reports
- * a stale (too small) layout-viewport height right after a client-side push
- * navigation, which makes the in-flow bottom nav sit above the real bottom of
- * the screen with a gap showing the body background underneath. 100dvh
- * (dynamic viewport height) self-corrects on navigation and scroll, so it is
- * the only height source we use here.
+ * Shell height: in iOS standalone PWA `100dvh` is too small on cold launch
+ * (it wrongly subtracts the absent top safe-area inset — WebKit bug #254868),
+ * leaving a gap under the in-flow bottom nav. A bootstrap script in <head>
+ * pins --app-height to 100vh only when standalone (where 100vh is correct
+ * because there is no URL bar). Browser Safari keeps the 100dvh fallback.
+ * See src/lib/pwa/app-height.ts.
  */
+.app-shell {
+  height: var(--app-height, 100dvh);
+  min-height: var(--app-height, 100dvh);
+}
 
 body {
   background: var(--body-bg);
