@@ -73,7 +73,7 @@ function ProgramsView() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 pb-24 space-y-4">
+    <div className="flex-1 overflow-y-auto px-4 pb-bottom-nav space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           {t.programs.yourPrograms}

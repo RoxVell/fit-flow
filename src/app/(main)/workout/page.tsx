@@ -55,7 +55,7 @@ export default function WorkoutPlanPage() {
 
   if (program === undefined || draft === undefined) {
     return (
-      <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
+      <div className="space-y-4 px-4 pt-[calc(env(safe-area-inset-top)+1rem)]">
         <Skeleton className="h-8 w-32 rounded-lg" />
         <Skeleton className="h-12 w-full rounded-xl" />
         <Skeleton className="h-64 w-full rounded-xl" />
@@ -65,7 +65,7 @@ export default function WorkoutPlanPage() {
 
   if (!program) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] h-full">
+      <div className="flex flex-col items-center justify-center gap-4 px-4 pt-[calc(env(safe-area-inset-top)+1rem)] h-full">
         <Dumbbell className="h-12 w-12 text-muted-foreground" />
         <p className="text-sm text-muted-foreground text-center">
           {t.workout.noActiveProgram}
@@ -79,7 +79,7 @@ export default function WorkoutPlanPage() {
   const exercises = selectedSession?.exercises || [];
 
   return (
-    <div className="space-y-6 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
+    <div className="space-y-6 px-4 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <div>
         <h1 className="text-2xl font-bold">{t.workout.title}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">

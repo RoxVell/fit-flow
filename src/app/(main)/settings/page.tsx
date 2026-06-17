@@ -9,7 +9,7 @@ export default function SettingsPage() {
   const t = useT();
 
   return (
-    <div className="space-y-10 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
+    <div className="space-y-10 px-4 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <div>
         <h1 className="text-2xl font-bold">{t.settings.title}</h1>
       </div>

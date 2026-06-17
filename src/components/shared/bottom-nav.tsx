@@ -28,8 +28,8 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto grid h-16 grid-cols-5 items-center px-0.5">
+    <nav className="bottom-nav supports-[backdrop-filter]:bg-background/60">
+      <div className="mx-auto grid h-16 max-h-[var(--footer-height)] grid-cols-5 items-center px-0.5">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           const Icon = item.icon;

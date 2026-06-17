@@ -149,7 +149,7 @@ function ActiveWorkoutContent({
         </div>
       </div>
 
-      <div className="pt-[calc(env(safe-area-inset-top)+4rem)] pb-20 px-4">
+      <div className="pt-[calc(env(safe-area-inset-top)+4rem)] px-4">
         <AnimatePresence>
           {exercises.map((ex) => {
             const exercise = exerciseMap.get(ex.exerciseId);

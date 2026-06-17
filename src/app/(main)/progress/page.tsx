@@ -21,7 +21,7 @@ export default function ProgressPage() {
   ];
 
   return (
-    <div className="px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
+    <div className="px-4 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <h1 className="text-2xl font-bold mb-3">{t.progress.title}</h1>
       <div className="flex rounded-lg bg-muted p-0.5 mb-4">
         {tabs.map((tab) => (

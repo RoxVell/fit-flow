@@ -12,7 +12,7 @@ export default function CardioPage() {
   const sessions = useCardioSessions();
 
   return (
-    <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
+    <div className="space-y-4 px-4 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />

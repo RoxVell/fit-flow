@@ -60,7 +60,7 @@ export function TriumphScreen({ records, volume, duration, onClose }: TriumphScr
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed top-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] left-1/2 z-50 flex w-full max-w-lg -translate-x-1/2 flex-col bg-black/30 dark:bg-black/50 backdrop-blur-lg"
+      className="fixed top-0 bottom-[var(--bottom-nav-total-height)] left-1/2 z-50 flex w-full max-w-lg -translate-x-1/2 flex-col bg-black/30 dark:bg-black/50 backdrop-blur-lg"
     >
       <div className="grid min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
         <div className="m-auto flex w-full max-w-xs flex-col items-center gap-4 px-6 py-8">

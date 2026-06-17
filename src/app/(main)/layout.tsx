@@ -7,7 +7,7 @@ export default function MainLayout({
 }) {
   return (
     <div className="app-shell relative mx-auto flex w-full max-w-lg flex-col overflow-hidden">
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-bottom-nav">
         {children}
       </main>
       <BottomNav />

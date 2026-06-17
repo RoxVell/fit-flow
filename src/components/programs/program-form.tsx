@@ -190,7 +190,7 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-lg space-y-8 px-4 py-6 pb-24">
+        <div className="mx-auto max-w-lg space-y-8 px-4 py-6">
           {/* Info section */}
           <section>
             <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">

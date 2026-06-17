@@ -84,6 +84,11 @@
   --sidebar-accent-foreground: oklch(0.35 0.1 45);
   --sidebar-border: oklch(0.9 0.04 45);
   --sidebar-ring: oklch(0.63 0.18 45);
+  --footer-height: 4rem;
+  --safe-area-max-inset-bottom: env(safe-area-max-inset-bottom, 34px);
+  --bottom-nav-total-height: calc(
+    var(--footer-height) + var(--safe-area-max-inset-bottom)
+  );
   --body-bg:
     radial-gradient(circle at 85% 35%, #ff91281a 0%, #ff78140f 20%, #0000 55%),
     radial-gradient(circle at 15% 72%, #ff912812 0%, #ff781408 25%, #0000 60%),
@@ -161,6 +166,39 @@
 .app-shell {
   height: 100dvh;
   min-height: 100dvh;
+}
+
+/*
+ * Bottom nav: safe-area-max-inset sliding pattern (whatpwacando.today / Chrome
+ * edge-to-edge). Fixed to viewport with margin centering (no transform) so iOS
+ * PWA does not jitter. Fallback uses plain safe-area-inset-bottom.
+ */
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-width: 32rem;
+  margin-inline: auto;
+  box-sizing: border-box;
+  z-index: 50;
+  bottom: 0;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklch, var(--background) 95%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@supports (padding: max(0px)) {
+  .bottom-nav {
+    padding-bottom: var(--safe-area-max-inset-bottom);
+    bottom: calc(env(safe-area-inset-bottom, 0px) - var(--safe-area-max-inset-bottom));
+  }
+}
+
+.pb-bottom-nav {
+  padding-bottom: var(--bottom-nav-total-height);
 }
 
 body {
