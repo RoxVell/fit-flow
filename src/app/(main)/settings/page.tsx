@@ -1,9 +1,18 @@
 "use client";
 
-import { Languages, Palette } from "lucide-react";
+import { Languages, Palette, Info } from "lucide-react";
 import { ThemeToggle } from "@/components/settings/theme-toggle";
 import { LanguageToggle } from "@/components/settings/language-toggle";
 import { useT } from "@/lib/i18n/use-t";
+
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "—";
+const BUILD_DATE = process.env.NEXT_PUBLIC_BUILD_DATE
+  ? new Date(process.env.NEXT_PUBLIC_BUILD_DATE).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
+  : "—";
 
 export default function SettingsPage() {
   const t = useT();
@@ -32,6 +41,27 @@ export default function SettingsPage() {
               {t.settings.language}
             </span>
             <LanguageToggle />
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {t.settings.about}
+        </h2>
+        <div className="overflow-hidden rounded-xl border bg-card divide-y">
+          <div className="flex items-center justify-between px-4 py-3.5">
+            <span className="flex items-center gap-3 text-base font-medium">
+              <Info className="h-5 w-5 text-foreground/70" />
+              {t.settings.version}
+            </span>
+            <span className="text-sm text-muted-foreground">{APP_VERSION}</span>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3.5">
+            <span className="flex items-center gap-3 text-base font-medium">
+              {t.settings.buildDate}
+            </span>
+            <span className="text-sm text-muted-foreground">{BUILD_DATE}</span>
           </div>
         </div>
       </section>

@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 import { withSerwist } from "@serwist/turbopack";
+import pkg from "./package.json";
+
+const NEXT_PUBLIC_APP_VERSION = pkg.version as string;
+const NEXT_PUBLIC_BUILD_DATE = new Date().toISOString();
 
 const baseConfig: NextConfig = {
   reactStrictMode: true,
@@ -36,6 +40,10 @@ const nextConfig = (phase: string, ctx: { defaultConfig: NextConfig }): NextConf
   const config: NextConfig = {
     ...ctx.defaultConfig,
     ...baseConfig,
+    env: {
+      NEXT_PUBLIC_APP_VERSION,
+      NEXT_PUBLIC_BUILD_DATE,
+    },
     devIndicators: isE2eRun ? false : ctx.defaultConfig.devIndicators,
     logging: {
       ...ctx.defaultConfig.logging,

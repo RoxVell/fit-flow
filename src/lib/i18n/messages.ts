@@ -15,6 +15,9 @@ export const messages = {
       userInterface: "User Interface",
       theme: "Theme",
       language: "Language",
+      about: "About",
+      version: "Version",
+      buildDate: "Last update",
     },
     dashboard: {
       steps: "Steps",
@@ -197,6 +200,9 @@ export const messages = {
       userInterface: "Интерфейс",
       theme: "Тема",
       language: "Язык",
+      about: "О приложении",
+      version: "Версия",
+      buildDate: "Последнее обновление",
     },
     dashboard: {
       steps: "Шаги",
