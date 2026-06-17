@@ -28,7 +28,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
+    <div className="space-y-4 px-4 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <Greeting />
 
       {stats && (
