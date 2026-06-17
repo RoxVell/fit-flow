@@ -11,6 +11,8 @@ const BUILD_DATE = process.env.NEXT_PUBLIC_BUILD_DATE
       year: "numeric",
       month: "short",
       day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     })
   : "—";
 
