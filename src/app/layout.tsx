@@ -13,6 +13,7 @@ import { ServiceWorkerRegister } from "@/components/shared/service-worker-regist
 import { OfflineBanner } from "@/components/shared/offline-banner";
 import { InstallPrompt } from "@/components/shared/install-prompt";
 import { UpdateToast } from "@/components/shared/update-toast";
+import { ViewportDebug } from "@/components/shared/viewport-debug";
 import "./globals.css";
 import BlockOne from "@/components/ui/block-one";
 
@@ -70,6 +71,7 @@ export default async function RootLayout({
           <OfflineBanner />
           <UpdateToast />
           <InstallPrompt />
+          <ViewportDebug />
           {children}
         </Providers>
       </body>
