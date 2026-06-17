@@ -5,7 +5,6 @@ import {
   CacheableResponsePlugin,
   CacheFirst,
   ExpirationPlugin,
-  NetworkFirst,
   NetworkOnly,
   Serwist,
   StaleWhileRevalidate,
@@ -95,9 +94,8 @@ const serwist = new Serwist({
     },
     {
       matcher: ({ request }) => request.mode === "navigate",
-      handler: new NetworkFirst({
+      handler: new StaleWhileRevalidate({
         cacheName: "html-pages",
-        networkTimeoutSeconds: 3,
         plugins: [
           new CacheableResponsePlugin({ statuses: [0, 200] }),
           new ExpirationPlugin({
