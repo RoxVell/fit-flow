@@ -19,6 +19,7 @@ import { ExerciseCard } from "@/components/workout/exercise-card";
 import { ExercisePickerDialog } from "@/components/exercises/exercise-picker-dialog";
 import { RestTimer } from "@/components/workout/rest-timer";
 import { TriumphScreen } from "@/components/workout/triumph-screen";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatDuration } from "@/lib/utils/calculations";
 
 function ActiveWorkoutContent({
@@ -222,69 +223,54 @@ function ActiveWorkoutContent({
       </AnimatePresence>
 
       {showConfirmFinish && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-sm rounded-xl bg-popover p-4 shadow-lg">
-            <h3 className="text-lg font-medium mb-2">
-              {completedSetsCount === 0
-                ? t.workout.noCompletedSets
-                : t.workout.incompleteSets}
-            </h3>
-            <p className="text-base text-muted-foreground mb-3">
-              {completedSetsCount === 0
-                ? t.workout.noCompletedSetsDesc
-                : t.workout.incompleteSetsDesc(completedSetsCount, totalSetsCount)}
-            </p>
-            <div className="w-full bg-muted rounded-full h-1.5 mb-5">
-              <div
-                className="bg-primary h-1.5 rounded-full transition-all"
-                style={{
-                  width: `${totalSetsCount > 0 ? (completedSetsCount / totalSetsCount) * 100 : 0}%`,
-                }}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  setShowConfirmFinish(false);
-                  setShowAbandonConfirm(true);
-                }}
-              >
-                {t.workout.discard}
-              </Button>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setShowConfirmFinish(false)}>
-                  {t.workout.cancel}
-                </Button>
-                {completedSetsCount > 0 && (
-                  <Button onClick={confirmFinish}>{t.workout.finishAnyway}</Button>
-                )}
-              </div>
-            </div>
+        <ConfirmDialog
+          open={showConfirmFinish}
+          onOpenChange={setShowConfirmFinish}
+          title={
+            completedSetsCount === 0
+              ? t.workout.noCompletedSets
+              : t.workout.incompleteSets
+          }
+          description={
+            completedSetsCount === 0
+              ? t.workout.noCompletedSetsDesc
+              : t.workout.incompleteSetsDesc(completedSetsCount, totalSetsCount)
+          }
+          confirmLabel={t.workout.discard}
+          cancelLabel={t.workout.cancel}
+          destructive
+          onConfirm={() => {
+            setShowConfirmFinish(false);
+            setShowAbandonConfirm(true);
+          }}
+          extraButtons={
+            completedSetsCount > 0 ? (
+              <Button onClick={confirmFinish}>{t.workout.finishAnyway}</Button>
+            ) : undefined
+          }
+        >
+          <div className="w-full bg-muted rounded-full h-1.5">
+            <div
+              className="bg-primary h-1.5 rounded-full transition-all"
+              style={{
+                width: `${totalSetsCount > 0 ? (completedSetsCount / totalSetsCount) * 100 : 0}%`,
+              }}
+            />
           </div>
-        </div>
+        </ConfirmDialog>
       )}
 
       {showAbandonConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-xs rounded-xl bg-popover p-4 shadow-lg">
-            <h3 className="text-lg font-medium mb-2">{t.workout.abandonTitle}</h3>
-            <p className="text-base text-muted-foreground mb-5">
-              {t.workout.abandonDesc}
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button variant="outline" onClick={() => setShowAbandonConfirm(false)}>
-                {t.workout.cancel}
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => void abandonWorkout()}
-              >
-                {t.workout.abandon}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          open={showAbandonConfirm}
+          onOpenChange={setShowAbandonConfirm}
+          title={t.workout.abandonTitle}
+          description={t.workout.abandonDesc}
+          confirmLabel={t.workout.abandon}
+          cancelLabel={t.workout.cancel}
+          destructive
+          onConfirm={() => void abandonWorkout()}
+        />
       )}
     </>
   );
