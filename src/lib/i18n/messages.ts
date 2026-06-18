@@ -131,10 +131,14 @@ export const messages = {
       abandonDesc: "Your progress won't be saved.",
       abandon: "Abandon",
       triumphTitle: "Workout Complete!",
+      triumphSubtitle: "Great work — you showed up",
       triumphStats: (duration: string, volume: string, kg: string) =>
         `${duration} · ${volume} ${kg} total volume`,
       triumphNewPRs: "New Personal Records",
+      triumphNoPRs: "No records this time — keep pushing",
       triumphDone: "Done",
+      durationLabel: "Duration",
+      volumeLabel: "Volume",
     },
     programs: {
       title: "Programs",
@@ -319,10 +323,14 @@ export const messages = {
       abandonDesc: "Прогресс не будет сохранён.",
       abandon: "Прервать",
       triumphTitle: "Тренировка завершена!",
+      triumphSubtitle: "Отличная работа — ты выложился",
       triumphStats: (duration: string, volume: string, kg: string) =>
         `${duration} · ${volume} ${kg} общий объём`,
       triumphNewPRs: "Новые рекорды",
+      triumphNoPRs: "В этот раз без рекордов — продолжай в том же духе",
       triumphDone: "Готово",
+      durationLabel: "Длительность",
+      volumeLabel: "Объём",
     },
     programs: {
       title: "Программы",
