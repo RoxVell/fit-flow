@@ -18,6 +18,8 @@ export const messages = {
       about: "About",
       version: "Version",
       buildDate: "Last update",
+      lastSync: "Last sync",
+      never: "Never",
     },
     dashboard: {
       steps: "Steps",
@@ -203,6 +205,8 @@ export const messages = {
       about: "О приложении",
       version: "Версия",
       buildDate: "Последнее обновление",
+      lastSync: "Последняя синхронизация",
+      never: "Никогда",
     },
     dashboard: {
       steps: "Шаги",
