@@ -129,7 +129,9 @@ export default function WorkoutPlanPage() {
                   getName(se.exerciseId, t.workout.unknownExercise)}
               </span>
               <span className="text-sm text-muted-foreground">
-                {se.targetSets}&times;{se.targetReps}
+                {se.targetReps
+                  ? `${se.targetSets}×${se.targetReps}`
+                  : t.workout.setsCount(se.targetSets)}
               </span>
             </div>
           ))}
