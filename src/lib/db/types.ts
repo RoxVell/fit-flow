@@ -70,6 +70,8 @@ export interface WorkoutProgram {
   sessions: WorkoutSession[];
   isActive: boolean;
   createdAt: string;
+  /** Rest timer duration in seconds; shared across all exercises in the program. */
+  restDurationSeconds?: number;
 }
 
 export interface WorkoutSession {

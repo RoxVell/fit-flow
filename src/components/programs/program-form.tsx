@@ -45,6 +45,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { RestDurationStepper } from "@/components/programs/rest-duration-stepper";
+import { DEFAULT_REST_DURATION_SECONDS, resolveRestDuration } from "@/lib/workout/rest-duration";
 
 interface ExerciseEntry {
   exerciseId: string;
@@ -67,6 +69,7 @@ interface ProgramFormProps {
     description: string;
     daysPerWeek: number;
     isActive: boolean;
+    restDurationSeconds: number;
     sessions: {
       name: string;
       dayOfWeek: number;
@@ -78,6 +81,7 @@ interface ProgramFormProps {
   initialData?: {
     name: string;
     description: string;
+    restDurationSeconds?: number;
     sessions: {
       name: string;
       dayOfWeek: number;
@@ -91,6 +95,9 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
   const { dayOptions, muscleGroupLabel } = useFormat();
   const [name, setName] = useState(initialData?.name ?? "");
   const [description, setDescription] = useState(initialData?.description ?? "");
+  const [restDurationSeconds, setRestDurationSeconds] = useState(
+    resolveRestDuration(initialData?.restDurationSeconds)
+  );
   const [sessions, setSessions] = useState<SessionEntry[]>(
     initialData?.sessions.map((s) => ({
       name: s.name,
@@ -115,6 +122,7 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
       description: description.trim(),
       daysPerWeek: sessions.length,
       isActive: sessions.length > 0 && sessions.some((s) => s.dayOfWeek === new Date().getDay()),
+      restDurationSeconds,
       sessions: sessions.map((s, i) => ({
         name: s.name.trim(),
         dayOfWeek: s.dayOfWeek,
@@ -129,6 +137,7 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
     });
     setName("");
     setDescription("");
+    setRestDurationSeconds(DEFAULT_REST_DURATION_SECONDS);
     setSessions([]);
   };
 
@@ -217,6 +226,11 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
                     className="border-0 bg-muted/50 px-3 py-2 text-sm resize-none"
                   />
                 </div>
+                <RestDurationStepper
+                  label={t.programs.restDuration}
+                  value={restDurationSeconds}
+                  onChange={setRestDurationSeconds}
+                />
               </div>
             </div>
           </section>
@@ -352,6 +366,11 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
                     className="border-0 bg-muted/50 px-3 py-2 text-sm resize-none"
                   />
                 </div>
+                <RestDurationStepper
+                  label={t.programs.restDuration}
+                  value={restDurationSeconds}
+                  onChange={setRestDurationSeconds}
+                />
               </div>
             </div>
           </section>

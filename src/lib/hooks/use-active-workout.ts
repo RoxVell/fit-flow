@@ -17,6 +17,7 @@ import { createWorkoutLog } from "@/lib/repositories/workouts";
 import { clearDraft, updateDraftExercises } from "@/lib/repositories/drafts";
 import { generateId } from "@/lib/utils/calculations";
 import { volume } from "@/lib/training-metrics";
+import { resolveRestDuration } from "@/lib/workout/rest-duration";
 import { buildPreviousSetsMap } from "@/lib/workout/previous-sets";
 import type {
   Exercise,
@@ -73,6 +74,7 @@ export function useActiveWorkout(
   const { exerciseMap } = useExerciseLookup();
   const program = useActiveProgram();
   const workoutLogs = useWorkoutLogs(50);
+  const restDurationSeconds = resolveRestDuration(program?.restDurationSeconds);
 
   const exercises = draft?.exercises ?? [];
   const startedAt = draft?.startedAt ?? null;
@@ -277,7 +279,7 @@ export function useActiveWorkout(
       )
     );
     if (willComplete) {
-      restStore.startRestTimer(90);
+      restStore.startRestTimer(restDurationSeconds);
       setLastActiveExerciseId(exerciseId);
     }
   };

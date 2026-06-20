@@ -8,11 +8,12 @@ import { CircularProgress } from "@/components/ui/circular-progress";
 
 interface RestTimerProps {
   endTime: number | null;
+  duration: number;
   isRunning: boolean;
   onStop: () => void;
 }
 
-export function RestTimer({ endTime, isRunning, onStop }: RestTimerProps) {
+export function RestTimer({ endTime, duration, isRunning, onStop }: RestTimerProps) {
   const [remaining, setRemaining] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -40,7 +41,7 @@ export function RestTimer({ endTime, isRunning, onStop }: RestTimerProps) {
 
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
-  const progress = remaining / 90;
+  const progress = duration > 0 ? remaining / duration : 0;
 
   return (
     <motion.div

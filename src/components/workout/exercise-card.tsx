@@ -26,6 +26,7 @@ interface ExerciseCardProps {
   onCompleteSet: (index: number) => void;
   onRemove: () => void;
   onSwapRequest: () => void;
+  onHistoryRequest: () => void;
 }
 
 export function ExerciseCard({
@@ -40,6 +41,7 @@ export function ExerciseCard({
   onCompleteSet,
   onRemove,
   onSwapRequest,
+  onHistoryRequest,
 }: ExerciseCardProps) {
   const [collapsed, setCollapsed] = useState(false);
   const t = useT();
@@ -65,7 +67,13 @@ export function ExerciseCard({
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm truncate">{exerciseName}</p>
+                  <button
+                    type="button"
+                    onClick={onHistoryRequest}
+                    className="truncate text-left text-sm font-medium underline decoration-dotted underline-offset-4 hover:text-primary transition-colors"
+                  >
+                    {exerciseName}
+                  </button>
                   <Badge variant="secondary" className="text-[10px] shrink-0">
                     {muscleGroupLabel(muscleGroup)}
                   </Badge>

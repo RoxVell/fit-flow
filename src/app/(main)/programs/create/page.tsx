@@ -30,6 +30,7 @@ function CreateProgramInner() {
           ? {
               name: existingProgram.name,
               description: existingProgram.description,
+              restDurationSeconds: existingProgram.restDurationSeconds,
               sessions: existingProgram.sessions.map((s) => ({
                 name: s.name,
                 dayOfWeek: s.dayOfWeek,
