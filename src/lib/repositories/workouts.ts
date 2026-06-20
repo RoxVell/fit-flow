@@ -1,10 +1,19 @@
 import { withoutDeleted } from "@/lib/db/active-records";
 import { db } from "@/lib/db/dexie";
 import { ensureSeeded } from "@/lib/db/seed-loader";
-import type { Exercise, WorkoutLog, WorkoutLogEntity } from "@/lib/db/types";
+import type {
+  Exercise,
+  LoggedExercise,
+  WorkoutLog,
+  WorkoutLogEntity,
+} from "@/lib/db/types";
 import { bestE1RM, bestWeight, volume } from "@/lib/training-metrics";
 import { enqueueSync } from "@/lib/sync/queue";
 import { getExerciseMap } from "./exercises";
+import {
+  deletePersonalRecordsForWorkout,
+  reconcilePRsAfterWorkoutUpdate,
+} from "./records";
 
 function attachExercisesToLogs(
   logs: WorkoutLogEntity[],
@@ -137,4 +146,25 @@ export async function deleteWorkoutLog(id: string): Promise<void> {
     revision,
   });
   await db.workoutLogs.delete(id);
+}
+
+export async function saveWorkoutEdits(
+  id: string,
+  exercises: LoggedExercise[],
+  exerciseMap: Map<string, Exercise>
+): Promise<WorkoutLogEntity | undefined> {
+  const updated = await updateWorkoutLog(id, { exercises });
+  if (!updated) return undefined;
+  await reconcilePRsAfterWorkoutUpdate(updated, exerciseMap);
+  return updated;
+}
+
+export async function removeWorkoutLog(id: string): Promise<void> {
+  const [existing, exerciseMap] = await Promise.all([
+    db.workoutLogs.get(id),
+    getExerciseMap(),
+  ]);
+  if (!existing || existing.deletedAt) return;
+  await deletePersonalRecordsForWorkout(id, existing, exerciseMap);
+  await deleteWorkoutLog(id);
 }

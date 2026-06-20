@@ -180,8 +180,9 @@ export function useActiveWorkout(
     const capturedSeconds = seconds;
 
     void (async () => {
+      let createdLog;
       try {
-        await createWorkoutLog(log);
+        createdLog = await createWorkoutLog(log);
       } catch (err) {
         console.warn("[finishWorkout] createWorkoutLog failed", err);
         hasFinishedRef.current = false;
@@ -197,7 +198,10 @@ export function useActiveWorkout(
         );
         for (const rec of records) {
           const { id: _id, ...payload } = rec;
-          void createPersonalRecord(payload).catch((err) => {
+          void createPersonalRecord({
+            ...payload,
+            workoutLogId: createdLog.id,
+          }).catch((err) => {
             console.warn("[finishWorkout] createPersonalRecord failed", err);
           });
         }
@@ -381,7 +385,19 @@ export function useActiveWorkout(
   const swapExercise = (loggedExerciseId: string, newExerciseId: string) => {
     void updateDraftExercises((current) =>
       current.map((e) =>
-        e.id === loggedExerciseId ? { ...e, exerciseId: newExerciseId } : e
+        e.id === loggedExerciseId
+          ? {
+              ...e,
+              exerciseId: newExerciseId,
+              sets: e.sets.map((s) => ({
+                ...s,
+                id: generateId(),
+                weight: 0,
+                reps: 0,
+                completed: false,
+              })),
+            }
+          : e
       )
     );
   };
