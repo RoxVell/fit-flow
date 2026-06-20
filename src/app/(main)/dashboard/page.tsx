@@ -5,7 +5,6 @@ import { Greeting } from "@/components/dashboard/greeting";
 import { StartWorkoutButton } from "@/components/dashboard/start-workout-button";
 import { SmartStats } from "@/components/dashboard/smart-stats";
 import { RecentPRs } from "@/components/dashboard/recent-prs";
-import { RecentWorkouts } from "@/components/dashboard/recent-workouts";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
@@ -41,8 +40,6 @@ export default function DashboardPage() {
       )}
 
       <RecentPRs />
-
-      <RecentWorkouts />
 
       <StartWorkoutButton />
     </div>

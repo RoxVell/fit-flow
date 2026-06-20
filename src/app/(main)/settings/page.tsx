@@ -1,9 +1,10 @@
 "use client";
 
-import { Languages, Palette, Info } from "lucide-react";
+import { Languages, Palette, Info, RefreshCw } from "lucide-react";
 import { ThemeToggle } from "@/components/settings/theme-toggle";
 import { LanguageToggle } from "@/components/settings/language-toggle";
 import { useT } from "@/lib/i18n/use-t";
+import { useSyncState } from "@/lib/sync/sync-service";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "—";
 const BUILD_DATE = process.env.NEXT_PUBLIC_BUILD_DATE
@@ -16,8 +17,19 @@ const BUILD_DATE = process.env.NEXT_PUBLIC_BUILD_DATE
     })
   : "—";
 
+function formatSyncDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function SettingsPage() {
   const t = useT();
+  const { lastSyncAt } = useSyncState();
 
   return (
     <div className="space-y-10 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
@@ -64,6 +76,15 @@ export default function SettingsPage() {
               {t.settings.buildDate}
             </span>
             <span className="text-sm text-muted-foreground">{BUILD_DATE}</span>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3.5">
+            <span className="flex items-center gap-3 text-base font-medium">
+              <RefreshCw className="h-5 w-5 text-foreground/70" />
+              {t.settings.lastSync}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {lastSyncAt ? formatSyncDate(lastSyncAt) : t.settings.never}
+            </span>
           </div>
         </div>
       </section>

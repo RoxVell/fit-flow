@@ -127,6 +127,29 @@ export function useWorkoutLogs(limit = 20) {
   );
 }
 
+export function useCompletedWorkoutLogs(limit: number) {
+  return useLiveQuery(
+    () =>
+      db.workoutLogs
+        .orderBy("startedAt")
+        .reverse()
+        .filter((l) => !l.deletedAt && !!l.endedAt)
+        .limit(limit)
+        .toArray(),
+    [limit]
+  );
+}
+
+export function useCompletedWorkoutLogsCount() {
+  return useLiveQuery(
+    () =>
+      db.workoutLogs
+        .filter((l) => !l.deletedAt && !!l.endedAt)
+        .count(),
+    []
+  );
+}
+
 export function useWorkoutLog(id: string) {
   return useLiveQuery(async () => {
     const log = await db.workoutLogs.get(id);

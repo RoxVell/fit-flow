@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,6 +20,8 @@ interface ConfirmDialogProps {
   pendingLabel?: string;
   destructive?: boolean;
   pending?: boolean;
+  children?: ReactNode;
+  extraButtons?: ReactNode;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
 }
@@ -32,6 +35,8 @@ export function ConfirmDialog({
   pendingLabel,
   destructive = false,
   pending = false,
+  children,
+  extraButtons,
   onOpenChange,
   onConfirm,
 }: ConfirmDialogProps) {
@@ -42,7 +47,9 @@ export function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
+        {children}
         <DialogFooter className="grid grid-cols-2 sm:flex sm:flex-row">
+          {extraButtons}
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
             {cancelLabel}
           </Button>

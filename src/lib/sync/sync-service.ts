@@ -73,13 +73,16 @@ export async function sync(): Promise<SyncResponse | null> {
 export function useSyncState() {
   const [pending, setPending] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const mounted = useRef(true);
 
   const refresh = useCallback(async () => {
     const count = await pendingCount();
+    const meta = await getAppMeta();
     if (mounted.current) {
       setPending(count);
       setIsSyncing(syncing);
+      setLastSyncAt(meta.lastSyncAt);
     }
   }, []);
 
@@ -120,7 +123,7 @@ export function useSyncState() {
     await refresh();
   }, [refresh]);
 
-  return { pending, syncing: isSyncing, flush };
+  return { pending, syncing: isSyncing, lastSyncAt, flush };
 }
 
 /** Warm up Dexie on app start (writes — must not run inside useLiveQuery) */

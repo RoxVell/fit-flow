@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Play, Dumbbell, ChevronDown } from "lucide-react";
+import { Play, Dumbbell, ChevronDown, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useActiveProgram, useWorkoutDraft } from "@/lib/hooks/use-data";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
@@ -11,6 +11,7 @@ import { useFormat } from "@/lib/i18n/use-format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { startWorkoutDraft } from "@/lib/workout/start-session-draft";
+import { WorkoutHistory } from "@/components/workout/workout-history";
 import {
   Dialog,
   DialogContent,
@@ -18,14 +19,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+type Tab = "plan" | "history";
+
 export default function WorkoutPlanPage() {
   const router = useRouter();
   const t = useT();
-  const { dayLabels } = useFormat();
-  const program = useActiveProgram();
+  const [activeTab, setActiveTab] = useState<Tab>("plan");
   const draft = useWorkoutDraft();
-  const { getName } = useExerciseLookup();
-  const today = new Date().getDay();
 
   useEffect(() => {
     if (draft === undefined) return;
@@ -33,6 +33,58 @@ export default function WorkoutPlanPage() {
       router.replace(`/workout/active?session=${draft.sessionId}`);
     }
   }, [draft, router]);
+
+  const tabs = [
+    { value: "plan" as const, label: t.workout.tabPlan, icon: Play },
+    { value: "history" as const, label: t.workout.tabHistory, icon: CalendarDays },
+  ];
+
+  if (draft === undefined) {
+    return (
+      <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
+        <Skeleton className="h-8 w-32 rounded-lg" />
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
+      <h1 className="text-2xl font-bold">{t.workout.title}</h1>
+
+      <div className="flex rounded-lg bg-muted p-0.5">
+        {tabs.map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            onClick={() => setActiveTab(tab.value)}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-all",
+              activeTab === tab.value
+                ? "bg-background text-foreground shadow-xs"
+                : "text-muted-foreground"
+            )}
+          >
+            <tab.icon className="h-4 w-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "plan" && <WorkoutPlanTab />}
+      {activeTab === "history" && <WorkoutHistory />}
+    </div>
+  );
+}
+
+function WorkoutPlanTab() {
+  const router = useRouter();
+  const t = useT();
+  const { dayLabels } = useFormat();
+  const program = useActiveProgram();
+  const { getName } = useExerciseLookup();
+  const today = new Date().getDay();
 
   const [starting, setStarting] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -53,10 +105,9 @@ export default function WorkoutPlanPage() {
     return program.sessions.find((s) => s.id === effectiveId) || null;
   }, [program, effectiveId]);
 
-  if (program === undefined || draft === undefined) {
+  if (program === undefined) {
     return (
-      <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
-        <Skeleton className="h-8 w-32 rounded-lg" />
+      <div className="space-y-4">
         <Skeleton className="h-12 w-full rounded-xl" />
         <Skeleton className="h-64 w-full rounded-xl" />
       </div>
@@ -65,7 +116,7 @@ export default function WorkoutPlanPage() {
 
   if (!program) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)] h-full">
+      <div className="flex flex-col items-center justify-center gap-4 py-12">
         <Dumbbell className="h-12 w-12 text-muted-foreground" />
         <p className="text-sm text-muted-foreground text-center">
           {t.workout.noActiveProgram}
@@ -79,10 +130,9 @@ export default function WorkoutPlanPage() {
   const exercises = selectedSession?.exercises || [];
 
   return (
-    <div className="space-y-6 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">{t.workout.title}</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
+        <p className="text-sm text-muted-foreground">
           {program.name} &middot; {program.daysPerWeek} {t.workout.daysPerWeek}
         </p>
       </div>
@@ -129,7 +179,9 @@ export default function WorkoutPlanPage() {
                   getName(se.exerciseId, t.workout.unknownExercise)}
               </span>
               <span className="text-sm text-muted-foreground">
-                {se.targetSets}&times;{se.targetReps}
+                {se.targetReps
+                  ? `${se.targetSets}×${se.targetReps}`
+                  : t.workout.setsCount(se.targetSets)}
               </span>
             </div>
           ))}

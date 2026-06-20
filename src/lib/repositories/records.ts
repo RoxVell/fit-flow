@@ -7,6 +7,7 @@ import type {
   PersonalRecord,
   PersonalRecordEntity,
   PRType,
+  WorkoutLogEntity,
 } from "@/lib/db/types";
 import { bestE1RM, bestWeight, volume } from "@/lib/training-metrics";
 import { enqueueSync } from "@/lib/sync/queue";
@@ -139,4 +140,89 @@ export async function createPersonalRecord(
     revision: entity.revision,
   });
   return entity;
+}
+
+export async function deletePersonalRecord(id: string): Promise<void> {
+  const existing = await db.personalRecords.get(id);
+  if (!existing || existing.deletedAt) return;
+  const now = new Date().toISOString();
+  const revision = existing.revision + 1;
+  await enqueueSync({
+    entityType: "personalRecord",
+    entityId: id,
+    operation: "delete",
+    revision,
+  });
+  await db.personalRecords.update(id, {
+    deletedAt: now,
+    revision,
+    updatedAt: now,
+  });
+}
+
+function legacyPRMatchesWorkout(
+  record: PersonalRecordEntity,
+  candidates: PersonalRecord[],
+  completedAt: string
+): boolean {
+  if (record.workoutLogId) return false;
+  if (record.date !== completedAt) return false;
+  return candidates.some(
+    (c) =>
+      c.exerciseId === record.exerciseId &&
+      c.type === record.type &&
+      c.value === record.value
+  );
+}
+
+export async function deletePersonalRecordsForWorkout(
+  workoutLogId: string,
+  log?: WorkoutLogEntity,
+  exerciseMap?: Map<string, Exercise>
+): Promise<void> {
+  await ensureSeeded();
+  const all = withoutDeleted(await db.personalRecords.toArray());
+  const linked = all.filter((r) => r.workoutLogId === workoutLogId);
+
+  let legacyMatches: PersonalRecordEntity[] = [];
+  if (log && exerciseMap) {
+    const completedAt = log.endedAt ?? log.startedAt;
+    const candidates = createPRsFromWorkout(
+      log.exercises,
+      exerciseMap,
+      completedAt,
+      []
+    );
+    legacyMatches = all.filter((r) =>
+      legacyPRMatchesWorkout(r, candidates, completedAt)
+    );
+  }
+
+  const toDelete = new Map<string, PersonalRecordEntity>();
+  for (const r of [...linked, ...legacyMatches]) {
+    toDelete.set(r.id, r);
+  }
+
+  await Promise.all([...toDelete.keys()].map((id) => deletePersonalRecord(id)));
+}
+
+export async function reconcilePRsAfterWorkoutUpdate(
+  log: WorkoutLogEntity,
+  exerciseMap: Map<string, Exercise>
+): Promise<PersonalRecord[]> {
+  await deletePersonalRecordsForWorkout(log.id, log, exerciseMap);
+
+  const completedAt = log.endedAt ?? log.startedAt;
+  const newRecords = await detectNewPRsFromWorkout(
+    log.exercises,
+    exerciseMap,
+    completedAt
+  );
+
+  for (const rec of newRecords) {
+    const { id: _id, ...payload } = rec;
+    await createPersonalRecord({ ...payload, workoutLogId: log.id });
+  }
+
+  return newRecords;
 }
