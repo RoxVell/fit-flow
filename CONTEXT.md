@@ -24,6 +24,10 @@ _Avoid_: failed request, pending mutation, offline write
 A read against a resource that requires the seed bootstrap (`exercises`, `programs`). The `db/queries.ts` read functions call `ensureSeeded()` first; the seed is a one-time insert guarded by an IDB meta flag. The seed concern lives in the read module, not in the API or transport.
 _Avoid_: initial fetch, cold start, first-run load
 
+**active program**:
+The single `WorkoutProgram` marked `isActive: true` in IndexedDB. Drives the Workout plan tab, rest duration, and session picker. Exactly one program is active at a time; the user switches it from Programs → library via **Set active**. Editing a program does not change which one is active.
+_Avoid_: current program, selected plan, default workout
+
 **active workout**:
 The in-progress workout session held in the Zustand `workout-store`. Distinct from a `WorkoutLog` (which is the persisted record of a completed workout). The active workout can be edited freely; the log is created on finish and is immutable thereafter.
 _Avoid_: current session, live workout, draft workout

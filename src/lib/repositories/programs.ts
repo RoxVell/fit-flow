@@ -64,10 +64,13 @@ export async function getProgramById(id: string): Promise<ProgramEntity | undefi
 export async function createProgram(data: ProgramInput): Promise<ProgramEntity> {
   const programId = crypto.randomUUID();
   const now = new Date().toISOString();
+  const hasActiveProgram =
+    (await db.programs.filter((p) => p.isActive && !p.deletedAt).count()) > 0;
   const entity: ProgramEntity = {
     ...data,
     id: programId,
     description: data.description || "",
+    isActive: data.isActive ?? !hasActiveProgram,
     createdAt: now,
     sessions: buildSessions(programId, data.sessions),
     revision: 1,
@@ -95,6 +98,7 @@ export async function updateProgram(
     ...data,
     id,
     description: data.description || "",
+    isActive: existing.isActive,
     createdAt: existing.createdAt,
     sessions: buildSessions(id, data.sessions),
     revision: existing.revision + 1,
@@ -109,6 +113,36 @@ export async function updateProgram(
     revision: entity.revision,
   });
   return withAttachedExercises(entity);
+}
+
+export async function setActiveProgram(id: string): Promise<ProgramEntity | undefined> {
+  const target = await db.programs.get(id);
+  if (!isActiveRecord(target)) return undefined;
+
+  const programs = withoutDeleted(await db.programs.toArray());
+  const now = new Date().toISOString();
+
+  for (const program of programs) {
+    const shouldBeActive = program.id === id;
+    if (program.isActive === shouldBeActive) continue;
+
+    const updated: ProgramEntity = {
+      ...program,
+      isActive: shouldBeActive,
+      revision: program.revision + 1,
+      updatedAt: now,
+    };
+    await db.programs.put(updated);
+    await enqueueSync({
+      entityType: "program",
+      entityId: updated.id,
+      operation: "update",
+      payload: updated,
+      revision: updated.revision,
+    });
+  }
+
+  return getProgramById(id);
 }
 
 export async function deleteProgram(id: string): Promise<void> {

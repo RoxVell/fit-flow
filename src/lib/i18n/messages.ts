@@ -157,6 +157,8 @@ export const messages = {
       yourPrograms: "Your Programs",
       createNew: "Create new program",
       active: "Active",
+      setActive: "Set active",
+      settingActive: "Setting...",
       edit: "Edit",
       daysSessions: (days: number, sessions: number) =>
         `${days} days · ${sessions} sessions`,
@@ -362,6 +364,8 @@ export const messages = {
       yourPrograms: "Ваши программы",
       createNew: "Создать программу",
       active: "Активна",
+      setActive: "Сделать активной",
+      settingActive: "Сохранение...",
       edit: "Изменить",
       daysSessions: (days: number, sessions: number) =>
         `${days} дн. · ${sessions} тренировок`,

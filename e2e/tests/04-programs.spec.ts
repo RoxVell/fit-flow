@@ -37,6 +37,27 @@ test("library can switch between programs and exercises views", async ({ page })
   await expect(page.getByText(/^PPL$/i).first()).toBeVisible();
 });
 
+test("user can set a different program as active", async ({ page }) => {
+  await expect(page.getByText(/^PPL$/i).first()).toBeVisible();
+  await expect(page.getByText(/^Upper \/ Lower$/i).first()).toBeVisible();
+
+  const pplCard = page.locator(".overflow-hidden").filter({
+    has: page.getByText(/^PPL$/i),
+  });
+  const upperLowerCard = page.locator(".overflow-hidden").filter({
+    has: page.getByText(/^Upper \/ Lower$/i),
+  });
+
+  await expect(pplCard.getByText(/^active$/i)).toBeVisible();
+  await upperLowerCard.getByRole("button", { name: /set active/i }).click();
+
+  await expect(upperLowerCard.getByText(/^active$/i)).toBeVisible();
+  await expect(pplCard.getByRole("button", { name: /set active/i })).toBeVisible();
+
+  await page.goto("/workout");
+  await expect(page.getByText(/Upper \/ Lower/i).first()).toBeVisible();
+});
+
 test("create program form requires a name and can be cancelled", async ({ page }) => {
   await page.getByRole("link", { name: /create|new program/i }).first().click();
   await expect(page).toHaveURL(/\/programs\/create/);

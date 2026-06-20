@@ -68,7 +68,6 @@ interface ProgramFormProps {
     name: string;
     description: string;
     daysPerWeek: number;
-    isActive: boolean;
     restDurationSeconds: number;
     sessions: {
       name: string;
@@ -121,7 +120,6 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
       name: name.trim(),
       description: description.trim(),
       daysPerWeek: sessions.length,
-      isActive: sessions.length > 0 && sessions.some((s) => s.dayOfWeek === new Date().getDay()),
       restDurationSeconds,
       sessions: sessions.map((s, i) => ({
         name: s.name.trim(),
