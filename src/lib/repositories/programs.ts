@@ -5,7 +5,11 @@ import type { ProgramEntity, WorkoutProgram, WorkoutSession } from "@/lib/db/typ
 import { enqueueSync } from "@/lib/sync/queue";
 import { attachExercisesToSessions, getExerciseMap } from "./exercises";
 
-type ProgramInput = Omit<WorkoutProgram, "id" | "createdAt" | "sessions" | "revision" | "updatedAt"> & {
+type ProgramInput = Omit<
+  WorkoutProgram,
+  "id" | "createdAt" | "sessions" | "revision" | "updatedAt" | "isActive"
+> & {
+  isActive?: boolean;
   sessions: {
     name: string;
     dayOfWeek: number;
