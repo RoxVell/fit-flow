@@ -12,6 +12,8 @@
     "build:exercises": "npx tsx scripts/build-exercise-library.ts",
     "boostcamp:map": "npx tsx scripts/boostcamp/generate-mapping.ts",
     "boostcamp:import": "npx tsx scripts/boostcamp/import.ts",
+    "test": "vitest run",
+    "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
@@ -55,7 +57,9 @@
     "esbuild": "^0.28.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "fake-indexeddb": "^6.2.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.9"
   }
 }
