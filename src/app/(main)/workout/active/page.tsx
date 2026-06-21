@@ -19,6 +19,7 @@ import { ExerciseCard } from "@/components/workout/exercise-card";
 import { ExercisePickerDialog } from "@/components/exercises/exercise-picker-dialog";
 import { RestTimer } from "@/components/workout/rest-timer";
 import { TriumphScreen } from "@/components/workout/triumph-screen";
+import { ExerciseHistorySheet } from "@/components/workout/exercise-history-sheet";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatDuration } from "@/lib/utils/calculations";
 
@@ -68,6 +69,10 @@ function ActiveWorkoutContent({
     string | null
   >(null);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
+  const [historyExercise, setHistoryExercise] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const swapTargetExerciseId = useMemo(() => {
     if (!swapTargetLoggedExerciseId) return null;
@@ -154,6 +159,8 @@ function ActiveWorkoutContent({
         <AnimatePresence>
           {exercises.map((ex) => {
             const exercise = exerciseMap.get(ex.exerciseId);
+            const exerciseName =
+              exercise?.name || getName(ex.exerciseId, t.workout.unknownExercise);
             return (
               <motion.div
                 key={ex.id}
@@ -165,7 +172,7 @@ function ActiveWorkoutContent({
               >
                 <ExerciseCard
                   exercise={ex}
-                  exerciseName={exercise?.name || getName(ex.exerciseId, t.workout.unknownExercise)}
+                  exerciseName={exerciseName}
                   muscleGroup={exercise?.muscleGroup || "chest"}
                   previousSets={previousSetsMap.get(ex.id) || []}
                   isActive={ex.id === activeExerciseId}
@@ -175,6 +182,9 @@ function ActiveWorkoutContent({
                   onCompleteSet={(idx) => toggleSetCompleted(ex.id, idx)}
                   onRemove={() => removeExercise(ex.id)}
                   onSwapRequest={() => setSwapTargetLoggedExerciseId(ex.id)}
+                  onHistoryRequest={() =>
+                    setHistoryExercise({ id: ex.exerciseId, name: exerciseName })
+                  }
                 />
               </motion.div>
             );
@@ -212,11 +222,21 @@ function ActiveWorkoutContent({
             }}
           />
         ) : null}
+
+        <ExerciseHistorySheet
+          exerciseId={historyExercise?.id ?? null}
+          exerciseName={historyExercise?.name ?? ""}
+          open={historyExercise != null}
+          onOpenChange={(open) => {
+            if (!open) setHistoryExercise(null);
+          }}
+        />
       </div>
 
       <AnimatePresence>
         <RestTimer
           endTime={restStore.restTimer.endTime}
+          duration={restStore.restTimer.duration}
           isRunning={restStore.restTimer.isRunning}
           onStop={restStore.stopRestTimer}
         />

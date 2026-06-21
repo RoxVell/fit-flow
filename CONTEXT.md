@@ -24,9 +24,29 @@ _Avoid_: failed request, pending mutation, offline write
 A read against a resource that requires the seed bootstrap (`exercises`, `programs`). The `db/queries.ts` read functions call `ensureSeeded()` first; the seed is a one-time insert guarded by an IDB meta flag. The seed concern lives in the read module, not in the API or transport.
 _Avoid_: initial fetch, cold start, first-run load
 
+**active program**:
+The single `WorkoutProgram` marked `isActive: true` in IndexedDB. Drives the Workout plan tab, rest duration, and session picker. Exactly one program is active at a time; the user switches it from Programs → library via **Set active**. Editing a program does not change which one is active.
+_Avoid_: current program, selected plan, default workout
+
 **active workout**:
 The in-progress workout session held in the Zustand `workout-store`. Distinct from a `WorkoutLog` (which is the persisted record of a completed workout). The active workout can be edited freely; the log is created on finish and is immutable thereafter.
 _Avoid_: current session, live workout, draft workout
+
+**rest duration**:
+Per-program rest timer length in seconds (`restDurationSeconds` on `WorkoutProgram`). One value applies to every exercise in that program; completing a set during an active workout starts the timer for this duration. Default 90 seconds. Edited in Program Info via a 15-second stepper (30 s–5 min).
+_Avoid_: rest timer setting, break time, global timer preference
+
+**triumph screen**:
+Full-screen overlay shown immediately after finishing an active workout: duration, volume, and new PRs. Covers the bottom nav; dismissed with Done.
+_Avoid_: completion modal, summary page, celebration dialog
+
+**exercise history sheet**:
+During an active workout, tapping an exercise name opens a bottom sheet (~70% viewport height) showing past performance for that exercise. Reuses the session accordion from Progress; only completed `WorkoutLog` entries, not the in-progress draft. Dismiss by tapping the dimmed area above the sheet.
+_Avoid_: exercise detail, progress page, modal
+
+**exercise library list**:
+The Exercises tab under Programs shows the catalog in a single shared card container (`rounded-xl border bg-card`) with rows divided inside, rather than individual per-row cards.
+_Avoid_: exercise picker, program editor list
 
 **training metric**:
 A named derivation of one or more sets: `e1RM(weight, reps)`, `volume(sets)`, `bestWeight(sets)`, `bestE1RM(sets)`. Lives in `lib/training-metrics.ts`; all four formulas are colocated there and never inlined. Callers pass a structural `{ weight, reps }` shape (e.g. a filtered `LoggedSet[]`), never the full `LoggedSet` record.

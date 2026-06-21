@@ -21,6 +21,7 @@ export const programs: WorkoutProgram[] = [
     description: "Push / Pull / Legs split — 6 days per week. Proven volume for intermediate lifters.",
     daysPerWeek: 6,
     isActive: true,
+    restDurationSeconds: 90,
     createdAt: daysAgo(60),
     sessions: [
       {
@@ -89,6 +90,7 @@ export const programs: WorkoutProgram[] = [
     description: "Classic 4-day upper/lower split. Balanced volume for strength and hypertrophy.",
     daysPerWeek: 4,
     isActive: false,
+    restDurationSeconds: 90,
     createdAt: daysAgo(30),
     sessions: [
       {

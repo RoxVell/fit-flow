@@ -157,6 +157,8 @@ export const messages = {
       yourPrograms: "Your Programs",
       createNew: "Create new program",
       active: "Active",
+      setActive: "Set active",
+      settingActive: "Setting...",
       edit: "Edit",
       daysSessions: (days: number, sessions: number) =>
         `${days} days · ${sessions} sessions`,
@@ -179,6 +181,7 @@ export const messages = {
       namePlaceholder: "e.g. Push/Pull/Legs",
       description: "Description",
       descriptionPlaceholder: "Brief description of the program",
+      restDuration: "Rest between sets",
       sessionsHeader: (n: number) => `Sessions (${n})`,
       addSession: "Add Session",
       noSessionsYet: "No sessions yet",
@@ -361,6 +364,8 @@ export const messages = {
       yourPrograms: "Ваши программы",
       createNew: "Создать программу",
       active: "Активна",
+      setActive: "Сделать активной",
+      settingActive: "Сохранение...",
       edit: "Изменить",
       daysSessions: (days: number, sessions: number) =>
         `${days} дн. · ${sessions} тренировок`,
@@ -383,6 +388,7 @@ export const messages = {
       namePlaceholder: "напр. Жим/Тяга/Ноги",
       description: "Описание",
       descriptionPlaceholder: "Краткое описание программы",
+      restDuration: "Отдых между подходами",
       sessionsHeader: (n: number) => `Тренировки (${n})`,
       addSession: "Добавить",
       noSessionsYet: "Тренировок пока нет",
