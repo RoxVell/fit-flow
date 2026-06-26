@@ -1,8 +1,16 @@
+import { hasAnyBodyMetric } from "@/lib/body-measurements/metrics";
 import { withoutDeleted } from "@/lib/db/active-records";
 import { db } from "@/lib/db/dexie";
 import { ensureSeeded } from "@/lib/db/seed-loader";
 import type { BodyMeasurement, BodyMeasurementEntity } from "@/lib/db/types";
 import { enqueueSync } from "@/lib/sync/queue";
+
+export class BodyMeasurementValidationError extends Error {
+  constructor() {
+    super("At least one body metric is required");
+    this.name = "BodyMeasurementValidationError";
+  }
+}
 
 export async function getBodyMeasurements(): Promise<BodyMeasurementEntity[]> {
   await ensureSeeded();
@@ -14,6 +22,10 @@ export async function getBodyMeasurements(): Promise<BodyMeasurementEntity[]> {
 export async function logBodyMeasurement(
   data: Omit<BodyMeasurement, "id" | "revision" | "updatedAt">
 ): Promise<BodyMeasurementEntity> {
+  if (!hasAnyBodyMetric(data)) {
+    throw new BodyMeasurementValidationError();
+  }
+
   const now = new Date().toISOString();
   const entity: BodyMeasurementEntity = {
     ...data,

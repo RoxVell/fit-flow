@@ -65,7 +65,7 @@ export const workoutLogs = pgTable("workout_logs", {
 export const bodyMeasurements = pgTable("body_measurements", {
   id: text("id").primaryKey(),
   date: timestamp("date", { withTimezone: true }).notNull(),
-  weight: real("weight").notNull(),
+  weight: real("weight"),
   bodyFat: real("body_fat"),
   chest: real("chest"),
   waist: real("waist"),

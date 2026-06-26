@@ -19,6 +19,10 @@ import {
   matchesUnilateralFilter,
   toLibraryFilters,
 } from "@/lib/exercises/filter-adapter";
+import {
+  buildDailyBodyViews,
+  getWeightTrendFromDailyViews,
+} from "@/lib/body-measurements/daily-view";
 import { attachExercisesToSessions } from "@/lib/repositories/exercises";
 import { bestE1RM, bestWeight, volume } from "@/lib/training-metrics";
 import {
@@ -165,6 +169,14 @@ export function useBodyMeasurements() {
   }, []);
 }
 
+export function useDailyBodyViews() {
+  const measurements = useBodyMeasurements();
+  return useMemo(() => {
+    if (!measurements) return undefined;
+    return buildDailyBodyViews(measurements);
+  }, [measurements]);
+}
+
 export function usePersonalRecords() {
   return useLiveQuery(
     () => db.personalRecords.filter((r) => !r.deletedAt).toArray(),
@@ -211,20 +223,9 @@ export function useDashboardStats(): DashboardStats | undefined {
       0
     );
 
-    const sortedMeasurements = [...measurements].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-    const lastTwo = sortedMeasurements.slice(-2);
-    const currentWeight = lastTwo[lastTwo.length - 1]?.weight ?? 0;
-    const prevWeight = lastTwo[0]?.weight;
-    const weightTrend: DashboardStats["weightTrend"] =
-      prevWeight === undefined
-        ? "stable"
-        : currentWeight > prevWeight
-          ? "up"
-          : currentWeight < prevWeight
-            ? "down"
-            : "stable";
+    const dailyViews = buildDailyBodyViews(measurements);
+    const { currentWeight, weightTrend } = getWeightTrendFromDailyViews(dailyViews);
+    const hasWeightHistory = dailyViews.some((view) => view.weight != null);
 
     const activeProgram = programs.find((p) => p.isActive);
     const today = new Date().getDay();
@@ -277,6 +278,7 @@ export function useDashboardStats(): DashboardStats | undefined {
       weeklyVolume,
       currentWeight,
       weightTrend,
+      hasWeightHistory,
       steps: 8432,
       calories: 345,
       activeDays,

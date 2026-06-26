@@ -11,7 +11,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 import { ExerciseLibraryList } from "@/components/exercises/exercise-library-list";
-import { Plus, Pencil, Library, LayoutList, Trash2, Check } from "lucide-react";
+import { Plus, Pencil, Library, LayoutList, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -98,13 +98,23 @@ function ProgramsView() {
       </div>
 
       {programs?.map((prog) => (
-        <Card
-          key={prog.id}
-          className={cn("overflow-hidden", prog.isActive && "ring-1 ring-primary/40")}
-        >
+        <Card key={prog.id} className="overflow-hidden">
           <CardContent className="p-0">
             <div className="px-4 pt-2 pb-3">
               <div className="flex items-start justify-between gap-2">
+                <label className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+                  <input
+                    type="radio"
+                    name="active-program"
+                    checked={prog.isActive}
+                    disabled={activatingId != null}
+                    aria-label={`${t.programs.setActive}: ${prog.name}`}
+                    onChange={(event) => {
+                      if (event.target.checked) void handleSetActive(prog.id);
+                    }}
+                    className="h-4 w-4 accent-primary"
+                  />
+                </label>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-base font-bold">{prog.name}</p>
@@ -120,18 +130,6 @@ function ProgramsView() {
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  {!prog.isActive ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1 h-7 text-xs"
-                      disabled={activatingId != null}
-                      onClick={() => void handleSetActive(prog.id)}
-                    >
-                      <Check className="h-3 w-3" />
-                      {activatingId === prog.id ? t.programs.settingActive : t.programs.setActive}
-                    </Button>
-                  ) : null}
                   <Link href={`/programs/create?edit=${prog.id}`}>
                     <Button variant="ghost" size="sm" className="gap-1 h-7 text-xs">
                       <Pencil className="h-3 w-3" />

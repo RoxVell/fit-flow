@@ -1,5 +1,8 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -9,49 +12,71 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useBodyMeasurements } from "@/lib/hooks/use-data";
+import { ChartPeriodSelector } from "@/components/charts/chart-period-selector";
+import { BodyMeasurementHistory } from "@/components/progress/body-measurement-history";
+import { useDailyBodyViews } from "@/lib/hooks/use-data";
+import { BODY_METRIC_FIELDS } from "@/lib/body-measurements/metrics";
+import { filterByPeriod, type ChartPeriod } from "@/lib/charts/periods";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 
 const COLORS = ["var(--color-primary)", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
 export function BodyTab() {
-  const measurements = useBodyMeasurements();
+  const router = useRouter();
+  const dailyViews = useDailyBodyViews();
   const t = useT();
   const { formatChartDate } = useFormat();
+  const [period, setPeriod] = useState<ChartPeriod>("3m");
 
-  const measurementConfig = [
-    { key: "weight", label: t.progress.bodyMeasurements.weight, color: COLORS[0] },
-    { key: "chest", label: t.progress.bodyMeasurements.chest, color: COLORS[1] },
-    { key: "waist", label: t.progress.bodyMeasurements.waist, color: COLORS[2] },
-    { key: "arms", label: t.progress.bodyMeasurements.arms, color: COLORS[3] },
-    { key: "thighs", label: t.progress.bodyMeasurements.thighs, color: COLORS[4] },
-    { key: "calves", label: t.progress.bodyMeasurements.calves, color: COLORS[5] },
+  const periods = [
+    { value: "1m" as const, label: t.progress.period1m },
+    { value: "2m" as const, label: t.progress.period2m },
+    { value: "3m" as const, label: t.progress.period3m },
+    { value: "6m" as const, label: t.progress.period6m },
+    { value: "all" as const, label: t.progress.periodAll },
   ];
 
-  const chartData = measurements?.map((m) => ({
-    date: formatChartDate(m.date),
-    weight: m.weight,
-    bodyFat: m.bodyFat,
-    chest: m.chest,
-    waist: m.waist,
-    arms: m.arms,
-    thighs: m.thighs,
-    calves: m.calves,
+  const measurementConfig = BODY_METRIC_FIELDS.map((key, index) => ({
+    key,
+    label: t.progress.bodyMeasurements[key],
+    color: COLORS[index] ?? COLORS[0]!,
   }));
 
-  const hasMeasurements = chartData && chartData.length > 0;
+  const chartData = useMemo(() => {
+    if (!dailyViews) return undefined;
+    return filterByPeriod(dailyViews, period).map((view) => ({
+      date: formatChartDate(view.date),
+      weight: view.weight,
+      chest: view.chest,
+      waist: view.waist,
+      arms: view.arms,
+      thighs: view.thighs,
+      calves: view.calves,
+    }));
+  }, [dailyViews, period, formatChartDate]);
+
+  const hasChartData = chartData && chartData.length > 0;
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <ChartPeriodSelector period={period} onChange={setPeriod} labels={periods} />
+        <Button size="sm" onClick={() => router.push("/progress/body/log")}>
+          <Plus className="h-4 w-4" />
+          {t.progress.logMeasurement}
+        </Button>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-medium">{t.progress.bodyWeight}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-48 outline-none">
-            {hasMeasurements ? (
+            {hasChartData ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 5, right: 0, left: -15, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-muted)" />
@@ -74,13 +99,13 @@ export function BodyTab() {
                     stroke="var(--color-primary)"
                     strokeWidth={2}
                     dot={{ fill: "var(--color-primary)", r: 3 }}
-                    name="Weight (kg)"
+                    name={t.progress.bodyMeasurements.weight}
                   />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                No measurements yet
+                {t.progress.noMeasurementsYet}
               </div>
             )}
           </div>
@@ -89,11 +114,11 @@ export function BodyTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Body Measurements</CardTitle>
+          <CardTitle className="text-sm font-medium">{t.progress.bodyMeasurementsTitle}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64 outline-none">
-            {hasMeasurements ? (
+            {hasChartData ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 5, right: 0, left: -15, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-muted)" />
@@ -110,40 +135,46 @@ export function BodyTab() {
                     }}
                     cursor={{ stroke: "#444", strokeWidth: 1 }}
                   />
-                  {measurementConfig.map((cfg) => (
-                    <Line
-                      key={cfg.key}
-                      type="monotone"
-                      dataKey={cfg.key}
-                      stroke={cfg.color}
-                      strokeWidth={2}
-                      dot={{ fill: cfg.color, r: 2 }}
-                      name={cfg.label}
-                    />
-                  ))}
+                  {measurementConfig
+                    .filter((cfg) => cfg.key !== "weight")
+                    .map((cfg) => (
+                      <Line
+                        key={cfg.key}
+                        type="monotone"
+                        dataKey={cfg.key}
+                        stroke={cfg.color}
+                        strokeWidth={2}
+                        dot={{ fill: cfg.color, r: 2 }}
+                        name={cfg.label}
+                      />
+                    ))}
                 </LineChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                No measurements yet
+                {t.progress.noMeasurementsYet}
               </div>
             )}
           </div>
-          {hasMeasurements && (
+          {hasChartData && (
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-              {measurementConfig.map((cfg) => (
-                <div key={cfg.key} className="flex items-center gap-1.5">
-                  <span
-                    className="h-2.5 w-2.5 rounded-sm shrink-0"
-                    style={{ backgroundColor: cfg.color }}
-                  />
-                  <span className="text-xs text-muted-foreground">{cfg.label}</span>
-                </div>
-              ))}
+              {measurementConfig
+                .filter((cfg) => cfg.key !== "weight")
+                .map((cfg) => (
+                  <div key={cfg.key} className="flex items-center gap-1.5">
+                    <span
+                      className="h-2.5 w-2.5 rounded-sm shrink-0"
+                      style={{ backgroundColor: cfg.color }}
+                    />
+                    <span className="text-xs text-muted-foreground">{cfg.label}</span>
+                  </div>
+                ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      <BodyMeasurementHistory />
     </div>
   );
 }
