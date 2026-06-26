@@ -2,9 +2,9 @@
 
 import { useDashboardStats, useActiveProgram } from "@/lib/hooks/use-data";
 import { Greeting } from "@/components/dashboard/greeting";
-import { StartWorkoutButton } from "@/components/dashboard/start-workout-button";
 import { SmartStats } from "@/components/dashboard/smart-stats";
 import { RecentPRs } from "@/components/dashboard/recent-prs";
+import { ProgressChart } from "@/components/dashboard/progress-chart";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
@@ -36,12 +36,13 @@ export default function DashboardPage() {
           calories={stats.calories}
           weight={stats.currentWeight}
           weightTrend={stats.weightTrend}
+          hasWeightHistory={stats.hasWeightHistory}
         />
       )}
 
-      <RecentPRs />
+      <ProgressChart />
 
-      <StartWorkoutButton />
+      <RecentPRs />
     </div>
   );
 }

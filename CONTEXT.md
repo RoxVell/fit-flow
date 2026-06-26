@@ -75,3 +75,39 @@ _Avoid_: date range, zoom level
 **focus domain**:
 Y-axis scaling that starts below the data minimum (≈12% padding under range) instead of zero, so small progress/regression is readable on strength charts. `computeFocusDomain` in `lib/charts/domain.ts`.
 _Avoid_: auto scale, zoomed axis
+
+**body measurement snapshot**:
+A single log entry capturing whatever body metrics the user measured at one moment. **Tracked body metrics** in the form: weight and circumferences — all optional individually, but **at least one field must be filled** to save. Multiple snapshots may exist on the same calendar day; charts and dashboard use a **daily body view**. No morning/evening distinction in the UI. Distinct from **training metric** (derived from workout sets).
+_Avoid_: measurement (alone), body log, check-in
+
+**daily body view**:
+The merged representation of all **body measurement snapshots** on one calendar day. For each metric field, take the latest snapshot that has a value for that field (last non-null wins by snapshot time). Charts and dashboard weight trend consume daily body views, not raw snapshots.
+_Avoid_: daily average, combined entry, rollup row
+
+**body measurement log step**:
+Full-screen form at `/progress/body/log` for creating a **body measurement snapshot**. Back cancels without save; Save persists and returns to **Progress → Body**. Reached from Body tab **Log** or Dashboard weight card.
+_Avoid_: log modal, log sheet, measurements screen
+
+**body measurement history**:
+On **Progress → Body**, a list of raw **body measurement snapshots** (not **daily body view** rows). Each row: date + compact summary of filled fields only (e.g. `80 kg · 85 cm waist`). **Delete**: swipe left, then confirm in a dialog. **Editing** is not supported — fix via new snapshot or delete + re-log.
+_Avoid_: edit measurement, update entry, daily history row
+
+**snapshot date**:
+Each **body measurement snapshot** is stamped with a user-chosen calendar date; default is today at save time. Backdating is allowed on the full form (e.g. forgot yesterday's weigh-in).
+_Avoid_: logged at, timestamp, entry time
+
+**tracked body metrics**:
+Weight (kg) and circumferences (chest, waist, arms, thighs, calves — cm). **Body-fat %** is not offered in the UI for now; the field remains in storage/sync for a possible future release.
+_Avoid_: body composition, fat tracking
+
+**body progress charts**:
+Weight and circumference charts on **Progress → Body** use the same **chart period** control as other Progress tabs (`1m`–`6m`, `all`; default `3m`). Data source is **daily body view**, not raw snapshots.
+_Avoid_: body chart range, measurement zoom
+
+**body tab empty state**:
+When there are no snapshots yet, show chart placeholders («No measurements yet») and a **Log measurement** CTA that opens **body measurement log step**. History section hidden or empty until first snapshot.
+_Avoid_: onboarding screen, hide charts
+
+**dashboard weight card**:
+Shows the latest weight from **daily body view** history; **—** with no trend arrow when no weight has ever been logged. Trend compares the two most recent days that have a weight (skip days without weight). Card is always visible and tappable → **body measurement log step**.
+_Avoid_: zero placeholder, hide weight stat

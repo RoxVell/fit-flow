@@ -71,7 +71,7 @@ function mapBodyMeasurement(row: typeof bodyMeasurements.$inferSelect) {
   return {
     id: row.id,
     date: toIso(row.date)!,
-    weight: row.weight,
+    weight: row.weight ?? undefined,
     bodyFat: row.bodyFat ?? undefined,
     chest: row.chest ?? undefined,
     waist: row.waist ?? undefined,

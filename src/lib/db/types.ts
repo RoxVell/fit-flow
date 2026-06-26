@@ -142,7 +142,7 @@ export interface CardioSession {
 export interface BodyMeasurement {
   id: string;
   date: string;
-  weight: number;
+  weight?: number;
   bodyFat?: number;
   chest?: number;
   waist?: number;
@@ -164,8 +164,9 @@ export interface PersonalRecord {
 export interface DashboardStats {
   weeklyWorkouts: number;
   weeklyVolume: number;
-  currentWeight: number;
+  currentWeight: number | null;
   weightTrend: "up" | "down" | "stable";
+  hasWeightHistory: boolean;
   steps: number;
   calories: number;
   activeDays: number;
