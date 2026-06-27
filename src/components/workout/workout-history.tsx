@@ -14,8 +14,9 @@ import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLocale } from "@/lib/stores/locale-store";
 import {
   getCompletedWorkoutLogsInRange,
   removeWorkoutLog,
@@ -42,18 +43,16 @@ function getDurationMinutes(startedAt: string, endedAt?: string) {
   return Math.max(1, Math.round(ms / 60000));
 }
 
-function dateInputValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function atStartOfDay(date: Date) {
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
 }
 
-function dateFromInput(value: string, endOfDay = false) {
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-  date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
-  return date;
+function atEndOfDay(date: Date) {
+  const copy = new Date(date);
+  copy.setHours(23, 59, 59, 999);
+  return copy;
 }
 
 function downloadCsv(filename: string, csv: string) {
@@ -68,6 +67,7 @@ function downloadCsv(filename: string, csv: string) {
 
 export function WorkoutHistory() {
   const t = useT();
+  const locale = useLocale();
   const { formatShortDate } = useFormat();
   const { getName } = useExerciseLookup();
   const [limit, setLimit] = useState(PAGE_SIZE);
@@ -78,11 +78,11 @@ export function WorkoutHistory() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [exportPreset, setExportPreset] = useState<WorkoutExportPreset>("1m");
-  const [exportFrom, setExportFrom] = useState(() =>
-    dateInputValue(createWorkoutExportRange("1m").from)
+  const [exportFrom, setExportFrom] = useState(
+    () => createWorkoutExportRange("1m").from
   );
-  const [exportTo, setExportTo] = useState(() =>
-    dateInputValue(createWorkoutExportRange("1m").to)
+  const [exportTo, setExportTo] = useState(
+    () => createWorkoutExportRange("1m").to
   );
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -102,14 +102,14 @@ export function WorkoutHistory() {
     setExportError(null);
     if (preset === "custom") return;
     const range = createWorkoutExportRange(preset);
-    setExportFrom(dateInputValue(range.from));
-    setExportTo(dateInputValue(range.to));
+    setExportFrom(range.from);
+    setExportTo(range.to);
   };
 
   const handleExport = () => {
     if (exporting) return;
-    const from = dateFromInput(exportFrom);
-    const to = dateFromInput(exportTo, true);
+    const from = atStartOfDay(exportFrom);
+    const to = atEndOfDay(exportTo);
     if (from.getTime() > to.getTime()) {
       setExportError(t.workout.exportInvalidRange);
       return;
@@ -177,68 +177,78 @@ export function WorkoutHistory() {
           <CalendarDays className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">{t.workout.historyTitle}</h2>
         </div>
-        <div className="space-y-2 px-4 pb-3">
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="flex min-w-36 flex-col gap-1">
-              <label className="text-xs text-muted-foreground">
-                {t.workout.exportPeriod}
-              </label>
-              <select
-                value={exportPreset}
-                onChange={(event) =>
-                  handlePresetChange(event.target.value as WorkoutExportPreset)
-                }
-                className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                {EXPORT_PRESETS.map((preset) => (
-                  <option key={preset} value={preset}>
-                    {t.workout.exportPresets[preset]}
-                  </option>
-                ))}
-              </select>
+        <div className="space-y-3 px-4 pb-4">
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground">
+              {t.workout.exportCsv}
+            </p>
+            <div
+              className="flex w-full items-center rounded-lg border bg-muted/50 p-0.5"
+              role="group"
+              aria-label={t.workout.exportPeriod}
+            >
+              {EXPORT_PRESETS.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => handlePresetChange(preset)}
+                  className={cn(
+                    "min-w-0 flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
+                    exportPreset === preset
+                      ? "bg-card text-foreground shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t.workout.exportPresets[preset]}
+                </button>
+              ))}
             </div>
-            <div className="flex min-w-32 flex-col gap-1">
-              <label className="text-xs text-muted-foreground">
-                {t.workout.exportFrom}
-              </label>
-              <Input
-                type="date"
-                value={exportFrom}
-                onChange={(event) => {
-                  setExportPreset("custom");
-                  setExportFrom(event.target.value);
-                  setExportError(null);
-                }}
-              />
-            </div>
-            <div className="flex min-w-32 flex-col gap-1">
-              <label className="text-xs text-muted-foreground">
-                {t.workout.exportTo}
-              </label>
-              <Input
-                type="date"
-                value={exportTo}
-                onChange={(event) => {
-                  setExportPreset("custom");
-                  setExportTo(event.target.value);
-                  setExportError(null);
-                }}
-              />
-            </div>
+            {exportPreset === "custom" && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">
+                    {t.workout.exportFrom}
+                  </label>
+                  <DatePicker
+                    value={exportFrom}
+                    locale={locale}
+                    onChange={(date) => {
+                      setExportPreset("custom");
+                      setExportFrom(atStartOfDay(date));
+                      setExportError(null);
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">
+                    {t.workout.exportTo}
+                  </label>
+                  <DatePicker
+                    value={exportTo}
+                    locale={locale}
+                    onChange={(date) => {
+                      setExportPreset("custom");
+                      setExportTo(atEndOfDay(date));
+                      setExportError(null);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+            {exportError && (
+              <p className="text-xs text-destructive">{exportError}</p>
+            )}
             <Button
               type="button"
               variant="outline"
               onClick={handleExport}
               disabled={exporting}
-              className="gap-1.5"
+              className="w-full gap-1.5"
             >
               <Download className="h-4 w-4" />
               {exporting ? t.workout.exporting : t.workout.exportCsv}
             </Button>
           </div>
-          {exportError && (
-            <p className="text-xs text-destructive">{exportError}</p>
-          )}
         </div>
         <div
           className={cn(

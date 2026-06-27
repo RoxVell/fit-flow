@@ -8,7 +8,6 @@ export type WorkoutExportRange = {
 export type WorkoutExportPreset = "1m" | "3m" | "6m" | "custom";
 
 export const WORKOUT_EXPORT_HEADERS = [
-  "workout_id",
   "started_at",
   "ended_at",
   "program",
@@ -64,7 +63,6 @@ export function buildWorkoutLogsCsv(logs: WorkoutLogEntity[]): string {
         .filter((set) => set.completed)
         .sort((a, b) => a.setOrder - b.setOrder)
         .map((set, index) => [
-          log.id,
           log.startedAt,
           log.endedAt ?? "",
           log.programName ?? "",

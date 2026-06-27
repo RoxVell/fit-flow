@@ -76,7 +76,7 @@ describe("buildWorkoutLogsCsv", () => {
   it("exports completed workout sets with csv escaping", () => {
     const csv = buildWorkoutLogsCsv([makeLog()]);
 
-    expect(csv).toContain("workout_id,started_at,ended_at");
+    expect(csv).toContain("started_at,ended_at,program");
     expect(csv).toContain('"Push, Pull"');
     expect(csv).toContain('"Heavy ""Push"""');
     expect(csv).toContain("Bench Press,1,working,105,3,1,yes");
