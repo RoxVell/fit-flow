@@ -4,32 +4,17 @@ import { CalendarClock, Languages, Palette, Info, RefreshCw } from "lucide-react
 import { ThemeToggle } from "@/components/settings/theme-toggle";
 import { LanguageToggle } from "@/components/settings/language-toggle";
 import { useT } from "@/lib/i18n/use-t";
+import { useFormat } from "@/lib/i18n/use-format";
 import { useSyncState } from "@/lib/sync/sync-service";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "—";
-const BUILD_DATE = process.env.NEXT_PUBLIC_BUILD_DATE
-  ? new Date(process.env.NEXT_PUBLIC_BUILD_DATE).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  : "—";
-
-function formatSyncDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const BUILD_DATE = process.env.NEXT_PUBLIC_BUILD_DATE ?? null;
 
 export default function SettingsPage() {
   const t = useT();
+  const { formatDateTime } = useFormat();
   const { lastSyncAt } = useSyncState();
+  const buildDate = BUILD_DATE ? formatDateTime(BUILD_DATE) : "—";
 
   return (
     <div className="space-y-10 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
@@ -76,7 +61,7 @@ export default function SettingsPage() {
               <CalendarClock className="h-5 w-5 text-foreground/70" />
               {t.settings.buildDate}
             </span>
-            <span className="text-sm text-muted-foreground">{BUILD_DATE}</span>
+            <span className="text-sm text-muted-foreground">{buildDate}</span>
           </div>
           <div className="flex items-center justify-between px-4 py-3.5">
             <span className="flex items-center gap-3 text-base font-medium">
@@ -84,7 +69,7 @@ export default function SettingsPage() {
               {t.settings.lastSync}
             </span>
             <span className="text-sm text-muted-foreground">
-              {lastSyncAt ? formatSyncDate(lastSyncAt) : t.settings.never}
+              {lastSyncAt ? formatDateTime(lastSyncAt) : t.settings.never}
             </span>
           </div>
         </div>
