@@ -5,6 +5,7 @@ import type { MuscleGroup } from "@/lib/db/types";
 import { useLocale } from "@/lib/stores/locale-store";
 import {
   formatChartDate,
+  formatDateTime,
   formatHistoryDate,
   formatShortDate,
   getDayLabels,
@@ -30,6 +31,10 @@ export function useFormat() {
     (iso: string) => formatHistoryDate(iso, locale),
     [locale]
   );
+  const formatDateTimeFn = useCallback(
+    (iso: string) => formatDateTime(iso, locale),
+    [locale]
+  );
   const muscleGroupLabelFn = useCallback(
     (group: MuscleGroup | string) => muscleGroupLabel(group, locale),
     [locale]
@@ -42,6 +47,7 @@ export function useFormat() {
     formatShortDate: formatShortDateFn,
     formatChartDate: formatChartDateFn,
     formatHistoryDate: formatHistoryDateFn,
+    formatDateTime: formatDateTimeFn,
     muscleGroupLabel: muscleGroupLabelFn,
   };
 }

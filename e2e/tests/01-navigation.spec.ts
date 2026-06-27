@@ -39,7 +39,6 @@ test("bottom nav links route to every primary screen", async ({ page }) => {
   await expect(page).toHaveURL(/\/dashboard$/);
 });
 
-test("start workout button on dashboard routes to the workout plan", async ({ page }) => {
-  await page.getByRole("link", { name: /start workout/i }).click();
-  await expect(page).toHaveURL(/\/workout$/);
+test("dashboard no longer shows the start workout button", async ({ page }) => {
+  await expect(page.getByRole("link", { name: /start workout/i })).toHaveCount(0);
 });

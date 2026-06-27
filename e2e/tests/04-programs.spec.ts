@@ -47,12 +47,18 @@ test("user can set a different program as active", async ({ page }) => {
   const upperLowerCard = page.locator(".overflow-hidden").filter({
     has: page.getByText(/^Upper \/ Lower$/i),
   });
+  const pplRadio = pplCard.getByRole("radio", { name: /set active:\s*PPL/i });
+  const upperLowerRadio = upperLowerCard.getByRole("radio", {
+    name: /set active:\s*Upper \/ Lower/i,
+  });
 
   await expect(pplCard.getByText(/^active$/i)).toBeVisible();
-  await upperLowerCard.getByRole("button", { name: /set active/i }).click();
+  await expect(pplRadio).toBeChecked();
+  await upperLowerRadio.click();
 
   await expect(upperLowerCard.getByText(/^active$/i)).toBeVisible();
-  await expect(pplCard.getByRole("button", { name: /set active/i })).toBeVisible();
+  await expect(upperLowerRadio).toBeChecked();
+  await expect(pplRadio).not.toBeChecked();
 
   await page.goto("/workout");
   await expect(page.getByText(/Upper \/ Lower/i).first()).toBeVisible();

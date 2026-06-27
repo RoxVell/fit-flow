@@ -45,6 +45,16 @@ export function formatHistoryDate(iso: string, locale: Locale): string {
   });
 }
 
+export function formatDateTime(iso: string, locale: Locale): string {
+  return new Date(iso).toLocaleDateString(LOCALE_TAG[locale], {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 const MUSCLE_LABELS: Record<Locale, Record<MuscleGroup, string>> = {
   en: {
     chest: "Chest",

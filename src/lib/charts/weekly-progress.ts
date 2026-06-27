@@ -81,38 +81,93 @@ export function buildPerExerciseBaseline(
   return baseline;
 }
 
-function averageProgressForExercises(
-  weekExercises: Map<string, number>,
-  baseline: Map<string, number>,
-  exerciseFilter?: (exerciseId: string) => boolean
-): number | null {
-  let total = 0;
-  let count = 0;
-
-  for (const [exId, value] of weekExercises) {
-    if (exerciseFilter && !exerciseFilter(exId)) continue;
-    const baseValue = baseline.get(exId);
-    if (baseValue && baseValue > 0) {
-      total += (value / baseValue) * 100;
-      count++;
+function getPeriodCohort(
+  filteredWeeks: [string, Map<string, number>][]
+): Set<string> {
+  const cohort = new Set<string>();
+  for (const [, exercises] of filteredWeeks) {
+    for (const exId of exercises.keys()) {
+      cohort.add(exId);
     }
   }
-
-  return count > 0 ? Math.round((total / count) * 10) / 10 : null;
+  return cohort;
 }
 
+function getPeriodStartProgress(
+  filteredWeeks: [string, Map<string, number>][],
+  baseline: Map<string, number>,
+  exerciseId: string
+): number | null {
+  for (const [, exercises] of filteredWeeks) {
+    const value = exercises.get(exerciseId);
+    const baseValue = baseline.get(exerciseId);
+    if (value !== undefined && baseValue && baseValue > 0) {
+      return Math.round((value / baseValue) * 1000) / 10;
+    }
+  }
+  return null;
+}
+
+/** Weekly series indexed to 100 at each exercise's first week in the period. */
 export function computeOverallProgressSeries(
   filteredWeeks: [string, Map<string, number>][],
   baseline: Map<string, number>,
   formatChartDate: (iso: string) => string
 ): { week: string; progress: number }[] {
+  const cohort = getPeriodCohort(filteredWeeks);
+  const periodStartProgress = new Map<string, number>();
+  for (const exId of cohort) {
+    const start = getPeriodStartProgress(filteredWeeks, baseline, exId);
+    if (start !== null) {
+      periodStartProgress.set(exId, start);
+    }
+  }
+
+  const runningProgress = new Map<string, number>();
+
   return filteredWeeks.map(([weekStart, exercises]) => {
-    const progress = averageProgressForExercises(exercises, baseline) ?? 100;
+    for (const [exId, value] of exercises) {
+      const baseValue = baseline.get(exId);
+      if (baseValue && baseValue > 0) {
+        runningProgress.set(exId, Math.round((value / baseValue) * 1000) / 10);
+      }
+    }
+
+    let total = 0;
+    let count = 0;
+    for (const exId of cohort) {
+      const start = periodStartProgress.get(exId);
+      const current = runningProgress.get(exId);
+      if (start && start > 0 && current !== undefined) {
+        total += (current / start) * 100;
+        count++;
+      }
+    }
+
     return {
       week: formatChartDate(weekStart),
-      progress,
+      progress: count > 0 ? Math.round((total / count) * 10) / 10 : 100,
     };
   });
+}
+
+export function computeOverallProgressSummary(
+  filteredWeeks: [string, Map<string, number>][],
+  baseline: Map<string, number>
+): { current: number | null; change: PeriodChange | null } {
+  const summaries: ExerciseProgressSummary[] = [];
+
+  for (const exerciseId of baseline.keys()) {
+    const values = getExerciseProgressValues(filteredWeeks, baseline, exerciseId);
+    if (values.length === 0) continue;
+    summaries.push({
+      exerciseId,
+      current: values[values.length - 1],
+      change: computePeriodChange(values),
+    });
+  }
+
+  return computeBodyPartSummaryFromExercises(summaries);
 }
 
 export const BODY_PART_ORDER: BodyPart[] = [

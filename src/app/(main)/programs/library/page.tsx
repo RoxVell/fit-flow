@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -67,10 +67,16 @@ function ProgramsView() {
     setActivatingId(id);
     try {
       await setActiveProgram(id);
-    } finally {
+    } catch {
       setActivatingId(null);
     }
   };
+
+  useEffect(() => {
+    if (!activatingId || !programs) return;
+    const activated = programs.some((p) => p.id === activatingId && p.isActive);
+    if (activated) setActivatingId(null);
+  }, [programs, activatingId]);
 
   const confirmDelete = async () => {
     if (!pendingDelete || deleting) return;
@@ -106,19 +112,22 @@ function ProgramsView() {
                   <input
                     type="radio"
                     name="active-program"
-                    checked={prog.isActive}
-                    disabled={activatingId != null}
+                    checked={prog.isActive || activatingId === prog.id}
+                    disabled={activatingId != null && activatingId !== prog.id}
                     aria-label={`${t.programs.setActive}: ${prog.name}`}
-                    onChange={(event) => {
-                      if (event.target.checked) void handleSetActive(prog.id);
+                    onClick={() => {
+                      if (!prog.isActive && activatingId == null) {
+                        void handleSetActive(prog.id);
+                      }
                     }}
+                    onChange={() => {}}
                     className="h-4 w-4 accent-primary"
                   />
                 </label>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-base font-bold">{prog.name}</p>
-                    {prog.isActive && (
+                    {(prog.isActive || activatingId === prog.id) && (
                       <Badge className="text-[10px] h-5 px-2">{t.programs.active}</Badge>
                     )}
                   </div>

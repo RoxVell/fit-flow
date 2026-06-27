@@ -1,5 +1,7 @@
 export type ChartPeriod = "1m" | "2m" | "3m" | "6m" | "all";
 
+export const DEFAULT_CHART_PERIOD: ChartPeriod = "1m";
+
 export const CHART_PERIOD_DAYS: Record<ChartPeriod, number> = {
   "1m": 30,
   "2m": 60,
