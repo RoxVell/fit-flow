@@ -14,7 +14,7 @@ import { useWorkoutLogs } from "@/lib/hooks/use-data";
 import { ChartPeriodSelector } from "@/components/charts/chart-period-selector";
 import { PeriodChangeIndicator } from "@/components/charts/period-change-indicator";
 import { computeFocusDomain, computePeriodChange } from "@/lib/charts/domain";
-import { type ChartPeriod } from "@/lib/charts/periods";
+import { DEFAULT_CHART_PERIOD, type ChartPeriod } from "@/lib/charts/periods";
 import {
   buildWeeklyExerciseBest1RM,
   buildPerExerciseBaseline,
@@ -27,7 +27,7 @@ import { useFormat } from "@/lib/i18n/use-format";
 
 export function ProgressChart() {
   const logs = useWorkoutLogs(200);
-  const [period, setPeriod] = useState<ChartPeriod>("3m");
+  const [period, setPeriod] = useState<ChartPeriod>(DEFAULT_CHART_PERIOD);
   const t = useT();
   const { formatChartDate } = useFormat();
 
@@ -39,24 +39,23 @@ export function ProgressChart() {
     { value: "all" as const, label: t.progress.periodAll },
   ];
 
-  const chartData = useMemo(() => {
-    if (!logs || logs.length === 0) return null;
+  const { chartData, periodChange } = useMemo(() => {
+    if (!logs || logs.length === 0) return { chartData: null, periodChange: null };
 
     const weeksMap = buildWeeklyExerciseBest1RM(logs);
     const sortedWeeks = getSortedWeeks(weeksMap);
-    if (sortedWeeks.length < 2) return null;
+    if (sortedWeeks.length < 2) return { chartData: null, periodChange: null };
 
     const filteredWeeks = filterWeeksByPeriod(sortedWeeks, period);
-    if (filteredWeeks.length < 2) return null;
+    if (filteredWeeks.length < 2) return { chartData: null, periodChange: null };
 
     const baseline = buildPerExerciseBaseline(sortedWeeks);
-    return computeOverallProgressSeries(filteredWeeks, baseline, formatChartDate);
+    const data = computeOverallProgressSeries(filteredWeeks, baseline, formatChartDate);
+    return {
+      chartData: data,
+      periodChange: computePeriodChange(data.map((d) => d.progress)),
+    };
   }, [logs, period, formatChartDate]);
-
-  const periodChange = useMemo(() => {
-    if (!chartData?.length) return null;
-    return computePeriodChange(chartData.map((d) => d.progress));
-  }, [chartData]);
 
   const yDomain = useMemo(() => {
     if (!chartData?.length) return undefined;

@@ -54,7 +54,7 @@ test("user can set a different program as active", async ({ page }) => {
 
   await expect(pplCard.getByText(/^active$/i)).toBeVisible();
   await expect(pplRadio).toBeChecked();
-  await upperLowerRadio.check();
+  await upperLowerRadio.click();
 
   await expect(upperLowerCard.getByText(/^active$/i)).toBeVisible();
   await expect(upperLowerRadio).toBeChecked();

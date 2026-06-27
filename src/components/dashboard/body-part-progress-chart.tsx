@@ -16,7 +16,7 @@ import { useExerciseManifest } from "@/lib/hooks/use-exercise-library";
 import { ChartPeriodSelector } from "@/components/charts/chart-period-selector";
 import { BODY_PART_CHART_COLORS } from "@/lib/charts/body-part-colors";
 import { computeFocusDomain } from "@/lib/charts/domain";
-import { type ChartPeriod } from "@/lib/charts/periods";
+import { DEFAULT_CHART_PERIOD, type ChartPeriod } from "@/lib/charts/periods";
 import {
   buildWeeklyExerciseBest1RM,
   buildPerExerciseBaseline,
@@ -84,7 +84,7 @@ function ExerciseProgressRow({
 export function BodyPartProgressChart() {
   const logs = useWorkoutLogs(200);
   const { manifest } = useExerciseManifest();
-  const [period, setPeriod] = useState<ChartPeriod>("3m");
+  const [period, setPeriod] = useState<ChartPeriod>(DEFAULT_CHART_PERIOD);
   const [expandedBodyPart, setExpandedBodyPart] = useState<BodyPart | null>(null);
   const t = useT();
   const locale = useLocale();

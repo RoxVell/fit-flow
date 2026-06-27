@@ -18,7 +18,7 @@ import { ChartPeriodSelector } from "@/components/charts/chart-period-selector";
 import { BodyMeasurementHistory } from "@/components/progress/body-measurement-history";
 import { useDailyBodyViews } from "@/lib/hooks/use-data";
 import { BODY_METRIC_FIELDS } from "@/lib/body-measurements/metrics";
-import { filterByPeriod, type ChartPeriod } from "@/lib/charts/periods";
+import { DEFAULT_CHART_PERIOD, filterByPeriod, type ChartPeriod } from "@/lib/charts/periods";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 
@@ -29,7 +29,7 @@ export function BodyTab() {
   const dailyViews = useDailyBodyViews();
   const t = useT();
   const { formatChartDate } = useFormat();
-  const [period, setPeriod] = useState<ChartPeriod>("3m");
+  const [period, setPeriod] = useState<ChartPeriod>(DEFAULT_CHART_PERIOD);
 
   const periods = [
     { value: "1m" as const, label: t.progress.period1m },

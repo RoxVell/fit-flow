@@ -29,7 +29,7 @@ import { HistoryAccordion } from "@/components/progress/history-accordion";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 import { computeFocusDomain, computePeriodChange } from "@/lib/charts/domain";
-import { filterByPeriod, type ChartPeriod } from "@/lib/charts/periods";
+import { DEFAULT_CHART_PERIOD, filterByPeriod, type ChartPeriod } from "@/lib/charts/periods";
 
 export function ExercisesTab() {
   const t = useT();
@@ -38,7 +38,7 @@ export function ExercisesTab() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [chartType, setChartType] = useState<"1rm" | "volume">("1rm");
-  const [period, setPeriod] = useState<ChartPeriod>("3m");
+  const [period, setPeriod] = useState<ChartPeriod>(DEFAULT_CHART_PERIOD);
 
   const periods = [
     { value: "1m" as const, label: t.progress.period1m },
