@@ -42,6 +42,25 @@ export async function getWorkoutLogs(limit = 20): Promise<WorkoutLogEntity[]> {
   return attachExercisesToLogs(all, exerciseMap);
 }
 
+export async function getCompletedWorkoutLogsInRange(
+  from: Date,
+  to: Date
+): Promise<WorkoutLogEntity[]> {
+  await ensureSeeded();
+  const [all, exerciseMap] = await Promise.all([
+    db.workoutLogs
+      .where("startedAt")
+      .between(from.toISOString(), to.toISOString(), true, true)
+      .filter((l) => !l.deletedAt && !!l.endedAt)
+      .toArray(),
+    getExerciseMap(),
+  ]);
+  const sorted = all.sort(
+    (a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime()
+  );
+  return attachExercisesToLogs(sorted, exerciseMap);
+}
+
 export async function getWorkoutLogById(id: string): Promise<WorkoutLogEntity | undefined> {
   await ensureSeeded();
   const [log, exerciseMap] = await Promise.all([db.workoutLogs.get(id), getExerciseMap()]);

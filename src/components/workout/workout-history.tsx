@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CalendarDays, ChevronDown, Pencil, Trash2 } from "lucide-react";
+import { CalendarDays, ChevronDown, Download, Pencil, Trash2 } from "lucide-react";
 import {
   useCompletedWorkoutLogs,
   useCompletedWorkoutLogsCount,
@@ -14,20 +14,56 @@ import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { removeWorkoutLog } from "@/lib/repositories/workouts";
+import {
+  getCompletedWorkoutLogsInRange,
+  removeWorkoutLog,
+} from "@/lib/repositories/workouts";
 import type { WorkoutLogEntity } from "@/lib/db/types";
 import { WorkoutEditSheet } from "@/components/workout/workout-edit-sheet";
+import {
+  buildWorkoutLogsCsv,
+  createWorkoutExportRange,
+  getWorkoutExportFilename,
+  type WorkoutExportPreset,
+} from "@/lib/workout/export-csv";
 
 const PAGE_SIZE = 20;
 
 const WORKOUT_ROW_GRID =
   "grid grid-cols-[4.25rem_minmax(0,1fr)_2.75rem_5.25rem_1rem] items-center gap-2";
 
+const EXPORT_PRESETS: WorkoutExportPreset[] = ["1m", "3m", "6m", "custom"];
+
 function getDurationMinutes(startedAt: string, endedAt?: string) {
   if (!endedAt) return null;
   const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
   return Math.max(1, Math.round(ms / 60000));
+}
+
+function dateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function dateFromInput(value: string, endOfDay = false) {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+  return date;
+}
+
+function downloadCsv(filename: string, csv: string) {
+  const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 export function WorkoutHistory() {
@@ -41,6 +77,15 @@ export function WorkoutHistory() {
   const [editingLog, setEditingLog] = useState<WorkoutLogEntity | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [exportPreset, setExportPreset] = useState<WorkoutExportPreset>("1m");
+  const [exportFrom, setExportFrom] = useState(() =>
+    dateInputValue(createWorkoutExportRange("1m").from)
+  );
+  const [exportTo, setExportTo] = useState(() =>
+    dateInputValue(createWorkoutExportRange("1m").to)
+  );
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const hasMore =
@@ -51,6 +96,41 @@ export function WorkoutHistory() {
   const loadMore = useCallback(() => {
     setLimit((n) => n + PAGE_SIZE);
   }, []);
+
+  const handlePresetChange = (preset: WorkoutExportPreset) => {
+    setExportPreset(preset);
+    setExportError(null);
+    if (preset === "custom") return;
+    const range = createWorkoutExportRange(preset);
+    setExportFrom(dateInputValue(range.from));
+    setExportTo(dateInputValue(range.to));
+  };
+
+  const handleExport = () => {
+    if (exporting) return;
+    const from = dateFromInput(exportFrom);
+    const to = dateFromInput(exportTo, true);
+    if (from.getTime() > to.getTime()) {
+      setExportError(t.workout.exportInvalidRange);
+      return;
+    }
+    setExporting(true);
+    setExportError(null);
+    void getCompletedWorkoutLogsInRange(from, to)
+      .then((exportLogs) => {
+        if (exportLogs.length === 0) {
+          setExportError(t.workout.exportEmpty);
+          return;
+        }
+        const range = { from, to };
+        downloadCsv(getWorkoutExportFilename(range), buildWorkoutLogsCsv(exportLogs));
+      })
+      .catch((err) => {
+        console.warn("[workout-history] export failed", err);
+        setExportError(t.workout.exportFailed);
+      })
+      .finally(() => setExporting(false));
+  };
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -96,6 +176,69 @@ export function WorkoutHistory() {
         <div className="flex items-center gap-2 p-4 pb-2">
           <CalendarDays className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">{t.workout.historyTitle}</h2>
+        </div>
+        <div className="space-y-2 px-4 pb-3">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="flex min-w-36 flex-col gap-1">
+              <label className="text-xs text-muted-foreground">
+                {t.workout.exportPeriod}
+              </label>
+              <select
+                value={exportPreset}
+                onChange={(event) =>
+                  handlePresetChange(event.target.value as WorkoutExportPreset)
+                }
+                className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                {EXPORT_PRESETS.map((preset) => (
+                  <option key={preset} value={preset}>
+                    {t.workout.exportPresets[preset]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex min-w-32 flex-col gap-1">
+              <label className="text-xs text-muted-foreground">
+                {t.workout.exportFrom}
+              </label>
+              <Input
+                type="date"
+                value={exportFrom}
+                onChange={(event) => {
+                  setExportPreset("custom");
+                  setExportFrom(event.target.value);
+                  setExportError(null);
+                }}
+              />
+            </div>
+            <div className="flex min-w-32 flex-col gap-1">
+              <label className="text-xs text-muted-foreground">
+                {t.workout.exportTo}
+              </label>
+              <Input
+                type="date"
+                value={exportTo}
+                onChange={(event) => {
+                  setExportPreset("custom");
+                  setExportTo(event.target.value);
+                  setExportError(null);
+                }}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleExport}
+              disabled={exporting}
+              className="gap-1.5"
+            >
+              <Download className="h-4 w-4" />
+              {exporting ? t.workout.exporting : t.workout.exportCsv}
+            </Button>
+          </div>
+          {exportError && (
+            <p className="text-xs text-destructive">{exportError}</p>
+          )}
         </div>
         <div
           className={cn(
