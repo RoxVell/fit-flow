@@ -19,8 +19,18 @@ test("workout page shows plan and history tabs", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("dashboard no longer shows recent workouts section", async ({ page }) => {
-  await expect(page.getByText(/^Recent Workouts$/i)).toHaveCount(0);
+test("dashboard shows recent workouts after completing a session", async ({
+  page,
+}) => {
+  await finishQuickWorkout(page);
+  await page.goto("/dashboard");
+
+  await expect(page.getByText(/^Recent Workouts$/i)).toBeVisible();
+  await page
+    .getByRole("link", { name: /view all workouts/i })
+    .click();
+  await expect(page).toHaveURL(/\/workout\?tab=history/);
+  await expect(page.getByText(/^Workout History$/i)).toBeVisible();
 });
 
 test("history tab lists a completed workout after finishing a session", async ({

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Play, Dumbbell, ChevronDown, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useActiveProgram, useWorkoutDraft } from "@/lib/hooks/use-data";
@@ -23,9 +23,17 @@ type Tab = "plan" | "history";
 
 export default function WorkoutPlanPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useT();
   const [activeTab, setActiveTab] = useState<Tab>("plan");
   const draft = useWorkoutDraft();
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "history" || tab === "plan") {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (draft === undefined) return;
