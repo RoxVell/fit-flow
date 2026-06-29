@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { CalendarDays, ChevronDown, Download, Pencil, Trash2 } from "lucide-react";
 import {
   useCompletedWorkoutLogs,
@@ -13,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocale } from "@/lib/stores/locale-store";
@@ -31,6 +32,7 @@ import {
 } from "@/lib/workout/export-csv";
 
 const PAGE_SIZE = 20;
+const PREVIEW_LIMIT = 5;
 
 const WORKOUT_ROW_GRID =
   "grid grid-cols-[4.25rem_minmax(0,1fr)_2.75rem_5.25rem_1rem] items-center gap-2";
@@ -65,13 +67,13 @@ function downloadCsv(filename: string, csv: string) {
   URL.revokeObjectURL(url);
 }
 
-export function WorkoutHistory() {
+export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) {
   const t = useT();
   const locale = useLocale();
   const { formatShortDate } = useFormat();
   const { getName } = useExerciseLookup();
   const [limit, setLimit] = useState(PAGE_SIZE);
-  const logs = useCompletedWorkoutLogs(limit);
+  const logs = useCompletedWorkoutLogs(preview ? PREVIEW_LIMIT : limit);
   const totalCount = useCompletedWorkoutLogsCount();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingLog, setEditingLog] = useState<WorkoutLogEntity | null>(null);
@@ -89,6 +91,7 @@ export function WorkoutHistory() {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const hasMore =
+    !preview &&
     logs !== undefined &&
     totalCount !== undefined &&
     logs.length < totalCount;
@@ -133,6 +136,7 @@ export function WorkoutHistory() {
   };
 
   useEffect(() => {
+    if (preview) return;
     const el = sentinelRef.current;
     if (!el || !hasMore) return;
 
@@ -147,9 +151,10 @@ export function WorkoutHistory() {
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasMore, loadMore]);
+  }, [hasMore, loadMore, preview]);
 
   if (logs === undefined) {
+    if (preview) return null;
     return (
       <div className="space-y-2">
         <Skeleton className="h-48 w-full rounded-xl" />
@@ -158,6 +163,7 @@ export function WorkoutHistory() {
   }
 
   if (logs.length === 0) {
+    if (preview) return null;
     return (
       <div className="flex flex-col items-center justify-center gap-2 rounded-xl border bg-card px-4 py-12 text-center">
         <CalendarDays className="h-10 w-10 text-muted-foreground" />
@@ -175,8 +181,11 @@ export function WorkoutHistory() {
       <div className="overflow-hidden rounded-xl border bg-card">
         <div className="flex items-center gap-2 p-4 pb-2">
           <CalendarDays className="h-4 w-4 text-primary" />
-          <h2 className="text-sm font-semibold">{t.workout.historyTitle}</h2>
+          <h2 className="text-sm font-semibold">
+            {preview ? t.dashboard.recentWorkouts : t.workout.historyTitle}
+          </h2>
         </div>
+        {!preview && (
         <div className="space-y-3 px-4 pb-4">
           <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
             <p className="text-xs font-medium text-muted-foreground">
@@ -250,6 +259,7 @@ export function WorkoutHistory() {
             </Button>
           </div>
         </div>
+        )}
         <div
           className={cn(
             WORKOUT_ROW_GRID,
@@ -354,6 +364,7 @@ export function WorkoutHistory() {
                             );
                           })
                       )}
+                      {!preview && (
                       <div className="flex gap-2 pt-1">
                         <Button
                           type="button"
@@ -376,6 +387,7 @@ export function WorkoutHistory() {
                           {t.workout.deleteWorkout}
                         </Button>
                       </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -383,13 +395,26 @@ export function WorkoutHistory() {
             );
           })}
         </div>
-        {hasMore && (
+        {preview ? (
+          <div className="border-t px-4 py-3">
+            <Link
+              href="/workout?tab=history"
+              className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+            >
+              {t.dashboard.viewAllWorkouts}
+            </Link>
+          </div>
+        ) : (
+          hasMore && (
           <div ref={sentinelRef} className="px-4 py-3">
             <Skeleton className="h-8 w-full rounded-lg" />
           </div>
+          )
         )}
       </div>
 
+      {!preview && (
+      <>
       <WorkoutEditSheet
         log={editingLog}
         open={editingLog !== null}
@@ -434,6 +459,8 @@ export function WorkoutHistory() {
           </p>
         )}
       </ConfirmDialog>
+      </>
+      )}
     </>
   );
 }
