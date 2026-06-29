@@ -84,7 +84,7 @@ export function TriumphScreen({ records, volume, duration, onClose }: TriumphScr
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-primary/15 via-background/95 to-background backdrop-blur-lg"
+      className="fixed inset-0 z-[60] flex flex-col bg-gradient-to-b from-primary/15 via-background/95 to-background backdrop-blur-lg"
     >
       {/* Confetti layer */}
       {!reduceMotion && hasRecords && (
@@ -114,8 +114,8 @@ export function TriumphScreen({ records, volume, duration, onClose }: TriumphScr
         </div>
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto overscroll-y-contain px-6 py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
-        <div className="flex w-full max-w-sm flex-col items-center gap-6">
+      <div className="grid min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 pt-[calc(env(safe-area-inset-top)+2.5rem)] pb-[calc(env(safe-area-inset-bottom)+2.5rem)]">
+        <div className="m-auto flex w-full max-w-sm flex-col items-center gap-6">
           {/* Trophy with glow */}
           <div className="relative shrink-0">
             {/* Glow halo */}
