@@ -48,7 +48,7 @@ export function RestTimer({ endTime, duration, isRunning, onStop }: RestTimerPro
       initial={{ y: 50, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 50, opacity: 0 }}
-      className="fixed bottom-20 left-4 right-4 z-50 max-w-lg mx-auto"
+      className="fixed bottom-[calc(env(safe-area-inset-bottom)+4rem+0.75rem)] left-1/2 z-50 w-full max-w-lg -translate-x-1/2 px-4"
     >
       <div className="flex items-center gap-3 rounded-xl bg-card/80 backdrop-blur px-4 py-2 shadow-lg border">
         <div className="relative flex items-center justify-center shrink-0">
