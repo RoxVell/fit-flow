@@ -4,6 +4,7 @@ import { useDashboardStats, useActiveProgram } from "@/lib/hooks/use-data";
 import { Greeting } from "@/components/dashboard/greeting";
 import { SmartStats } from "@/components/dashboard/smart-stats";
 import { RecentPRs } from "@/components/dashboard/recent-prs";
+import { WorkoutHistory } from "@/components/workout/workout-history";
 import { ProgressChart } from "@/components/dashboard/progress-chart";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -43,6 +44,8 @@ export default function DashboardPage() {
       <ProgressChart />
 
       <RecentPRs />
+
+      <WorkoutHistory preview />
     </div>
   );
 }
