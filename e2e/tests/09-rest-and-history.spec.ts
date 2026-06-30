@@ -63,7 +63,7 @@ test("active workout opens exercise history sheet from the exercise name", async
   await expect(sheet).toBeHidden();
 });
 
-test("triumph screen covers the full viewport after finishing a workout", async ({
+test("triumph screen keeps the done button above the bottom nav", async ({
   page,
 }) => {
   await page.goto("/workout");
@@ -87,16 +87,17 @@ test("triumph screen covers the full viewport after finishing a workout", async 
     page.getByText(/workout (complete|completed|finished)/i).first(),
   ).toBeVisible({ timeout: 10_000 });
 
-  const triumph = page.locator(".fixed.inset-0").filter({
-    has: page.getByText(/workout (complete|completed|finished)/i),
-  });
-  await expect(triumph).toBeVisible();
+  const doneButton = page.getByRole("button", { name: /^Done$/i });
+  await expect(doneButton).toBeVisible();
 
-  const box = await triumph.boundingBox();
-  const viewport = page.viewportSize();
-  expect(box).not.toBeNull();
-  expect(viewport).not.toBeNull();
-  if (box && viewport) {
-    expect(box.height).toBeGreaterThanOrEqual(viewport.height - 2);
+  const nav = page.locator("nav").filter({ has: page.getByRole("link", { name: /dashboard/i }) });
+  await expect(nav).toBeVisible();
+
+  const doneBox = await doneButton.boundingBox();
+  const navBox = await nav.boundingBox();
+  expect(doneBox).not.toBeNull();
+  expect(navBox).not.toBeNull();
+  if (doneBox && navBox) {
+    expect(doneBox.y + doneBox.height).toBeLessThanOrEqual(navBox.y + 1);
   }
 });
