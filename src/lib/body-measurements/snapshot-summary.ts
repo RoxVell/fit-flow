@@ -1,28 +1,20 @@
 import {
   BODY_METRIC_FIELDS,
-  LEGACY_BODY_METRIC_FIELDS,
   hasBodyMetricValue,
 } from "@/lib/body-measurements/metrics";
 import type { BodyMeasurement } from "@/lib/db/types";
 
-type SnapshotSummaryField =
-  | (typeof BODY_METRIC_FIELDS)[number]
-  | (typeof LEGACY_BODY_METRIC_FIELDS)[number];
-
-type SnapshotSummary = Record<SnapshotSummaryField, (v: number) => string>;
-
-const SNAPSHOT_SUMMARY_FIELDS = [
-  ...BODY_METRIC_FIELDS,
-  ...LEGACY_BODY_METRIC_FIELDS,
-] as const;
+type SnapshotSummary = {
+  [K in (typeof BODY_METRIC_FIELDS)[number]]: (v: number) => string;
+};
 
 export function formatSnapshotSummary(
-  snapshot: Pick<BodyMeasurement, SnapshotSummaryField>,
+  snapshot: Pick<BodyMeasurement, (typeof BODY_METRIC_FIELDS)[number]>,
   summary: SnapshotSummary
 ): string {
   const parts: string[] = [];
 
-  for (const field of SNAPSHOT_SUMMARY_FIELDS) {
+  for (const field of BODY_METRIC_FIELDS) {
     const value = snapshot[field];
     if (!hasBodyMetricValue(value)) continue;
     parts.push(summary[field](value));

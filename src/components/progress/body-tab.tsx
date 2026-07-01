@@ -17,10 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartPeriodSelector } from "@/components/charts/chart-period-selector";
 import { BodyMeasurementHistory } from "@/components/progress/body-measurement-history";
 import { useDailyBodyViews } from "@/lib/hooks/use-data";
-import {
-  BODY_METRIC_FIELDS,
-  LEGACY_BODY_METRIC_FIELDS,
-} from "@/lib/body-measurements/metrics";
+import { BODY_METRIC_FIELDS } from "@/lib/body-measurements/metrics";
 import { DEFAULT_CHART_PERIOD, filterByPeriod, type ChartPeriod } from "@/lib/charts/periods";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
@@ -39,10 +36,7 @@ const COLORS = [
   "#84cc16",
 ];
 
-const CIRCUMFERENCE_CHART_FIELDS = [
-  ...BODY_METRIC_FIELDS.filter((field) => field !== "weight"),
-  ...LEGACY_BODY_METRIC_FIELDS,
-] as const;
+const CIRCUMFERENCE_CHART_FIELDS = BODY_METRIC_FIELDS.filter((field) => field !== "weight");
 
 export function BodyTab() {
   const router = useRouter();
@@ -78,9 +72,6 @@ export function BodyTab() {
       rightThigh: view.rightThigh,
       leftCalf: view.leftCalf,
       rightCalf: view.rightCalf,
-      arms: view.arms,
-      thighs: view.thighs,
-      calves: view.calves,
     }));
   }, [dailyViews, period, formatChartDate]);
 
