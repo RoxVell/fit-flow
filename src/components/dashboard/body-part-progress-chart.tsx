@@ -241,7 +241,6 @@ export function BodyPartProgressChart() {
       <div className="mt-3 space-y-2">
         {bodyParts.map((bodyPart) => {
           const summary = bodyPartSummaries.get(bodyPart);
-          const currentValue = summary?.current ?? null;
           const changeValue = summary?.change?.percent ?? 0;
           const isExpanded = expandedBodyPart === bodyPart;
           const exercises = exerciseSummaries.get(bodyPart) ?? [];
@@ -260,14 +259,9 @@ export function BodyPartProgressChart() {
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">
                   {labelFor(BODY_PART_LABELS, bodyPart, locale)}
                 </span>
-                <div className="flex shrink-0 flex-col items-end gap-0.5">
-                  {summary?.change ? <ChangeBadge value={changeValue} /> : null}
-                  {currentValue !== null ? (
-                    <span className="text-xs tabular-nums text-muted-foreground">
-                      {Math.round(currentValue * 10) / 10}% {t.progress.bodyPartBaselineLevel}
-                    </span>
-                  ) : null}
-                </div>
+                {summary?.change ? (
+                  <ChangeBadge value={changeValue} />
+                ) : null}
                 <ChevronDown
                   className={cn(
                     "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
