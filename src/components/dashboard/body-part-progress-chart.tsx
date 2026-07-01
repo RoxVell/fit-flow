@@ -15,14 +15,14 @@ import { useWorkoutLogs } from "@/lib/hooks/use-data";
 import { useExerciseManifest } from "@/lib/hooks/use-exercise-library";
 import { ChartPeriodSelector } from "@/components/charts/chart-period-selector";
 import { BODY_PART_CHART_COLORS } from "@/lib/charts/body-part-colors";
-import { computeFocusDomain } from "@/lib/charts/domain";
+import { computeFocusDomain, type PeriodChange } from "@/lib/charts/domain";
 import { DEFAULT_CHART_PERIOD, type ChartPeriod } from "@/lib/charts/periods";
 import {
   buildWeeklyExerciseBest1RM,
   buildPerExerciseBaseline,
   collectNumericValues,
+  computeBodyPartChartChanges,
   computeBodyPartProgressSeries,
-  computeBodyPartSummariesFromExercises,
   computeExerciseProgressSummaries,
   filterWeeksByPeriod,
   getSortedWeeks,
@@ -141,10 +141,8 @@ export function BodyPartProgressChart() {
     return {
       chartData: series.chartData,
       bodyParts: series.bodyParts,
-      bodyPartSummaries: computeBodyPartSummariesFromExercises(
-        filteredWeeks,
-        baseline,
-        exerciseBodyPart,
+      bodyPartChartChanges: computeBodyPartChartChanges(
+        series.chartData,
         series.bodyParts
       ),
       exerciseSummaries,
@@ -161,7 +159,7 @@ export function BodyPartProgressChart() {
 
   if (!chartModel) return null;
 
-  const { chartData, bodyParts, bodyPartSummaries, exerciseSummaries, exerciseNames } =
+  const { chartData, bodyParts, bodyPartChartChanges, exerciseSummaries, exerciseNames } =
     chartModel;
 
   const toggleBodyPart = (bodyPart: BodyPart) => {
@@ -240,8 +238,8 @@ export function BodyPartProgressChart() {
 
       <div className="mt-3 space-y-2">
         {bodyParts.map((bodyPart) => {
-          const summary = bodyPartSummaries.get(bodyPart);
-          const changeValue = summary?.change?.percent ?? 0;
+          const chartChange: PeriodChange | null | undefined =
+            bodyPartChartChanges.get(bodyPart);
           const isExpanded = expandedBodyPart === bodyPart;
           const exercises = exerciseSummaries.get(bodyPart) ?? [];
 
@@ -259,9 +257,7 @@ export function BodyPartProgressChart() {
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">
                   {labelFor(BODY_PART_LABELS, bodyPart, locale)}
                 </span>
-                {summary?.change ? (
-                  <ChangeBadge value={changeValue} />
-                ) : null}
+                {chartChange ? <ChangeBadge value={chartChange.percent} /> : null}
                 <ChevronDown
                   className={cn(
                     "h-4 w-4 shrink-0 text-muted-foreground transition-transform",

@@ -401,6 +401,21 @@ export function computeBodyPartSummariesFromExercises(
   return summaries;
 }
 
+/** Period change per body-part line (first vs last chart point), like General progress. */
+export function computeBodyPartChartChanges(
+  chartData: Record<string, string | number>[],
+  bodyParts: BodyPart[]
+): Map<BodyPart, PeriodChange | null> {
+  const changes = new Map<BodyPart, PeriodChange | null>();
+  for (const bodyPart of bodyParts) {
+    const values = chartData
+      .map((row) => row[bodyPart])
+      .filter((value): value is number => typeof value === "number");
+    changes.set(bodyPart, computePeriodChange(values));
+  }
+  return changes;
+}
+
 export function collectNumericValues(
   chartData: Record<string, string | number>[],
   keys: string[]

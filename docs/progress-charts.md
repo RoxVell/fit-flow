@@ -42,13 +42,14 @@ Components: `GeneralTab` → `ProgressChart`, `BodyPartProgressChart`, `RecentPR
 - A body part appears only if at least one exercise in that group has logged strength data.
 - **Weekly line value**: average index of exercises in the group that appear in the period, indexed to **100% at each exercise’s first week in the period** (same logic as General progress), with **carry-forward** until a new session updates it.
 - **Category summary** (header row on each expandable card):
-  - **Change** = average of each exercise’s **relative** change over the period: `(last / first − 1) × 100`. Direction matches the chart line. For all-time level vs first log, use period **All** — the chart then indexes from each exercise’s first week in history.
+  - **Change** = first vs last point on the chart line for that body part (same as General progress headline). Matches what you read off the graph (e.g. 100% → 102.7% = **+2.7%**).
+  - Expanded **per-exercise** rows still show each exercise’s own relative change; averaging those can differ from the line when new exercises join mid-period or some moves were logged only once.
 - Tap a category to expand **per-exercise** rows (same current + relative change). Expanding highlights that line on the chart.
 - Legend under the chart maps colors to body-part labels (`BODY_PART_LABELS`, localized).
 
 ### Why category change matches the chart
 
-Chart lines and the **change** badge both use **period-indexed** values (100% at each exercise’s first week in the selected period). Use period **All** to see all-time progress from each exercise’s first log.
+Chart lines and category **change** badges both use **period-indexed** weekly averages; the badge is **first vs last point on the line** (not an average of per-exercise badges). Use period **All** to see all-time progress from each exercise’s first log.
 
 ## Exercises tab (`ExercisesTab`)
 

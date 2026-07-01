@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computePeriodChange } from "./domain";
 import {
   buildPerExerciseBaseline,
+  computeBodyPartChartChanges,
   computeBodyPartProgressSeries,
   computeBodyPartSummariesFromExercises,
   computeOverallProgressSeries,
@@ -110,10 +111,62 @@ describe("computeBodyPartProgressSeries", () => {
       bodyParts
     );
     const summary = summaries.get("BACK")!;
-    const chartChange = computePeriodChange(backSeries);
+    const chartChanges = computeBodyPartChartChanges(chartData, bodyParts);
+    const chartChange = chartChanges.get("BACK")!;
 
     expect(summary.change?.percent).toBeGreaterThan(0);
     expect(chartChange?.percent).toBeGreaterThan(0);
+    expect(chartChange?.percent).toBe(
+      computePeriodChange(backSeries)?.percent
+    );
+  });
+
+  it("category badge matches chart line, not exercise-average when cohort mix shifts", () => {
+    const exerciseBodyPart = new Map<string, BodyPart>([
+      ["wpu", "BACK"],
+      ["lat", "BACK"],
+      ["tbar", "BACK"],
+      ["pullover", "BACK"],
+      ["row1", "BACK"],
+      ["row2", "BACK"],
+    ]);
+    const filteredWeeks = [
+      week("2026-06-02T00:00:00.000Z", {
+        wpu: 100,
+        lat: 100,
+        tbar: 100,
+        pullover: 100,
+      }),
+      week("2026-06-23T00:00:00.000Z", {
+        wpu: 94.1,
+        lat: 100,
+        tbar: 119.7,
+        pullover: 102.5,
+        row1: 100,
+        row2: 100,
+      }),
+    ];
+    const baseline = buildPerExerciseBaseline(filteredWeeks);
+
+    const { chartData, bodyParts } = computeBodyPartProgressSeries(
+      filteredWeeks,
+      baseline,
+      exerciseBodyPart,
+      (iso) => iso
+    );
+    const backSeries = chartData.map((row) => row.BACK as number);
+    const chartChanges = computeBodyPartChartChanges(chartData, bodyParts);
+    const exerciseSummary = computeBodyPartSummariesFromExercises(
+      filteredWeeks,
+      baseline,
+      exerciseBodyPart,
+      bodyParts
+    ).get("BACK")!;
+
+    expect(backSeries[0]).toBe(100);
+    expect(backSeries.at(-1)).toBe(102.7);
+    expect(chartChanges.get("BACK")?.percent).toBe(2.7);
+    expect(exerciseSummary.change?.percent).toBe(4.1);
   });
 
   it("does not fall when a new exercise joins mid-period", () => {
