@@ -1,4 +1,9 @@
-import { BODY_METRIC_FIELDS, calendarDayKey, hasBodyMetricValue } from "@/lib/body-measurements/metrics";
+import {
+  BODY_METRIC_FIELDS,
+  LEGACY_BODY_METRIC_FIELDS,
+  calendarDayKey,
+  hasBodyMetricValue,
+} from "@/lib/body-measurements/metrics";
 import type { BodyMeasurementEntity } from "@/lib/db/types";
 
 export interface DailyBodyView {
@@ -6,10 +11,19 @@ export interface DailyBodyView {
   weight?: number;
   chest?: number;
   waist?: number;
+  leftArm?: number;
+  rightArm?: number;
+  leftThigh?: number;
+  rightThigh?: number;
+  leftCalf?: number;
+  rightCalf?: number;
+  /** @deprecated Legacy combined limb values from older snapshots */
   arms?: number;
   thighs?: number;
   calves?: number;
 }
+
+const DAILY_VIEW_FIELDS = [...BODY_METRIC_FIELDS, ...LEGACY_BODY_METRIC_FIELDS] as const;
 
 export function buildDailyBodyViews(
   snapshots: BodyMeasurementEntity[]
@@ -32,7 +46,7 @@ export function buildDailyBodyViews(
 
     const view: DailyBodyView = { date: day };
     for (const snapshot of sorted) {
-      for (const field of BODY_METRIC_FIELDS) {
+      for (const field of DAILY_VIEW_FIELDS) {
         const value = snapshot[field];
         if (hasBodyMetricValue(value)) {
           view[field] = value;

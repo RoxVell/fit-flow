@@ -146,9 +146,18 @@ export interface BodyMeasurement {
   bodyFat?: number;
   chest?: number;
   waist?: number;
+  /** @deprecated Use leftArm/rightArm — kept for legacy snapshots */
   arms?: number;
+  /** @deprecated Use leftThigh/rightThigh — kept for legacy snapshots */
   thighs?: number;
+  /** @deprecated Use leftCalf/rightCalf — kept for legacy snapshots */
   calves?: number;
+  leftArm?: number;
+  rightArm?: number;
+  leftThigh?: number;
+  rightThigh?: number;
+  leftCalf?: number;
+  rightCalf?: number;
 }
 
 export interface PersonalRecord {
