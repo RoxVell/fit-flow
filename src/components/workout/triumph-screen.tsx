@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { Trophy, TrendingUp, Dumbbell, Clock, Weight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -73,19 +74,26 @@ export function TriumphScreen({ records, volume, duration, onClose }: TriumphScr
   const groupedRecords = useMemo(() => groupRecordsByExercise(records), [records]);
   const hasRecords = groupedRecords.length > 0;
 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const handleClose = () => {
     if (closedRef.current) return;
     closedRef.current = true;
     onClose();
   };
 
-  return (
+  const content = (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-x-0 top-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] left-1/2 z-[60] flex w-full max-w-lg -translate-x-1/2 flex-col bg-gradient-to-b from-primary/15 via-background/95 to-background backdrop-blur-lg"
+      className="fixed inset-0 z-[100] flex flex-col bg-gradient-to-b from-primary/15 via-background/95 to-background backdrop-blur-lg"
     >
+      <div className="relative mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col">
       {/* Confetti layer */}
       {!reduceMotion && hasRecords && (
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -114,8 +122,8 @@ export function TriumphScreen({ records, volume, duration, onClose }: TriumphScr
         </div>
       )}
 
-      <div className="grid min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-6">
-        <div className="m-auto flex w-full max-w-sm flex-col items-center gap-6">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-4">
+        <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-6">
           {/* Trophy with glow */}
           <div className="relative shrink-0">
             {/* Glow halo */}
@@ -254,18 +262,26 @@ export function TriumphScreen({ records, volume, duration, onClose }: TriumphScr
             </motion.p>
           )}
 
-          <motion.div
-            initial={{ y: 12, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.65 }}
-            className="w-full shrink-0"
-          >
-            <Button onClick={handleClose} size="lg" className="mt-1 w-full shadow-md">
-              {t.workout.triumphDone}
-            </Button>
-          </motion.div>
         </div>
+      </div>
+
+      <div className="mx-auto w-full max-w-lg shrink-0 border-t bg-background/95 px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <motion.div
+          initial={{ y: 12, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.65 }}
+          className="mx-auto w-full max-w-sm"
+        >
+          <Button onClick={handleClose} size="lg" className="w-full shadow-md">
+            {t.workout.triumphDone}
+          </Button>
+        </motion.div>
+      </div>
       </div>
     </motion.div>
   );
+
+  if (!mounted) return null;
+
+  return createPortal(content, document.body);
 }

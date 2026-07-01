@@ -63,7 +63,7 @@ test("active workout opens exercise history sheet from the exercise name", async
   await expect(sheet).toBeHidden();
 });
 
-test("triumph screen keeps the done button above the bottom nav", async ({
+test("triumph screen done button closes the overlay and navigates to dashboard", async ({
   page,
 }) => {
   await page.goto("/workout");
@@ -89,15 +89,10 @@ test("triumph screen keeps the done button above the bottom nav", async ({
 
   const doneButton = page.getByRole("button", { name: /^Done$/i });
   await expect(doneButton).toBeVisible();
+  await doneButton.click();
 
-  const nav = page.locator("nav").filter({ has: page.getByRole("link", { name: /dashboard/i }) });
-  await expect(nav).toBeVisible();
-
-  const doneBox = await doneButton.boundingBox();
-  const navBox = await nav.boundingBox();
-  expect(doneBox).not.toBeNull();
-  expect(navBox).not.toBeNull();
-  if (doneBox && navBox) {
-    expect(doneBox.y + doneBox.height).toBeLessThanOrEqual(navBox.y + 1);
-  }
+  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(
+    page.getByText(/workout (complete|completed|finished)/i).first(),
+  ).toHaveCount(0);
 });

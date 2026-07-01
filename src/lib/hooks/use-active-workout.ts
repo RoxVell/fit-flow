@@ -267,8 +267,9 @@ export function useActiveWorkout(
   };
 
   const handleCloseTriumph = () => {
+    setShowTriumph(false);
     void clearDraft();
-    router.push("/dashboard");
+    router.replace("/dashboard");
   };
 
   const abandonWorkout = async () => {
