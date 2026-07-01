@@ -121,7 +121,7 @@ describe("computeBodyPartProgressSeries", () => {
     );
   });
 
-  it("category badge matches chart line, not exercise-average when cohort mix shifts", () => {
+  it("excludes single-session exercises from the chart average", () => {
     const exerciseBodyPart = new Map<string, BodyPart>([
       ["wpu", "BACK"],
       ["lat", "BACK"],
@@ -164,8 +164,8 @@ describe("computeBodyPartProgressSeries", () => {
     ).get("BACK")!;
 
     expect(backSeries[0]).toBe(100);
-    expect(backSeries.at(-1)).toBe(102.7);
-    expect(chartChanges.get("BACK")?.percent).toBe(2.7);
+    expect(backSeries.at(-1)).toBe(104.1);
+    expect(chartChanges.get("BACK")?.percent).toBe(4.1);
     expect(exerciseSummary.change?.percent).toBe(4.1);
   });
 

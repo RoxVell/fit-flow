@@ -141,15 +141,35 @@ function computePeriodIndexedAverage(
   return count > 0 ? Math.round((total / count) * 10) / 10 : null;
 }
 
+function getRepeatSessionExerciseIds(
+  filteredWeeks: [string, Map<string, number>][]
+): Set<string> {
+  const sessionCounts = new Map<string, number>();
+  for (const [, exercises] of filteredWeeks) {
+    for (const exId of exercises.keys()) {
+      sessionCounts.set(exId, (sessionCounts.get(exId) ?? 0) + 1);
+    }
+  }
+  return new Set(
+    [...sessionCounts.entries()]
+      .filter(([, count]) => count >= 2)
+      .map(([exId]) => exId)
+  );
+}
+
 function getBodyPartPeriodCohort(
   filteredWeeks: [string, Map<string, number>][],
   exerciseBodyPart: Map<string, BodyPart>,
-  bodyPart: BodyPart
+  bodyPart: BodyPart,
+  repeatSessionIds: Set<string>
 ): Set<string> {
   const cohort = new Set<string>();
   for (const [, exercises] of filteredWeeks) {
     for (const exId of exercises.keys()) {
-      if (exerciseBodyPart.get(exId) === bodyPart) {
+      if (
+        exerciseBodyPart.get(exId) === bodyPart &&
+        repeatSessionIds.has(exId)
+      ) {
         cohort.add(exId);
       }
     }
@@ -294,11 +314,17 @@ export function computeBodyPartProgressSeries(
   }
 
   const bodyParts = sortBodyParts([...bodyPartsWithData]);
+  const repeatSessionIds = getRepeatSessionExerciseIds(filteredWeeks);
   const bodyPartCohorts = new Map<BodyPart, Set<string>>();
   for (const bodyPart of bodyParts) {
     bodyPartCohorts.set(
       bodyPart,
-      getBodyPartPeriodCohort(filteredWeeks, exerciseBodyPart, bodyPart)
+      getBodyPartPeriodCohort(
+        filteredWeeks,
+        exerciseBodyPart,
+        bodyPart,
+        repeatSessionIds
+      )
     );
   }
 

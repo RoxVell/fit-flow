@@ -65,7 +65,7 @@ Strength progress expressed as a percentage of baseline: `(current e1RM / baseli
 _Avoid_: percent gain, strength score
 
 **body part progress**:
-Weekly and summary progress grouped by catalog `BodyPart`. Chart lines are period-indexed; category **change** = first vs last chart point. Per-exercise rows in the accordion show individual `(last/first − 1) × 100`. Component: `BodyPartProgressChart`.
+Weekly and summary progress grouped by catalog `BodyPart`. Chart lines are period-indexed and **exclude exercises logged only once** in the period; category **change** = first vs last chart point. Component: `BodyPartProgressChart`.
 _Avoid_: muscle group chart, body region stats
 
 **chart period**:
