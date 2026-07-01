@@ -22,7 +22,21 @@ import { DEFAULT_CHART_PERIOD, filterByPeriod, type ChartPeriod } from "@/lib/ch
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 
-const COLORS = ["var(--color-primary)", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
+const COLORS = [
+  "var(--color-primary)",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#06b6d4",
+  "#ec4899",
+  "#14b8a6",
+  "#a855f7",
+  "#64748b",
+  "#84cc16",
+];
+
+const CIRCUMFERENCE_CHART_FIELDS = BODY_METRIC_FIELDS.filter((field) => field !== "weight");
 
 export function BodyTab() {
   const router = useRouter();
@@ -39,7 +53,7 @@ export function BodyTab() {
     { value: "all" as const, label: t.progress.periodAll },
   ];
 
-  const measurementConfig = BODY_METRIC_FIELDS.map((key, index) => ({
+  const measurementConfig = CIRCUMFERENCE_CHART_FIELDS.map((key, index) => ({
     key,
     label: t.progress.bodyMeasurements[key],
     color: COLORS[index] ?? COLORS[0]!,
@@ -52,9 +66,12 @@ export function BodyTab() {
       weight: view.weight,
       chest: view.chest,
       waist: view.waist,
-      arms: view.arms,
-      thighs: view.thighs,
-      calves: view.calves,
+      leftArm: view.leftArm,
+      rightArm: view.rightArm,
+      leftThigh: view.leftThigh,
+      rightThigh: view.rightThigh,
+      leftCalf: view.leftCalf,
+      rightCalf: view.rightCalf,
     }));
   }, [dailyViews, period, formatChartDate]);
 
@@ -135,19 +152,17 @@ export function BodyTab() {
                     }}
                     cursor={{ stroke: "#444", strokeWidth: 1 }}
                   />
-                  {measurementConfig
-                    .filter((cfg) => cfg.key !== "weight")
-                    .map((cfg) => (
-                      <Line
-                        key={cfg.key}
-                        type="monotone"
-                        dataKey={cfg.key}
-                        stroke={cfg.color}
-                        strokeWidth={2}
-                        dot={{ fill: cfg.color, r: 2 }}
-                        name={cfg.label}
-                      />
-                    ))}
+                  {measurementConfig.map((cfg) => (
+                    <Line
+                      key={cfg.key}
+                      type="monotone"
+                      dataKey={cfg.key}
+                      stroke={cfg.color}
+                      strokeWidth={2}
+                      dot={{ fill: cfg.color, r: 2 }}
+                      name={cfg.label}
+                    />
+                  ))}
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -158,17 +173,15 @@ export function BodyTab() {
           </div>
           {hasChartData && (
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-              {measurementConfig
-                .filter((cfg) => cfg.key !== "weight")
-                .map((cfg) => (
-                  <div key={cfg.key} className="flex items-center gap-1.5">
-                    <span
-                      className="h-2.5 w-2.5 rounded-sm shrink-0"
-                      style={{ backgroundColor: cfg.color }}
-                    />
-                    <span className="text-xs text-muted-foreground">{cfg.label}</span>
-                  </div>
-                ))}
+              {measurementConfig.map((cfg) => (
+                <div key={cfg.key} className="flex items-center gap-1.5">
+                  <span
+                    className="h-2.5 w-2.5 rounded-sm shrink-0"
+                    style={{ backgroundColor: cfg.color }}
+                  />
+                  <span className="text-xs text-muted-foreground">{cfg.label}</span>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

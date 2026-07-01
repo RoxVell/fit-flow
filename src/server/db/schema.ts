@@ -69,9 +69,12 @@ export const bodyMeasurements = pgTable("body_measurements", {
   bodyFat: real("body_fat"),
   chest: real("chest"),
   waist: real("waist"),
-  arms: real("arms"),
-  thighs: real("thighs"),
-  calves: real("calves"),
+  leftArm: real("left_arm"),
+  rightArm: real("right_arm"),
+  leftThigh: real("left_thigh"),
+  rightThigh: real("right_thigh"),
+  leftCalf: real("left_calf"),
+  rightCalf: real("right_calf"),
   ...syncColumns,
 });
 

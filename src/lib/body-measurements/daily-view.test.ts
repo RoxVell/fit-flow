@@ -14,9 +14,12 @@ function snapshot(
     weight: partial.weight,
     chest: partial.chest,
     waist: partial.waist,
-    arms: partial.arms,
-    thighs: partial.thighs,
-    calves: partial.calves,
+    leftArm: partial.leftArm,
+    rightArm: partial.rightArm,
+    leftThigh: partial.leftThigh,
+    rightThigh: partial.rightThigh,
+    leftCalf: partial.leftCalf,
+    rightCalf: partial.rightCalf,
     ...partial,
   };
 }
@@ -40,6 +43,26 @@ describe("buildDailyBodyViews", () => {
 
     expect(views).toHaveLength(1);
     expect(views[0]).toMatchObject({ weight: 80, waist: 85 });
+  });
+
+  it("merges left and right limb fields independently", () => {
+    const views = buildDailyBodyViews([
+      snapshot({
+        id: "1",
+        date: "2025-06-01T08:00:00.000Z",
+        updatedAt: "2025-06-01T08:00:00.000Z",
+        leftArm: 32,
+      }),
+      snapshot({
+        id: "2",
+        date: "2025-06-01T20:00:00.000Z",
+        updatedAt: "2025-06-01T20:00:00.000Z",
+        rightArm: 33,
+      }),
+    ]);
+
+    expect(views).toHaveLength(1);
+    expect(views[0]).toMatchObject({ leftArm: 32, rightArm: 33 });
   });
 });
 

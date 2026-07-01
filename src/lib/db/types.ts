@@ -146,9 +146,12 @@ export interface BodyMeasurement {
   bodyFat?: number;
   chest?: number;
   waist?: number;
-  arms?: number;
-  thighs?: number;
-  calves?: number;
+  leftArm?: number;
+  rightArm?: number;
+  leftThigh?: number;
+  rightThigh?: number;
+  leftCalf?: number;
+  rightCalf?: number;
 }
 
 export interface PersonalRecord {

@@ -5,7 +5,12 @@ import { ArrowLeft, Check, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
-import { BODY_METRIC_FIELDS } from "@/lib/body-measurements/metrics";
+import {
+  BODY_BILATERAL_METRIC_GROUPS,
+  BODY_METRIC_FIELDS,
+  BODY_SINGLE_METRIC_FIELDS,
+  type BodyMetricField,
+} from "@/lib/body-measurements/metrics";
 import { dateInputToIso, todayDate } from "@/lib/body-measurements/snapshot-summary";
 import {
   BodyMeasurementValidationError,
@@ -27,14 +32,24 @@ function parseOptionalNumber(value: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-const METRIC_UNITS: Record<(typeof BODY_METRIC_FIELDS)[number], string> = {
+const METRIC_UNITS: Record<BodyMetricField, string> = {
   weight: "kg",
   chest: "cm",
   waist: "cm",
-  arms: "cm",
-  thighs: "cm",
-  calves: "cm",
+  leftArm: "cm",
+  rightArm: "cm",
+  leftThigh: "cm",
+  rightThigh: "cm",
+  leftCalf: "cm",
+  rightCalf: "cm",
 };
+
+function emptyMetricValues(): Record<BodyMetricField, string> {
+  return Object.fromEntries(BODY_METRIC_FIELDS.map((field) => [field, ""])) as Record<
+    BodyMetricField,
+    string
+  >;
+}
 
 export function BodyMeasurementForm({
   asPage = false,
@@ -44,14 +59,7 @@ export function BodyMeasurementForm({
   const t = useT();
   const locale = useLocale();
   const [date, setDate] = useState(todayDate);
-  const [values, setValues] = useState<Record<(typeof BODY_METRIC_FIELDS)[number], string>>({
-    weight: "",
-    chest: "",
-    waist: "",
-    arms: "",
-    thighs: "",
-    calves: "",
-  });
+  const [values, setValues] = useState(emptyMetricValues);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -59,9 +67,6 @@ export function BodyMeasurementForm({
     weight: t.progress.bodyMeasurements.weight.replace(/\s*\(.*\)$/, ""),
     chest: t.progress.bodyMeasurements.chest.replace(/\s*\(.*\)$/, ""),
     waist: t.progress.bodyMeasurements.waist.replace(/\s*\(.*\)$/, ""),
-    arms: t.progress.bodyMeasurements.arms.replace(/\s*\(.*\)$/, ""),
-    thighs: t.progress.bodyMeasurements.thighs.replace(/\s*\(.*\)$/, ""),
-    calves: t.progress.bodyMeasurements.calves.replace(/\s*\(.*\)$/, ""),
   };
 
   const hasAnyValue = BODY_METRIC_FIELDS.some((field) => values[field].trim() !== "");
@@ -73,9 +78,12 @@ export function BodyMeasurementForm({
       weight: parseOptionalNumber(values.weight),
       chest: parseOptionalNumber(values.chest),
       waist: parseOptionalNumber(values.waist),
-      arms: parseOptionalNumber(values.arms),
-      thighs: parseOptionalNumber(values.thighs),
-      calves: parseOptionalNumber(values.calves),
+      leftArm: parseOptionalNumber(values.leftArm),
+      rightArm: parseOptionalNumber(values.rightArm),
+      leftThigh: parseOptionalNumber(values.leftThigh),
+      rightThigh: parseOptionalNumber(values.rightThigh),
+      leftCalf: parseOptionalNumber(values.leftCalf),
+      rightCalf: parseOptionalNumber(values.rightCalf),
     };
 
     setSaving(true);
@@ -92,6 +100,30 @@ export function BodyMeasurementForm({
       setSaving(false);
     }
   };
+
+  const renderMetricInput = (field: BodyMetricField, sideLabel?: string) => (
+    <div key={field} className={cn("flex items-center gap-2", sideLabel ? "flex-1" : "w-28")}>
+      {sideLabel && (
+        <span className="w-10 shrink-0 text-xs text-muted-foreground">{sideLabel}</span>
+      )}
+      <Input
+        id={`measurement-${field}`}
+        type="number"
+        inputMode="decimal"
+        step="0.1"
+        value={values[field]}
+        onChange={(e) => setValues((current) => ({ ...current, [field]: e.target.value }))}
+        placeholder="—"
+        className="border-0 bg-muted/50 px-3 py-2 text-right text-sm tabular-nums"
+        aria-label={
+          sideLabel
+            ? `${t.progress.bodyMeasurements[field]} (${sideLabel})`
+            : t.progress.bodyMeasurements[field]
+        }
+      />
+      <span className="w-6 shrink-0 text-xs text-muted-foreground">{METRIC_UNITS[field]}</span>
+    </div>
+  );
 
   const formBody = (
     <div className="space-y-8">
@@ -112,7 +144,7 @@ export function BodyMeasurementForm({
         </div>
         <div className="overflow-hidden rounded-xl border bg-card">
           <div className="divide-y divide-border">
-            {BODY_METRIC_FIELDS.map((field) => (
+            {BODY_SINGLE_METRIC_FIELDS.map((field) => (
               <div key={field} className="flex items-center gap-3 px-4 py-3.5">
                 <label
                   htmlFor={`measurement-${field}`}
@@ -120,30 +152,22 @@ export function BodyMeasurementForm({
                 >
                   {fieldLabels[field]}
                 </label>
-                <div className="flex w-28 items-center gap-2">
-                  <Input
-                    id={`measurement-${field}`}
-                    type="number"
-                    inputMode="decimal"
-                    step="0.1"
-                    value={values[field]}
-                    onChange={(e) =>
-                      setValues((current) => ({ ...current, [field]: e.target.value }))
-                    }
-                    placeholder="—"
-                    className="border-0 bg-muted/50 px-3 py-2 text-right text-sm tabular-nums"
-                  />
-                  <span className="w-6 shrink-0 text-xs text-muted-foreground">
-                    {METRIC_UNITS[field]}
-                  </span>
+                {renderMetricInput(field)}
+              </div>
+            ))}
+
+            {BODY_BILATERAL_METRIC_GROUPS.map((group) => (
+              <div key={group.labelKey} className="px-4 py-3.5">
+                <p className="mb-3 text-sm font-medium">{t.progress.bodyMeasurements[group.labelKey]}</p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                  {renderMetricInput(group.left as BodyMetricField, t.progress.left)}
+                  {renderMetricInput(group.right as BodyMetricField, t.progress.right)}
                 </div>
               </div>
             ))}
           </div>
         </div>
-        <p className="mt-2 px-1 text-xs text-muted-foreground">
-          {t.progress.atLeastOneMetric}
-        </p>
+        <p className="mt-2 px-1 text-xs text-muted-foreground">{t.progress.atLeastOneMetric}</p>
       </section>
 
       {error && <p className="px-1 text-sm text-destructive">{error}</p>}

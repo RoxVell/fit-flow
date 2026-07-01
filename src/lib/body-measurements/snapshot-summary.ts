@@ -5,12 +5,7 @@ import {
 import type { BodyMeasurement } from "@/lib/db/types";
 
 type SnapshotSummary = {
-  weight: (v: number) => string;
-  chest: (v: number) => string;
-  waist: (v: number) => string;
-  arms: (v: number) => string;
-  thighs: (v: number) => string;
-  calves: (v: number) => string;
+  [K in (typeof BODY_METRIC_FIELDS)[number]]: (v: number) => string;
 };
 
 export function formatSnapshotSummary(
