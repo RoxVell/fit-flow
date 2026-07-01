@@ -40,16 +40,16 @@ Components: `GeneralTab` → `ProgressChart`, `BodyPartProgressChart`, `RecentPR
 
 - Multi-line chart: one line per `BodyPart` (`ABS`, `BACK`, `BICEPS`, …) from the exercise manifest.
 - A body part appears only if at least one exercise in that group has logged strength data.
-- **Weekly line value**: average index of exercises in the group that have appeared so far in the period, with **carry-forward** (last known index kept until a new session updates it).
+- **Weekly line value**: average index of exercises in the group that appear in the period, indexed to **100% at each exercise’s first week in the period** (same logic as General progress), with **carry-forward** until a new session updates it.
 - **Category summary** (header row on each expandable card):
-  - **Current** = average of each exercise’s latest index in the period.
-  - **Change** = average of each exercise’s **relative** change: `(last / first − 1) × 100`, not a simple subtraction of index values.
+  - **Change** (primary) = average of each exercise’s **relative** change over the period: `(last / first − 1) × 100`. Direction matches the chart line.
+  - **vs first log** (secondary) = average of each exercise’s latest index vs its all-time baseline `(current e1RM / first-ever e1RM) × 100`.
 - Tap a category to expand **per-exercise** rows (same current + relative change). Expanding highlights that line on the chart.
 - Legend under the chart maps colors to body-part labels (`BODY_PART_LABELS`, localized).
 
-### Why category change matches exercises
+### Why category change matches the chart
 
-Early versions compared first vs last **weekly average** on the chart. That broke when different exercises were logged in different weeks (e.g. one shoulder exercise early, five later → average looked like a drop while every exercise improved). Summaries are now derived from **exercise-level** series, then aggregated.
+Chart lines and the **change** badge both use **period-indexed** values (100% at each exercise’s first week in the selected period). The secondary **vs first log** figure is separate: it compares strength to the all-time baseline from the first week that exercise ever appears in history.
 
 ## Exercises tab (`ExercisesTab`)
 

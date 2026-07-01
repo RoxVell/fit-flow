@@ -171,7 +171,10 @@ export function BodyPartProgressChart() {
   return (
     <div className="rounded-xl border bg-card p-4">
       <div className="mb-3 flex items-start justify-between gap-2">
-        <p className="text-sm font-heading font-medium">{t.progress.bodyPartProgress}</p>
+        <div className="min-w-0">
+          <p className="text-sm font-heading font-medium">{t.progress.bodyPartProgress}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{t.progress.bodyPartChartHint}</p>
+        </div>
         <ChartPeriodSelector period={period} onChange={setPeriod} labels={periods} />
       </div>
 
@@ -257,13 +260,13 @@ export function BodyPartProgressChart() {
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">
                   {labelFor(BODY_PART_LABELS, bodyPart, locale)}
                 </span>
-                <div className="flex shrink-0 items-baseline gap-1.5">
+                <div className="flex shrink-0 flex-col items-end gap-0.5">
+                  {summary?.change ? <ChangeBadge value={changeValue} /> : null}
                   {currentValue !== null ? (
-                    <span className="text-sm font-semibold tabular-nums">
-                      {Math.round(currentValue * 10) / 10}%
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      {Math.round(currentValue * 10) / 10}% {t.progress.bodyPartBaselineLevel}
                     </span>
                   ) : null}
-                  {summary?.change ? <ChangeBadge value={changeValue} /> : null}
                 </div>
                 <ChevronDown
                   className={cn(
