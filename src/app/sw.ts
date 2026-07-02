@@ -5,6 +5,7 @@ import {
   CacheableResponsePlugin,
   CacheFirst,
   ExpirationPlugin,
+  NetworkFirst,
   NetworkOnly,
   Serwist,
   StaleWhileRevalidate,
@@ -81,8 +82,9 @@ const serwist = new Serwist({
           request.headers.get("Next-Router-Prefetch") === "1"
         );
       },
-      handler: new StaleWhileRevalidate({
+      handler: new NetworkFirst({
         cacheName: "rsc-cache",
+        networkTimeoutSeconds: 5,
         plugins: [
           new CacheableResponsePlugin({ statuses: [0, 200] }),
           new ExpirationPlugin({
@@ -94,8 +96,9 @@ const serwist = new Serwist({
     },
     {
       matcher: ({ request }) => request.mode === "navigate",
-      handler: new StaleWhileRevalidate({
+      handler: new NetworkFirst({
         cacheName: "html-pages",
+        networkTimeoutSeconds: 5,
         plugins: [
           new CacheableResponsePlugin({ statuses: [0, 200] }),
           new ExpirationPlugin({
@@ -116,8 +119,26 @@ const serwist = new Serwist({
   },
 });
 
+const RUNTIME_CACHE_FRAGMENTS = [
+  "exercise-library",
+  "html-pages",
+  "rsc-cache",
+  "static-assets",
+  "images",
+] as const;
+
 self.addEventListener("activate", (event) => {
-  event.waitUntil(caches.delete("exercise-library"));
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) =>
+            RUNTIME_CACHE_FRAGMENTS.some((fragment) => key.includes(fragment))
+          )
+          .map((key) => caches.delete(key))
+      )
+    )
+  );
 });
 
 serwist.addEventListeners();

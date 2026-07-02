@@ -56,7 +56,22 @@ export function ServiceWorkerRegister() {
       }
     };
 
+    const checkForUpdates = () => {
+      void window.serwist?.update();
+    };
+
     void start();
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") checkForUpdates();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    const interval = setInterval(checkForUpdates, 60 * 60 * 1000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(interval);
+    };
   }, []);
 
   return null;
