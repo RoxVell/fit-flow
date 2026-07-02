@@ -40,16 +40,16 @@ Components: `GeneralTab` → `ProgressChart`, `BodyPartProgressChart`, `RecentPR
 
 - Multi-line chart: one line per `BodyPart` (`ABS`, `BACK`, `BICEPS`, …) from the exercise manifest.
 - A body part appears only if at least one exercise in that group has logged strength data.
-- **Weekly line value**: average index of exercises in the group that have appeared so far in the period, with **carry-forward** (last known index kept until a new session updates it).
+- **Weekly line value**: average index of exercises in the group that were logged in **at least two weeks** in the period, indexed to **100% at each exercise’s first week in the period**, with **carry-forward** until a new session updates it. One-off exercises (single week in the period) are excluded — they stay at 100% and would dilute the line.
 - **Category summary** (header row on each expandable card):
-  - **Current** = average of each exercise’s latest index in the period.
-  - **Change** = average of each exercise’s **relative** change: `(last / first − 1) × 100`, not a simple subtraction of index values.
+  - **Change** = first vs last point on the chart line for that body part (same as General progress headline). Matches what you read off the graph (e.g. 100% → 102.7% = **+2.7%**).
+  - Expanded **per-exercise** rows still show each exercise’s own relative change; averaging those can differ from the line when new exercises join mid-period or some moves were logged only once.
 - Tap a category to expand **per-exercise** rows (same current + relative change). Expanding highlights that line on the chart.
 - Legend under the chart maps colors to body-part labels (`BODY_PART_LABELS`, localized).
 
-### Why category change matches exercises
+### Why category change matches the chart
 
-Early versions compared first vs last **weekly average** on the chart. That broke when different exercises were logged in different weeks (e.g. one shoulder exercise early, five later → average looked like a drop while every exercise improved). Summaries are now derived from **exercise-level** series, then aggregated.
+Chart lines and category **change** badges both use **period-indexed** weekly averages; the badge is **first vs last point on the line** (not an average of per-exercise badges). Use period **All** to see all-time progress from each exercise’s first log.
 
 ## Exercises tab (`ExercisesTab`)
 

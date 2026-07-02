@@ -108,13 +108,11 @@ function getPeriodStartProgress(
   return null;
 }
 
-/** Weekly series indexed to 100 at each exercise's first week in the period. */
-export function computeOverallProgressSeries(
+function buildPeriodStartProgress(
   filteredWeeks: [string, Map<string, number>][],
   baseline: Map<string, number>,
-  formatChartDate: (iso: string) => string
-): { week: string; progress: number }[] {
-  const cohort = getPeriodCohort(filteredWeeks);
+  cohort: Set<string>
+): Map<string, number> {
   const periodStartProgress = new Map<string, number>();
   for (const exId of cohort) {
     const start = getPeriodStartProgress(filteredWeeks, baseline, exId);
@@ -122,7 +120,71 @@ export function computeOverallProgressSeries(
       periodStartProgress.set(exId, start);
     }
   }
+  return periodStartProgress;
+}
 
+function computePeriodIndexedAverage(
+  cohort: Set<string>,
+  periodStartProgress: Map<string, number>,
+  runningProgress: Map<string, number>
+): number | null {
+  let total = 0;
+  let count = 0;
+  for (const exId of cohort) {
+    const start = periodStartProgress.get(exId);
+    const current = runningProgress.get(exId);
+    if (start && start > 0 && current !== undefined) {
+      total += (current / start) * 100;
+      count++;
+    }
+  }
+  return count > 0 ? Math.round((total / count) * 10) / 10 : null;
+}
+
+function getRepeatSessionExerciseIds(
+  filteredWeeks: [string, Map<string, number>][]
+): Set<string> {
+  const sessionCounts = new Map<string, number>();
+  for (const [, exercises] of filteredWeeks) {
+    for (const exId of exercises.keys()) {
+      sessionCounts.set(exId, (sessionCounts.get(exId) ?? 0) + 1);
+    }
+  }
+  return new Set(
+    [...sessionCounts.entries()]
+      .filter(([, count]) => count >= 2)
+      .map(([exId]) => exId)
+  );
+}
+
+function getBodyPartPeriodCohort(
+  filteredWeeks: [string, Map<string, number>][],
+  exerciseBodyPart: Map<string, BodyPart>,
+  bodyPart: BodyPart,
+  repeatSessionIds: Set<string>
+): Set<string> {
+  const cohort = new Set<string>();
+  for (const [, exercises] of filteredWeeks) {
+    for (const exId of exercises.keys()) {
+      if (
+        exerciseBodyPart.get(exId) === bodyPart &&
+        repeatSessionIds.has(exId)
+      ) {
+        cohort.add(exId);
+      }
+    }
+  }
+  return cohort;
+}
+
+/** Weekly series indexed to 100 at each exercise's first week in the period. */
+export function computeOverallProgressSeries(
+  filteredWeeks: [string, Map<string, number>][],
+  baseline: Map<string, number>,
+  formatChartDate: (iso: string) => string
+): { week: string; progress: number }[] {
+  const cohort = getPeriodCohort(filteredWeeks);
+  const periodStartProgress = buildPeriodStartProgress(filteredWeeks, baseline, cohort);
   const runningProgress = new Map<string, number>();
 
   return filteredWeeks.map(([weekStart, exercises]) => {
@@ -133,20 +195,9 @@ export function computeOverallProgressSeries(
       }
     }
 
-    let total = 0;
-    let count = 0;
-    for (const exId of cohort) {
-      const start = periodStartProgress.get(exId);
-      const current = runningProgress.get(exId);
-      if (start && start > 0 && current !== undefined) {
-        total += (current / start) * 100;
-        count++;
-      }
-    }
-
     return {
       week: formatChartDate(weekStart),
-      progress: count > 0 ? Math.round((total / count) * 10) / 10 : 100,
+      progress: computePeriodIndexedAverage(cohort, periodStartProgress, runningProgress) ?? 100,
     };
   });
 }
@@ -244,6 +295,7 @@ export function computeExerciseProgressSummaries(
   return summaries.sort((a, b) => (b.current ?? 0) - (a.current ?? 0));
 }
 
+/** Weekly body-part lines indexed to 100 at each exercise's first week in the period. */
 export function computeBodyPartProgressSeries(
   filteredWeeks: [string, Map<string, number>][],
   baseline: Map<string, number>,
@@ -253,21 +305,31 @@ export function computeBodyPartProgressSeries(
   chartData: Record<string, string | number>[];
   bodyParts: BodyPart[];
 } {
-  const bodyPartsWithBaseline = new Set<BodyPart>();
-  for (const exId of baseline.keys()) {
-    const bodyPart = exerciseBodyPart.get(exId);
-    if (bodyPart) bodyPartsWithBaseline.add(bodyPart);
+  const bodyPartsWithData = new Set<BodyPart>();
+  for (const [, exercises] of filteredWeeks) {
+    for (const exId of exercises.keys()) {
+      const bodyPart = exerciseBodyPart.get(exId);
+      if (bodyPart) bodyPartsWithData.add(bodyPart);
+    }
   }
 
-  const bodyParts = sortBodyParts([...bodyPartsWithBaseline]);
-  const bodyPartExerciseIds = new Map<BodyPart, string[]>();
+  const bodyParts = sortBodyParts([...bodyPartsWithData]);
+  const repeatSessionIds = getRepeatSessionExerciseIds(filteredWeeks);
+  const bodyPartCohorts = new Map<BodyPart, Set<string>>();
   for (const bodyPart of bodyParts) {
-    bodyPartExerciseIds.set(
+    bodyPartCohorts.set(
       bodyPart,
-      getExercisesForBodyPart(baseline, exerciseBodyPart, bodyPart)
+      getBodyPartPeriodCohort(
+        filteredWeeks,
+        exerciseBodyPart,
+        bodyPart,
+        repeatSessionIds
+      )
     );
   }
 
+  const periodCohort = getPeriodCohort(filteredWeeks);
+  const periodStartProgress = buildPeriodStartProgress(filteredWeeks, baseline, periodCohort);
   const runningProgress = new Map<string, number>();
 
   const chartData = filteredWeeks.map(([weekStart, exercises]) => {
@@ -275,32 +337,22 @@ export function computeBodyPartProgressSeries(
       week: formatChartDate(weekStart),
     };
 
+    for (const [exId, value] of exercises) {
+      const baseValue = baseline.get(exId);
+      if (baseValue && baseValue > 0) {
+        runningProgress.set(exId, Math.round((value / baseValue) * 1000) / 10);
+      }
+    }
+
     for (const bodyPart of bodyParts) {
-      const exerciseIds = bodyPartExerciseIds.get(bodyPart)!;
-
-      for (const exId of exerciseIds) {
-        const value = exercises.get(exId);
-        const baseValue = baseline.get(exId);
-        if (value !== undefined && baseValue && baseValue > 0) {
-          runningProgress.set(
-            exId,
-            Math.round((value / baseValue) * 1000) / 10
-          );
-        }
-      }
-
-      let total = 0;
-      let count = 0;
-      for (const exId of exerciseIds) {
-        const progress = runningProgress.get(exId);
-        if (progress !== undefined) {
-          total += progress;
-          count++;
-        }
-      }
-
-      if (count > 0) {
-        row[bodyPart] = Math.round((total / count) * 10) / 10;
+      const cohort = bodyPartCohorts.get(bodyPart)!;
+      const indexed = computePeriodIndexedAverage(
+        cohort,
+        periodStartProgress,
+        runningProgress
+      );
+      if (indexed !== null) {
+        row[bodyPart] = indexed;
       }
     }
 
@@ -373,6 +425,21 @@ export function computeBodyPartSummariesFromExercises(
   }
 
   return summaries;
+}
+
+/** Period change per body-part line (first vs last chart point), like General progress. */
+export function computeBodyPartChartChanges(
+  chartData: Record<string, string | number>[],
+  bodyParts: BodyPart[]
+): Map<BodyPart, PeriodChange | null> {
+  const changes = new Map<BodyPart, PeriodChange | null>();
+  for (const bodyPart of bodyParts) {
+    const values = chartData
+      .map((row) => row[bodyPart])
+      .filter((value): value is number => typeof value === "number");
+    changes.set(bodyPart, computePeriodChange(values));
+  }
+  return changes;
 }
 
 export function collectNumericValues(
