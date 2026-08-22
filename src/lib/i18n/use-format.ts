@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import type { MuscleGroup } from "@/lib/db/types";
-import { useLocale } from "@/lib/stores/locale-store";
+import { useLocale } from "@/lib/i18n/locale-context";
 import {
   formatChartDate,
   formatDateTime,

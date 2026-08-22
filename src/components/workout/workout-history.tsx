@@ -17,7 +17,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useLocale } from "@/lib/stores/locale-store";
+import { useLocale } from "@/lib/i18n/locale-context";
 import {
   getCompletedWorkoutLogsInRange,
   removeWorkoutLog,

@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { WifiOff, Wifi, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSyncState } from "@/lib/sync/sync-service";
+import { useT } from "@/lib/i18n/use-t";
 
 export function OfflineBanner() {
   const [online, setOnline] = useState(true);
   const { pending, syncing, flush } = useSyncState();
+  const t = useT();
 
   useEffect(() => {
     setOnline(navigator.onLine);
@@ -33,18 +35,14 @@ export function OfflineBanner() {
       {online ? (
         <>
           <Wifi className="h-3 w-3" />
-          {pending > 0
-            ? `Back online — syncing ${pending} change${pending === 1 ? "" : "s"}…`
-            : "Back online"}
+          {pending > 0 ? t.pwa.backOnlineSyncing(pending) : t.pwa.backOnline}
         </>
       ) : (
         <>
           <WifiOff className="h-3 w-3" />
           <span>
-            You're offline —{" "}
-            {pending > 0
-              ? `${pending} pending change${pending === 1 ? "" : "s"}`
-              : "changes will sync when connected"}
+            {t.pwa.offlineTitle}{" "}
+            {pending > 0 ? t.pwa.pendingChanges(pending) : t.pwa.offlineNoPending}
           </span>
           {pending > 0 ? (
             <button
@@ -54,7 +52,7 @@ export function OfflineBanner() {
               className="ml-1 inline-flex items-center gap-1 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide hover:bg-white/30 disabled:opacity-60"
             >
               <RefreshCw className={cn("h-3 w-3", syncing && "animate-spin")} />
-              {syncing ? "Syncing" : "Sync now"}
+              {syncing ? t.pwa.syncing : t.pwa.syncNow}
             </button>
           ) : null}
         </>

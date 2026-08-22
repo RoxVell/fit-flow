@@ -26,7 +26,7 @@ import {
   topMuscles,
 } from "@/lib/exercises/muscle-map";
 import { exerciseUi } from "@/lib/exercises/ui";
-import { useLocale } from "@/lib/stores/locale-store";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 interface ExerciseDetailSheetProps {
   exerciseId: string | null;

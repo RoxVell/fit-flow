@@ -13,7 +13,7 @@ import {
   subscribeExerciseLibraryCacheClear,
 } from "@/lib/exercises/library-client";
 import { pickLocalized } from "@/lib/exercises/locale";
-import { useLocale } from "@/lib/stores/locale-store";
+import { useLocale } from "@/lib/i18n/locale-context";
 import type {
   BodyPart,
   ExerciseDetail,

@@ -33,7 +33,7 @@ import { BODY_PART_LABELS, labelFor } from "@/lib/exercises/labels";
 import type { BodyPart } from "@/lib/exercises/types";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
-import { useLocale } from "@/lib/stores/locale-store";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { cn } from "@/lib/utils";
 
 function formatChange(value: number): string {

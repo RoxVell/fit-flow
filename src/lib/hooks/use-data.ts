@@ -29,7 +29,7 @@ import {
   useExerciseLibrary,
   useExerciseManifest,
 } from "@/lib/hooks/use-exercise-library";
-import { useLocale } from "@/lib/stores/locale-store";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 export function useExercises(filters?: ExerciseFilters): Exercise[] | undefined {
   const locale = useLocale();
@@ -279,8 +279,6 @@ export function useDashboardStats(): DashboardStats | undefined {
       currentWeight,
       weightTrend,
       hasWeightHistory,
-      steps: 8432,
-      calories: 345,
       activeDays,
       nextSession,
       heatmapData,

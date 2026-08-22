@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Download, Share, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n/use-t";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -40,6 +41,7 @@ export function InstallPrompt() {
   const [visible, setVisible] = useState(false);
   const [installed, setInstalled] = useState(false);
   const [ios, setIos] = useState(false);
+  const t = useT();
 
   useEffect(() => {
     if (isStandalone()) {
@@ -94,7 +96,7 @@ export function InstallPrompt() {
     return (
       <div
         role="dialog"
-        aria-label="Install FitFlow on iOS"
+        aria-label={t.pwa.installIosAria}
         className={cn(
           "fixed bottom-20 left-1/2 z-40 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm",
           "rounded-xl border bg-background/95 backdrop-blur shadow-lg p-3 flex items-start gap-3"
@@ -104,16 +106,16 @@ export function InstallPrompt() {
           <Share className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold">Install FitFlow</p>
+          <p className="text-sm font-semibold">{t.pwa.installTitle}</p>
           <p className="text-xs text-muted-foreground leading-snug">
-            Tap the <Share className="inline h-3 w-3 -mt-0.5" /> Share button, then
-            &ldquo;Add to Home Screen&rdquo;.
+            {t.pwa.shareHintPrefix} <Share className="inline h-3 w-3 -mt-0.5" />{" "}
+            {t.pwa.shareHintSuffix}
           </p>
         </div>
         <button
           type="button"
           onClick={dismiss}
-          aria-label="Dismiss"
+          aria-label={t.pwa.dismiss}
           className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-foreground"
         >
           <X className="h-4 w-4" />
@@ -140,7 +142,7 @@ export function InstallPrompt() {
   return (
     <div
       role="dialog"
-      aria-label="Install FitFlow"
+      aria-label={t.pwa.installAria}
       className={cn(
         "fixed bottom-20 left-1/2 z-40 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm",
         "rounded-xl border bg-background/95 backdrop-blur shadow-lg p-3 flex items-center gap-3"
@@ -150,16 +152,16 @@ export function InstallPrompt() {
         <Download className="h-5 w-5" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold">Install FitFlow</p>
-        <p className="text-xs text-muted-foreground">Add to home screen for offline access</p>
+        <p className="text-sm font-semibold">{t.pwa.installTitle}</p>
+        <p className="text-xs text-muted-foreground">{t.pwa.installSubtitle}</p>
       </div>
       <Button size="sm" onClick={handleInstall} className="shrink-0">
-        Install
+        {t.pwa.installCta}
       </Button>
       <button
         type="button"
         onClick={dismiss}
-        aria-label="Dismiss"
+        aria-label={t.pwa.dismiss}
         className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-foreground"
       >
         <X className="h-4 w-4" />

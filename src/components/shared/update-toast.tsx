@@ -3,9 +3,11 @@
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUpdateAvailable } from "@/lib/hooks/use-update-available";
+import { useT } from "@/lib/i18n/use-t";
 
 export function UpdateToast() {
   const { updateAvailable, applyUpdate } = useUpdateAvailable();
+  const t = useT();
   if (!updateAvailable) return null;
 
   return (
@@ -18,11 +20,11 @@ export function UpdateToast() {
         <RefreshCw className="h-5 w-5" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold">Update available</p>
-        <p className="text-xs text-muted-foreground">A new version of FitFlow is ready</p>
+        <p className="text-sm font-semibold">{t.pwa.updateAvailable}</p>
+        <p className="text-xs text-muted-foreground">{t.pwa.updateReady}</p>
       </div>
       <Button size="sm" onClick={() => void applyUpdate()} className="shrink-0">
-        Reload
+        {t.pwa.reload}
       </Button>
     </div>
   );
