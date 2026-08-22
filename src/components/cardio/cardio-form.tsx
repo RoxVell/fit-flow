@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createCardioSession } from "@/lib/repositories/cardio";
 import { calculatePace, formatPace } from "@/lib/utils/calculations";
 import type { CardioType } from "@/lib/db/types";
+import { useT } from "@/lib/i18n/use-t";
 
 export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
   const [type, setType] = useState<CardioType>("run");
@@ -22,6 +23,7 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
   const [seconds, setSeconds] = useState("");
   const [heartRate, setHeartRate] = useState("");
   const [saving, setSaving] = useState(false);
+  const t = useT();
 
   const totalMinutes = parseFloat(minutes) + parseFloat(seconds) / 60 || 0;
   const distKm = parseFloat(distance) || 0;
@@ -48,7 +50,7 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Log Cardio</CardTitle>
+        <CardTitle className="text-lg">{t.cardio.logCardio}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <Select value={type} onValueChange={(v) => setType(v as CardioType)}>
@@ -56,27 +58,27 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="run">Run</SelectItem>
-            <SelectItem value="cycle">Cycle</SelectItem>
-            <SelectItem value="elliptical">Elliptical</SelectItem>
-            <SelectItem value="row">Row</SelectItem>
+            <SelectItem value="run">{t.cardio.types.run}</SelectItem>
+            <SelectItem value="cycle">{t.cardio.types.cycle}</SelectItem>
+            <SelectItem value="elliptical">{t.cardio.types.elliptical}</SelectItem>
+            <SelectItem value="row">{t.cardio.types.row}</SelectItem>
           </SelectContent>
         </Select>
 
         <div>
-          <label className="text-xs text-muted-foreground">Distance (km)</label>
+          <label className="text-xs text-muted-foreground">{t.cardio.distanceKm}</label>
           <Input
             type="number"
             step="0.1"
             value={distance}
             onChange={(e) => setDistance(e.target.value)}
-            placeholder="e.g. 5.0"
+            placeholder={t.cardio.distancePlaceholder}
           />
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-muted-foreground">Minutes</label>
+            <label className="text-xs text-muted-foreground">{t.cardio.minutes}</label>
             <Input
               type="number"
               value={minutes}
@@ -85,7 +87,7 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
             />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Seconds</label>
+            <label className="text-xs text-muted-foreground">{t.cardio.seconds}</label>
             <Input
               type="number"
               value={seconds}
@@ -97,18 +99,18 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
 
         {pace > 0 && (
           <div className="rounded-lg bg-muted p-3 text-center">
-            <p className="text-xs text-muted-foreground">Pace</p>
+            <p className="text-xs text-muted-foreground">{t.cardio.pace}</p>
             <p className="text-xl font-bold text-primary">{formatPace(pace)}</p>
           </div>
         )}
 
         <div>
-          <label className="text-xs text-muted-foreground">Avg Heart Rate (bpm)</label>
+          <label className="text-xs text-muted-foreground">{t.cardio.avgHeartRate}</label>
           <Input
             type="number"
             value={heartRate}
             onChange={(e) => setHeartRate(e.target.value)}
-            placeholder="Optional"
+            placeholder={t.cardio.optional}
           />
         </div>
 
@@ -117,7 +119,7 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
           onClick={() => void handleSubmit()}
           disabled={!distance || !minutes || saving}
         >
-          {saving ? "Saving..." : "Save Cardio"}
+          {saving ? t.cardio.saving : t.cardio.save}
         </Button>
       </CardContent>
     </Card>

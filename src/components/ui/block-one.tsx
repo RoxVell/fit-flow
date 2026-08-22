@@ -1,5 +1,5 @@
 'use client';
-import Blocks from '../../../components/uilayouts/blocks';
+import Blocks from '@/components/uilayouts/blocks';
 import React, { useRef } from 'react';
 
 function BlockOne() {

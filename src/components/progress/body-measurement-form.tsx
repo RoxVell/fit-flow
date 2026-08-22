@@ -17,7 +17,7 @@ import {
   logBodyMeasurement,
 } from "@/lib/repositories/measurements";
 import { useT } from "@/lib/i18n/use-t";
-import { useLocale } from "@/lib/stores/locale-store";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { cn } from "@/lib/utils";
 
 interface BodyMeasurementFormProps {

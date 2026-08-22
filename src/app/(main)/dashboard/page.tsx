@@ -17,11 +17,7 @@ export default function DashboardPage() {
       <div className="space-y-4 p-4">
         <Skeleton className="h-16 w-full rounded-2xl" />
         <Skeleton className="h-48 w-full rounded-xl" />
-        <div className="grid grid-cols-3 gap-3">
-          <Skeleton className="h-20 rounded-xl" />
-          <Skeleton className="h-20 rounded-xl" />
-          <Skeleton className="h-20 rounded-xl" />
-        </div>
+        <Skeleton className="h-20 w-full rounded-xl" />
         <Skeleton className="h-32 w-full rounded-xl" />
       </div>
     );
@@ -33,8 +29,6 @@ export default function DashboardPage() {
 
       {stats && (
         <SmartStats
-          steps={stats.steps}
-          calories={stats.calories}
           weight={stats.currentWeight}
           weightTrend={stats.weightTrend}
           hasWeightHistory={stats.hasWeightHistory}

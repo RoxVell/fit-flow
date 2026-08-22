@@ -14,7 +14,7 @@ import { pickLocalized } from "@/lib/exercises/locale";
 import { BODY_PART_LABELS, labelFor } from "@/lib/exercises/labels";
 import { exerciseUi } from "@/lib/exercises/ui";
 import { useSortedExerciseLibrary } from "@/lib/hooks/use-sorted-exercise-library";
-import { useLocale } from "@/lib/stores/locale-store";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 interface ExercisePickerDialogProps {
   open: boolean;

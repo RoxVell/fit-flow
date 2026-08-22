@@ -8,7 +8,7 @@ import {
 import { pickLocalized } from "@/lib/exercises/locale";
 import type { Exercise } from "@/lib/db/types";
 import { useExerciseManifest } from "@/lib/hooks/use-exercise-library";
-import { useLocale } from "@/lib/stores/locale-store";
+import { useLocale } from "@/lib/i18n/locale-context";
 
 /** Resolve exercise names and metadata from the static library manifest. */
 export function useExerciseLookup() {

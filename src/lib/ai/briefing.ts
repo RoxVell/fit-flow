@@ -67,59 +67,6 @@ export async function generateBriefing(
   return { summary, highlights, concerns };
 }
 
-export async function generateProgram(query: string): Promise<{
-  name: string;
-  description: string;
-  daysPerWeek: number;
-  sessions: { name: string; exercises: string[] }[];
-}> {
-  const isUpperLower = query.toLowerCase().includes("upper") || query.toLowerCase().includes("lower");
-  const isPPL = query.toLowerCase().includes("push") || query.toLowerCase().includes("pull");
-  const isFourDay = query.toLowerCase().includes("4") || isUpperLower;
-  const isSixDay = query.toLowerCase().includes("6") || isPPL;
-  const focusMuscle = query.toLowerCase().includes("shoulder") ? "shoulders" : "general";
-
-  if (isFourDay || !isSixDay) {
-    return {
-      name: "AI Upper/Lower Split",
-      description: `4-day upper/lower split with focus on ${focusMuscle}. Generated for: "${query}"`,
-      daysPerWeek: 4,
-      sessions: [
-        {
-          name: "Upper A",
-          exercises: ["Barbell Bench Press", "Barbell Row", "Overhead Press", "Barbell Curl", "Triceps Pushdown"],
-        },
-        {
-          name: "Lower A",
-          exercises: ["Squat", "Romanian Deadlift", "Standing Calf Raise", "Plank"],
-        },
-        {
-          name: "Upper B",
-          exercises: ["Dumbbell Bench Press", "Lat Pulldown", "Lateral Raise", "Skull Crushers", "Cable Crunch"],
-        },
-        {
-          name: "Lower B",
-          exercises: ["Deadlift", "Hip Thrust", "Bulgarian Split Squat", "Hanging Leg Raise"],
-        },
-      ],
-    };
-  }
-
-  return {
-    name: "AI PPL Split",
-    description: `6-day Push/Pull/Legs split with focus on ${focusMuscle}. Generated for: "${query}"`,
-    daysPerWeek: 6,
-    sessions: [
-      { name: "Push A", exercises: ["Barbell Bench Press", "Incline Barbell Bench Press", "Overhead Press", "Lateral Raise", "Triceps Pushdown", "Cable Crunch"] },
-      { name: "Pull A", exercises: ["Deadlift", "Pull-Ups", "Seated Cable Row", "Face Pull", "Barbell Curl", "Hanging Leg Raise"] },
-      { name: "Legs A", exercises: ["Squat", "Romanian Deadlift", "Leg Press", "Leg Curl", "Standing Calf Raise"] },
-      { name: "Push B", exercises: ["Dumbbell Bench Press", "Dips", "Dumbbell Shoulder Press", "Dumbbell Lateral Raise", "Skull Crushers", "Cable Flyes"] },
-      { name: "Pull B", exercises: ["Barbell Row", "Lat Pulldown", "Dumbbell Row", "Dumbbell Hammer Curl", "Farmers Walk"] },
-      { name: "Legs B", exercises: ["Bulgarian Split Squat", "Hip Thrust", "Goblet Squat", "Standing Calf Raise"] },
-    ],
-  };
-}
-
 export async function getAdvice(
   exerciseName: string,
   recentHistory: { weight: number; reps: number }[]

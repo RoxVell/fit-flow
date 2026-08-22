@@ -5,8 +5,6 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { useT } from "@/lib/i18n/use-t";
 
 interface SmartStatsProps {
-  steps: number;
-  calories: number;
   weight: number | null;
   weightTrend: "up" | "down" | "stable";
   hasWeightHistory: boolean;
@@ -19,8 +17,6 @@ function TrendIcon({ trend }: { trend: "up" | "down" | "stable" }) {
 }
 
 export function SmartStats({
-  steps,
-  calories,
   weight,
   weightTrend,
   hasWeightHistory,
@@ -29,34 +25,24 @@ export function SmartStats({
   const router = useRouter();
 
   return (
-    <div className="grid grid-cols-3 gap-3">
-      <div className="rounded-xl bg-card p-3 shadow-sm border">
-        <p className="text-xs text-muted-foreground">{t.dashboard.steps}</p>
-        <p className="text-lg font-bold">{steps.toLocaleString()}</p>
+    <button
+      type="button"
+      onClick={() => router.push("/progress/body/log")}
+      className="w-full rounded-xl bg-card p-3 shadow-sm border text-left transition-colors hover:bg-muted/40"
+    >
+      <div className="flex items-center gap-1">
+        <p className="text-xs text-muted-foreground">{t.dashboard.weight}</p>
+        {hasWeightHistory && <TrendIcon trend={weightTrend} />}
       </div>
-      <div className="rounded-xl bg-card p-3 shadow-sm border">
-        <p className="text-xs text-muted-foreground">{t.dashboard.calories}</p>
-        <p className="text-lg font-bold">{calories}</p>
-      </div>
-      <button
-        type="button"
-        onClick={() => router.push("/progress/body/log")}
-        className="rounded-xl bg-card p-3 shadow-sm border text-left transition-colors hover:bg-muted/40"
-      >
-        <div className="flex items-center gap-1">
-          <p className="text-xs text-muted-foreground">{t.dashboard.weight}</p>
-          {hasWeightHistory && <TrendIcon trend={weightTrend} />}
-        </div>
-        <p className="text-lg font-bold">
-          {weight != null ? (
-            <>
-              {weight} {t.dashboard.kg}
-            </>
-          ) : (
-            "—"
-          )}
-        </p>
-      </button>
-    </div>
+      <p className="text-lg font-bold">
+        {weight != null ? (
+          <>
+            {weight} {t.dashboard.kg}
+          </>
+        ) : (
+          t.common.emDash
+        )}
+      </p>
+    </button>
   );
 }

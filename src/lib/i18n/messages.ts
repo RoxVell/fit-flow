@@ -22,8 +22,6 @@ export const messages = {
       never: "Never",
     },
     dashboard: {
-      steps: "Steps",
-      calories: "Calories",
       weight: "Weight",
       kg: "kg",
       recentWorkouts: "Recent Workouts",
@@ -194,6 +192,7 @@ export const messages = {
       saveChanges: "Save",
       deleting: "Deleting...",
       saving: "Saving...",
+      restTimer: "Rest timer",
     },
     programs: {
       title: "Programs",
@@ -245,6 +244,52 @@ export const messages = {
       deleting: "Deleting...",
       cancel: "Cancel",
     },
+    cardio: {
+      title: "Cardio",
+      history: "History",
+      logCardio: "Log Cardio",
+      types: {
+        run: "Run",
+        cycle: "Cycle",
+        elliptical: "Elliptical",
+        row: "Row",
+      },
+      distanceKm: "Distance (km)",
+      distancePlaceholder: "e.g. 5.0",
+      minutes: "Minutes",
+      seconds: "Seconds",
+      pace: "Pace",
+      avgHeartRate: "Avg Heart Rate (bpm)",
+      optional: "Optional",
+      save: "Save Cardio",
+      saving: "Saving...",
+      kmUnit: "km",
+      bpmUnit: "bpm",
+    },
+    pwa: {
+      updateAvailable: "Update available",
+      updateReady: "A new version of FitFlow is ready",
+      reload: "Reload",
+      installTitle: "Install FitFlow",
+      installSubtitle: "Add to home screen for offline access",
+      installAria: "Install FitFlow",
+      installIosAria: "Install FitFlow on iOS",
+      shareHintPrefix: "Tap the",
+      shareHintSuffix: "Share button, then “Add to Home Screen”.",
+      dismiss: "Dismiss",
+      installCta: "Install",
+      backOnline: "Back online",
+      backOnlineSyncing: (n: number) =>
+        n === 1
+          ? `Back online — syncing ${n} change…`
+          : `Back online — syncing ${n} changes…`,
+      offlineTitle: "You're offline —",
+      offlineNoPending: "changes will sync when connected",
+      pendingChanges: (n: number) =>
+        n === 1 ? `${n} pending change` : `${n} pending changes`,
+      syncNow: "Sync now",
+      syncing: "Syncing",
+    },
     common: {
       loading: "Loading...",
       close: "Close",
@@ -272,8 +317,6 @@ export const messages = {
       never: "Никогда",
     },
     dashboard: {
-      steps: "Шаги",
-      calories: "Калории",
       weight: "Вес",
       kg: "кг",
       recentWorkouts: "Недавние тренировки",
@@ -445,6 +488,7 @@ export const messages = {
       saveChanges: "Сохранить",
       deleting: "Удаление...",
       saving: "Сохранение...",
+      restTimer: "Таймер отдыха",
     },
     programs: {
       title: "Программы",
@@ -501,6 +545,63 @@ export const messages = {
       delete: "Удалить",
       deleting: "Удаление...",
       cancel: "Отмена",
+    },
+    cardio: {
+      title: "Кардио",
+      history: "История",
+      logCardio: "Записать кардио",
+      types: {
+        run: "Бег",
+        cycle: "Велосипед",
+        elliptical: "Эллипс",
+        row: "Гребля",
+      },
+      distanceKm: "Дистанция (км)",
+      distancePlaceholder: "напр. 5.0",
+      minutes: "Минуты",
+      seconds: "Секунды",
+      pace: "Темп",
+      avgHeartRate: "Средний пульс (уд/мин)",
+      optional: "Необязательно",
+      save: "Сохранить",
+      saving: "Сохранение...",
+      kmUnit: "км",
+      bpmUnit: "уд/мин",
+    },
+    pwa: {
+      updateAvailable: "Доступно обновление",
+      updateReady: "Новая версия FitFlow готова",
+      reload: "Обновить",
+      installTitle: "Установить FitFlow",
+      installSubtitle: "Добавьте на главный экран для офлайн-доступа",
+      installAria: "Установить FitFlow",
+      installIosAria: "Установить FitFlow на iOS",
+      shareHintPrefix: "Нажмите",
+      shareHintSuffix: "«Поделиться», затем «На экран “Домой”».",
+      dismiss: "Скрыть",
+      installCta: "Установить",
+      backOnline: "Сеть доступна",
+      backOnlineSyncing: (n: number) => {
+        const mod10 = n % 10;
+        const mod100 = n % 100;
+        if (mod10 === 1 && mod100 !== 11)
+          return `Сеть доступна — синхронизируется ${n} изменение…`;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20))
+          return `Сеть доступна — синхронизируются ${n} изменения…`;
+        return `Сеть доступна — синхронизируются ${n} изменений…`;
+      },
+      offlineTitle: "Вы офлайн —",
+      offlineNoPending: "изменения синхронизируются при подключении",
+      pendingChanges: (n: number) => {
+        const mod10 = n % 10;
+        const mod100 = n % 100;
+        if (mod10 === 1 && mod100 !== 11) return `${n} несинхронизированное изменение`;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20))
+          return `${n} несинхронизированных изменения`;
+        return `${n} несинхронизированных изменений`;
+      },
+      syncNow: "Синхронизировать",
+      syncing: "Синхронизация...",
     },
     common: {
       loading: "Загрузка...",

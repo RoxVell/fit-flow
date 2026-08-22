@@ -170,8 +170,6 @@ export interface DashboardStats {
   currentWeight: number | null;
   weightTrend: "up" | "down" | "stable";
   hasWeightHistory: boolean;
-  steps: number;
-  calories: number;
   activeDays: number;
   nextSession?: WorkoutSession;
   heatmapData: Record<MuscleGroup, number>;

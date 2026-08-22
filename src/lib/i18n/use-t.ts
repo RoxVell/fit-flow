@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "@/lib/stores/locale-store";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { getMessages } from "./messages";
 
 export function useT() {

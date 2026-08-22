@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { sortExercisesByUsage } from "@/lib/exercises/sort-by-usage";
 import type { ExerciseLibraryFilters } from "@/lib/exercises/types";
-import { useLocale } from "@/lib/stores/locale-store";
+import { useLocale } from "@/lib/i18n/locale-context";
 import { useExerciseLibrary } from "@/lib/hooks/use-exercise-library";
 import { useExerciseUsageCounts } from "@/lib/hooks/use-exercise-usage";
 
