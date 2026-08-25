@@ -62,6 +62,7 @@ function ActiveWorkoutContent({
     removeSet,
     updateSet,
     swapExercise,
+    updateExercise,
   } = useActiveWorkout(sessionId);
 
   const [showAddExercise, setShowAddExercise] = useState(false);
@@ -157,7 +158,7 @@ function ActiveWorkoutContent({
 
       <div className="pt-[calc(env(safe-area-inset-top)+4rem)] pb-20 px-4">
         <AnimatePresence>
-          {exercises.map((ex) => {
+          {exercises.map((ex, index) => {
             const exercise = exerciseMap.get(ex.exerciseId);
             const exerciseName =
               exercise?.name || getName(ex.exerciseId, t.workout.unknownExercise);
@@ -172,6 +173,7 @@ function ActiveWorkoutContent({
               >
                 <ExerciseCard
                   exercise={ex}
+                  index={index + 1}
                   exerciseName={exerciseName}
                   muscleGroup={exercise?.muscleGroup || "chest"}
                   previousSets={previousSetsMap.get(ex.id) || []}
@@ -185,6 +187,7 @@ function ActiveWorkoutContent({
                   onHistoryRequest={() =>
                     setHistoryExercise({ id: ex.exerciseId, name: exerciseName })
                   }
+                  onUpdateExercise={(data) => updateExercise(ex.id, data)}
                 />
               </motion.div>
             );

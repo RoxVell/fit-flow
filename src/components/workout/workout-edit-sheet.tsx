@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Sheet,
   SheetContent,
@@ -60,6 +62,15 @@ export function WorkoutEditSheet({
     setWeightTexts(texts);
   }, [log, open]);
 
+  const updateExercise = (
+    exerciseId: string,
+    data: Partial<Pick<LoggedExercise, "notes" | "excludeFromStats">>
+  ) => {
+    setExercises((current) =>
+      current.map((ex) => (ex.id !== exerciseId ? ex : { ...ex, ...data }))
+    );
+  };
+
   const updateSet = (
     exerciseId: string,
     setId: string,
@@ -83,7 +94,14 @@ export function WorkoutEditSheet({
     if (!log || saving) return;
     setSaving(true);
     try {
-      await saveWorkoutEdits(log.id, exercises, exerciseMap);
+      const normalized = exercises.map((exercise) => {
+        const notes = exercise.notes?.trim();
+        return {
+          ...exercise,
+          notes: notes ? notes : undefined,
+        };
+      });
+      await saveWorkoutEdits(log.id, normalized, exerciseMap);
       onSaved();
       onOpenChange(false);
     } catch (err) {
@@ -112,10 +130,34 @@ export function WorkoutEditSheet({
                 .sort((a, b) => a.setOrder - b.setOrder);
 
               return (
-                <div key={exercise.id}>
-                  <p className="mb-2 text-sm font-medium">
+                <div key={exercise.id} className="space-y-2">
+                  <p className="text-sm font-medium">
                     {getName(exercise.exerciseId, t.workout.unknownExercise)}
                   </p>
+                  <label className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                    <span>{t.workout.excludeFromStats}</span>
+                    <Switch
+                      size="sm"
+                      checked={Boolean(exercise.excludeFromStats)}
+                      onCheckedChange={(checked) =>
+                        updateExercise(exercise.id, {
+                          excludeFromStats: Boolean(checked),
+                        })
+                      }
+                    />
+                  </label>
+                  <Textarea
+                    value={exercise.notes ?? ""}
+                    onChange={(event) =>
+                      updateExercise(exercise.id, {
+                        notes: event.target.value,
+                      })
+                    }
+                    placeholder={t.workout.exerciseNotePlaceholder}
+                    rows={2}
+                    aria-label={`${getName(exercise.exerciseId)} ${t.workout.exerciseNote}`}
+                    className="min-h-16 text-sm"
+                  />
                   <div className="space-y-2">
                     {completedSets.map((set, index) => (
                       <div

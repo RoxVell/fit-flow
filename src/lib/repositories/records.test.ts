@@ -138,6 +138,20 @@ describe("createPRsFromWorkout", () => {
     expect(records.some((r) => r.type === "volume")).toBe(true);
   });
 
+  it("skips exercises marked excludeFromStats", () => {
+    const excluded = makeLoggedExercise(100, 5, "le-deload");
+    excluded.excludeFromStats = true;
+
+    const skipped = createPRsFromWorkout(
+      [excluded],
+      exerciseMap,
+      COMPLETED_AT,
+      []
+    );
+
+    expect(skipped).toHaveLength(0);
+  });
+
   it("ignores exercises missing from the exercise map", () => {
     const records = createPRsFromWorkout(
       [makeLoggedExercise(100, 5, "le-unknown")],

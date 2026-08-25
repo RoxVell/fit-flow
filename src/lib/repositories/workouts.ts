@@ -7,7 +7,10 @@ import type {
   WorkoutLog,
   WorkoutLogEntity,
 } from "@/lib/db/types";
-import { bestE1RM, bestWeight, volume } from "@/lib/training-metrics";
+import {
+  toExerciseDetailedHistorySession,
+  toExerciseHistoryPoint,
+} from "@/lib/workout/exercise-stats";
 import { enqueueSync } from "@/lib/sync/queue";
 import { getExerciseMap } from "./exercises";
 import {
@@ -74,16 +77,9 @@ export async function getExerciseHistory(exerciseId: string) {
     .filter((l) => l.exercises.some((e) => e.exerciseId === exerciseId))
     .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
 
-  return logs.map((l) => {
-    const ex = l.exercises.find((e) => e.exerciseId === exerciseId)!;
-    const completed = ex.sets.filter((s) => s.completed);
-    return {
-      date: l.startedAt,
-      volume: volume(completed),
-      maxWeight: bestWeight(completed),
-      estimated1RM: bestE1RM(completed),
-    };
-  });
+  return logs
+    .map((l) => toExerciseHistoryPoint(l, exerciseId))
+    .filter((point): point is NonNullable<typeof point> => point !== null);
 }
 
 export async function getExerciseDetailedHistory(exerciseId: string) {
@@ -92,20 +88,9 @@ export async function getExerciseDetailedHistory(exerciseId: string) {
     .filter((l) => l.exercises.some((e) => e.exerciseId === exerciseId))
     .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
 
-  return logs.map((l) => {
-    const ex = l.exercises.find((e) => e.exerciseId === exerciseId)!;
-    const completed = ex.sets.filter((s) => s.completed);
-    return {
-      date: l.startedAt,
-      bestE1RM: bestE1RM(completed),
-      sets: completed.map((s) => ({
-        weight: s.weight,
-        reps: s.reps,
-        type: s.type,
-        setOrder: s.setOrder,
-      })),
-    };
-  });
+  return logs
+    .map((l) => toExerciseDetailedHistorySession(l, exerciseId))
+    .filter((session): session is NonNullable<typeof session> => session !== null);
 }
 
 export async function createWorkoutLog(

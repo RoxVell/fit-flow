@@ -341,9 +341,21 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
 
                             return (
                               <div key={exercise.id}>
-                                <p className="mb-1 text-xs font-medium">
-                                  {getName(exercise.exerciseId)}
-                                </p>
+                                <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                                  <p className="text-xs font-medium">
+                                    {getName(exercise.exerciseId)}
+                                  </p>
+                                  {exercise.excludeFromStats ? (
+                                    <span className="rounded-full border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                      {t.workout.excludedFromStats}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                {exercise.notes?.trim() ? (
+                                  <p className="mb-1 pl-2 text-xs italic text-muted-foreground">
+                                    {exercise.notes.trim()}
+                                  </p>
+                                ) : null}
                                 <div className="space-y-0.5 pl-2">
                                   {completedSets.map((set, index) => (
                                     <div

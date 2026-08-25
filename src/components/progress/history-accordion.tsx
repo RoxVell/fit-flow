@@ -17,6 +17,8 @@ interface HistorySet {
 interface HistorySession {
   date: string;
   bestE1RM: number;
+  excludeFromStats?: boolean;
+  notes?: string;
   sets: HistorySet[];
 }
 
@@ -102,7 +104,16 @@ export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
         <div className="divide-y divide-border/50">
           {sorted.map((session, i) => {
             const isOpen = openSet.has(i);
-            const prevBest = i < sorted.length - 1 ? sorted[i + 1].bestE1RM : null;
+            const excluded = Boolean(session.excludeFromStats);
+            let prevBest: number | null = null;
+            if (!excluded) {
+              for (let k = i + 1; k < sorted.length; k++) {
+                if (!sorted[k].excludeFromStats) {
+                  prevBest = sorted[k].bestE1RM;
+                  break;
+                }
+              }
+            }
             const delta = prevBest !== null ? session.bestE1RM - prevBest : null;
 
             return (
@@ -112,11 +123,23 @@ export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
                   onClick={() => toggle(i)}
                   className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left hover:bg-muted/20 transition-colors"
                 >
-                  <span className="text-sm text-muted-foreground">
-                    {formatHistoryDate(session.date)}
-                  </span>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      {formatHistoryDate(session.date)}
+                    </span>
+                    {excluded && (
+                      <span className="rounded-full border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {t.workout.excludedFromStats}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-sm font-semibold tabular-nums">
+                    <span
+                      className={cn(
+                        "text-sm font-semibold tabular-nums",
+                        excluded && "text-muted-foreground"
+                      )}
+                    >
                       {session.bestE1RM.toFixed(1)} {t.dashboard.kg}
                     </span>
                     {delta !== null && (
@@ -158,6 +181,11 @@ export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
                 >
                   <div className="min-h-0 overflow-hidden">
                     <div className="space-y-0.5 px-4 pb-3 pl-9">
+                      {session.notes ? (
+                        <p className="mb-1.5 text-xs italic text-muted-foreground">
+                          {session.notes}
+                        </p>
+                      ) : null}
                       {session.sets
                         .sort((a, b) => a.setOrder - b.setOrder)
                         .map((s, j) => (
