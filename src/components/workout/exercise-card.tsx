@@ -10,6 +10,7 @@ import {
   Trash2,
   EllipsisVertical,
   StickyNote,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +25,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -144,6 +144,7 @@ export function ExerciseCard({
                   <DropdownMenuTrigger
                     aria-label={t.workout.exerciseMenu}
                     className="rounded-lg p-1.5 text-muted-foreground/50 hover:bg-muted transition-colors"
+                    onPointerDown={(event) => event.stopPropagation()}
                   >
                     <EllipsisVertical className="h-4 w-4" />
                   </DropdownMenuTrigger>
@@ -156,14 +157,12 @@ export function ExerciseCard({
                       <StickyNote />
                       {noteText ? t.workout.editNote : t.workout.addNote}
                     </DropdownMenuItem>
-                    <DropdownMenuCheckboxItem
-                      checked={excluded}
-                      onCheckedChange={(checked) =>
-                        onUpdateExercise({ excludeFromStats: Boolean(checked) })
-                      }
+                    <DropdownMenuItem
+                      onClick={() => onUpdateExercise({ excludeFromStats: !excluded })}
                     >
+                      {excluded ? <Check /> : <span className="size-4" />}
                       {t.workout.excludeFromStats}
-                    </DropdownMenuCheckboxItem>
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={onSwapRequest}>
                       <Shuffle />

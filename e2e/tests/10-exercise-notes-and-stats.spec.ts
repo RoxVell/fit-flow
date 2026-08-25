@@ -26,7 +26,8 @@ test("active workout numbers exercises and can save a note plus deload flag", as
   await expect(page.getByText("close-grip handle").first()).toBeVisible();
 
   await page.getByRole("button", { name: /exercise options/i }).first().click();
-  await page.getByRole("menuitemcheckbox", { name: /don't count toward progress/i }).click();
+  await page.getByRole("menuitem", { name: /don't count toward progress/i }).click();
+  await expect(page.getByRole("menu")).toHaveCount(0);
   await expect(firstCard.getByText(/deload/i)).toBeVisible();
 
   const firstWeight = page.getByRole("textbox", { name: /set 1 weight/i }).first();
