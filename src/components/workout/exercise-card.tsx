@@ -109,9 +109,9 @@ export function ExerciseCard({
           className="flex w-[calc(100%+72px)]"
         >
           <div className="w-[calc(100%-72px)] shrink-0 bg-card p-2.5 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex min-w-0 flex-1 items-start gap-2">
-                <span className="mt-0.5 w-5 shrink-0 text-sm font-medium tabular-nums text-muted-foreground">
+            <div className="flex items-center justify-between gap-2 pl-2">
+              <div className="flex min-w-0 flex-1 items-start gap-1">
+                <span className="mt-0.5 w-5 shrink-0 text-center text-sm font-medium tabular-nums text-muted-foreground">
                   {index}.
                 </span>
                 <div className="min-w-0 flex-1">
