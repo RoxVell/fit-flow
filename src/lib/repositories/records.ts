@@ -68,7 +68,7 @@ export function createPRsFromWorkout(
 
   for (const ex of loggedExercises) {
     const exercise = exerciseMap.get(ex.exerciseId);
-    if (!exercise) continue;
+    if (!exercise || ex.excludeFromStats) continue;
 
     const completed = ex.sets.filter((s) => s.completed);
     if (completed.length === 0) continue;

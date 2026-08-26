@@ -28,6 +28,7 @@ export function buildWeeklyExerciseBest1RM(
     const weekExercises = weeksMap.get(weekStart)!;
 
     for (const ex of log.exercises) {
+      if (ex.excludeFromStats) continue;
       const completed = ex.sets.filter((s) => s.completed && s.weight > 0 && s.reps > 0);
       if (completed.length === 0) continue;
 

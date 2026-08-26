@@ -115,6 +115,8 @@ export interface LoggedExercise {
   sortOrder: number;
   supersetGroupId?: string;
   notes?: string;
+  /** When true, this performance is omitted from e1RM, PRs, and progress charts. */
+  excludeFromStats?: boolean;
   sets: LoggedSet[];
 }
 

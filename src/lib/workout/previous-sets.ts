@@ -23,7 +23,7 @@ export function buildPreviousSetsMap(
 
       for (const log of workoutLogs) {
         const loggedEx = log.exercises.find((e) => e.exerciseId === ex.exerciseId);
-        if (!loggedEx) continue;
+        if (!loggedEx || loggedEx.excludeFromStats) continue;
 
         const set = completedSets(loggedEx)[setIndex];
         if (set) {

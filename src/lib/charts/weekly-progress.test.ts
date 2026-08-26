@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computePeriodChange } from "./domain";
 import {
   buildPerExerciseBaseline,
+  buildWeeklyExerciseBest1RM,
   computeBodyPartChartChanges,
   computeBodyPartProgressSeries,
   computeBodyPartSummariesFromExercises,
@@ -10,6 +11,7 @@ import {
   getSortedWeeks,
 } from "./weekly-progress";
 import type { BodyPart } from "@/lib/exercises/types";
+import type { WorkoutLogEntity } from "@/lib/db/types";
 
 function week(isoDate: string, exercises: Record<string, number>) {
   return [isoDate, new Map(Object.entries(exercises))] as [
@@ -199,5 +201,68 @@ describe("getSortedWeeks", () => {
       ])
     );
     expect(weeks[0][0]).toBe("2026-05-05T00:00:00.000Z");
+  });
+});
+
+describe("buildWeeklyExerciseBest1RM", () => {
+  it("omits exercises marked excludeFromStats", () => {
+    const counted: WorkoutLogEntity = {
+      id: "log-1",
+      startedAt: "2026-06-15T12:00:00.000Z",
+      endedAt: "2026-06-15T13:00:00.000Z",
+      exercises: [
+        {
+          id: "le-1",
+          exerciseId: "bench",
+          workoutLogId: "log-1",
+          sortOrder: 0,
+          sets: [
+            {
+              id: "s1",
+              loggedExerciseId: "le-1",
+              type: "working",
+              setOrder: 0,
+              weight: 100,
+              reps: 5,
+              completed: true,
+            },
+          ],
+        },
+      ],
+      revision: 1,
+      updatedAt: "2026-06-15T13:00:00.000Z",
+    };
+    const deload: WorkoutLogEntity = {
+      ...counted,
+      id: "log-2",
+      startedAt: "2026-06-22T12:00:00.000Z",
+      endedAt: "2026-06-22T13:00:00.000Z",
+      updatedAt: "2026-06-22T13:00:00.000Z",
+      exercises: [
+        {
+          ...counted.exercises[0],
+          id: "le-2",
+          workoutLogId: "log-2",
+          excludeFromStats: true,
+          sets: [
+            {
+              id: "s2",
+              loggedExerciseId: "le-2",
+              type: "working",
+              setOrder: 0,
+              weight: 60,
+              reps: 8,
+              completed: true,
+            },
+          ],
+        },
+      ],
+    };
+
+    const weeks = buildWeeklyExerciseBest1RM([counted, deload]);
+    const values = [...weeks.values()].flatMap((map) => [...map.entries()]);
+    expect(values).toHaveLength(1);
+    expect(values[0][0]).toBe("bench");
+    expect(values[0][1]).toBe(100 * (1 + 5 / 30));
   });
 });

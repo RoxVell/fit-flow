@@ -1,10 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Shuffle, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Shuffle,
+  ChevronDown,
+  ChevronUp,
+  Trash2,
+  EllipsisVertical,
+  StickyNote,
+  Check,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SetRow } from "./set-row";
 import type { LoggedExercise, LoggedSet } from "@/lib/db/types";
 import { useT } from "@/lib/i18n/use-t";
@@ -12,6 +37,7 @@ import { useFormat } from "@/lib/i18n/use-format";
 
 interface ExerciseCardProps {
   exercise: LoggedExercise;
+  index: number;
   exerciseName: string;
   muscleGroup: string;
   previousSets: ({ weight: number; reps: number } | null)[];
@@ -27,10 +53,14 @@ interface ExerciseCardProps {
   onRemove: () => void;
   onSwapRequest: () => void;
   onHistoryRequest: () => void;
+  onUpdateExercise: (
+    data: Partial<Pick<LoggedExercise, "notes" | "excludeFromStats">>
+  ) => void;
 }
 
 export function ExerciseCard({
   exercise,
+  index,
   exerciseName,
   muscleGroup,
   previousSets,
@@ -42,10 +72,25 @@ export function ExerciseCard({
   onRemove,
   onSwapRequest,
   onHistoryRequest,
+  onUpdateExercise,
 }: ExerciseCardProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState(exercise.notes ?? "");
   const t = useT();
   const { muscleGroupLabel } = useFormat();
+  const noteText = exercise.notes?.trim() ?? "";
+  const excluded = Boolean(exercise.excludeFromStats);
+
+  useEffect(() => {
+    if (noteOpen) setNoteDraft(exercise.notes ?? "");
+  }, [exercise.notes, noteOpen]);
+
+  const saveNote = () => {
+    const trimmed = noteDraft.trim();
+    onUpdateExercise({ notes: trimmed ? trimmed : undefined });
+    setNoteOpen(false);
+  };
 
   return (
     <>
@@ -64,29 +109,69 @@ export function ExerciseCard({
           className="flex w-[calc(100%+72px)]"
         >
           <div className="w-[calc(100%-72px)] shrink-0 bg-card p-2.5 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={onHistoryRequest}
-                    className="truncate text-left text-sm font-medium underline decoration-dotted underline-offset-4 hover:text-primary transition-colors"
-                  >
-                    {exerciseName}
-                  </button>
-                  <Badge variant="secondary" className="text-[10px] shrink-0">
-                    {muscleGroupLabel(muscleGroup)}
-                  </Badge>
+            <div className="flex items-center justify-between gap-2 pl-2">
+              <div className="flex min-w-0 flex-1 items-start gap-1">
+                <span className="mt-0.5 w-5 shrink-0 text-center text-sm font-medium tabular-nums text-muted-foreground">
+                  {index}.
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={onHistoryRequest}
+                      className="truncate text-left text-sm font-medium underline decoration-dotted underline-offset-4 hover:text-primary transition-colors"
+                    >
+                      {exerciseName}
+                    </button>
+                    <Badge variant="secondary" className="text-[10px] shrink-0">
+                      {muscleGroupLabel(muscleGroup)}
+                    </Badge>
+                    {excluded && (
+                      <Badge variant="outline" className="text-[10px] shrink-0 text-muted-foreground">
+                        {t.workout.excludedFromStatsShort}
+                      </Badge>
+                    )}
+                  </div>
+                  {noteText ? (
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {noteText}
+                    </p>
+                  ) : null}
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-0.5 shrink-0">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    aria-label={t.workout.exerciseMenu}
+                    className="rounded-lg p-1.5 text-muted-foreground/50 hover:bg-muted transition-colors"
+                    onPointerDown={(event) => event.stopPropagation()}
+                  >
+                    <EllipsisVertical className="h-4 w-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-52 w-auto">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        window.setTimeout(() => setNoteOpen(true), 0);
+                      }}
+                    >
+                      <StickyNote />
+                      {noteText ? t.workout.editNote : t.workout.addNote}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onUpdateExercise({ excludeFromStats: !excluded })}
+                    >
+                      {excluded ? <Check /> : <span className="size-4" />}
+                      {t.workout.excludeFromStats}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onSwapRequest}>
+                      <Shuffle />
+                      {t.workout.swapExercise}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <button
-                  onClick={onSwapRequest}
-                  className="rounded-lg p-1.5 text-muted-foreground/50 hover:bg-muted transition-colors"
-                >
-                  <Shuffle className="h-4 w-4" />
-                </button>
-                <button
+                  type="button"
                   onClick={() => setCollapsed(!collapsed)}
                   className="rounded-lg p-1.5 text-muted-foreground/50 hover:bg-muted transition-colors"
                 >
@@ -149,6 +234,28 @@ export function ExerciseCard({
           </div>
         </motion.div>
       </div>
+
+      <Dialog open={noteOpen} onOpenChange={setNoteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.workout.exerciseNote}</DialogTitle>
+            <DialogDescription>{exerciseName}</DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={noteDraft}
+            onChange={(event) => setNoteDraft(event.target.value)}
+            placeholder={t.workout.exerciseNotePlaceholder}
+            rows={4}
+            aria-label={t.workout.exerciseNote}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNoteOpen(false)}>
+              {t.workout.cancel}
+            </Button>
+            <Button onClick={saveNote}>{t.workout.saveNote}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

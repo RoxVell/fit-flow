@@ -63,6 +63,10 @@ export interface UseActiveWorkoutResult {
     options?: { propagateWeight?: boolean; baselineWeight?: number }
   ) => void;
   swapExercise: (loggedExerciseId: string, newExerciseId: string) => void;
+  updateExercise: (
+    loggedExerciseId: string,
+    data: Partial<Pick<LoggedExercise, "notes" | "excludeFromStats">>
+  ) => void;
 }
 
 export function updateLoggedSet(
@@ -391,6 +395,15 @@ export function useActiveWorkout(
     );
   };
 
+  const updateExercise = (
+    loggedExerciseId: string,
+    data: Partial<Pick<LoggedExercise, "notes" | "excludeFromStats">>
+  ) => {
+    void updateDraftExercises((current) =>
+      current.map((e) => (e.id === loggedExerciseId ? { ...e, ...data } : e))
+    );
+  };
+
   const swapExercise = (loggedExerciseId: string, newExerciseId: string) => {
     void updateDraftExercises((current) =>
       current.map((e) =>
@@ -398,6 +411,8 @@ export function useActiveWorkout(
           ? {
               ...e,
               exerciseId: newExerciseId,
+              notes: undefined,
+              excludeFromStats: undefined,
               sets: e.sets.map((s) => ({
                 ...s,
                 id: generateId(),
@@ -442,5 +457,6 @@ export function useActiveWorkout(
     removeSet,
     updateSet,
     swapExercise,
+    updateExercise,
   };
 }
