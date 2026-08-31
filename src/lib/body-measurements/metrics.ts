@@ -1,4 +1,5 @@
 import type { BodyMeasurement } from "@/lib/db/types";
+import { formatDateKey } from "@/lib/utils/date";
 
 export const BODY_SINGLE_METRIC_FIELDS = ["weight", "chest", "waist"] as const;
 
@@ -41,9 +42,5 @@ export function hasAnyBodyMetric(data: Partial<BodyMetricValues>): boolean {
 }
 
 export function calendarDayKey(isoDate: string): string {
-  const date = new Date(isoDate);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return formatDateKey(new Date(isoDate));
 }

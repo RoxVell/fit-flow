@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,6 +24,7 @@ import {
   removeWorkoutLog,
 } from "@/lib/repositories/workouts";
 import type { WorkoutLogEntity } from "@/lib/db/types";
+import { atStartOfDay, atEndOfDay } from "@/lib/utils/date";
 import { WorkoutEditSheet } from "@/components/workout/workout-edit-sheet";
 import {
   buildWorkoutLogsCsv,
@@ -43,18 +45,6 @@ function getDurationMinutes(startedAt: string, endedAt?: string) {
   if (!endedAt) return null;
   const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
   return Math.max(1, Math.round(ms / 60000));
-}
-
-function atStartOfDay(date: Date) {
-  const copy = new Date(date);
-  copy.setHours(0, 0, 0, 0);
-  return copy;
-}
-
-function atEndOfDay(date: Date) {
-  const copy = new Date(date);
-  copy.setHours(23, 59, 59, 999);
-  return copy;
 }
 
 function downloadCsv(filename: string, csv: string) {
@@ -191,27 +181,18 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
             <p className="text-xs font-medium text-muted-foreground">
               {t.workout.exportCsv}
             </p>
-            <div
-              className="flex w-full items-center rounded-lg border bg-muted/50 p-0.5"
-              role="group"
-              aria-label={t.workout.exportPeriod}
-            >
-              {EXPORT_PRESETS.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => handlePresetChange(preset)}
-                  className={cn(
-                    "min-w-0 flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
-                    exportPreset === preset
-                      ? "bg-card text-foreground shadow-xs"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {t.workout.exportPresets[preset]}
-                </button>
-              ))}
-            </div>
+            <SegmentedTabs
+              variant="card"
+              className="w-full"
+              ariaLabel={t.workout.exportPeriod}
+              items={EXPORT_PRESETS.map((preset) => ({
+                value: preset,
+                label: t.workout.exportPresets[preset],
+              }))}
+              value={exportPreset}
+              onChange={handlePresetChange}
+              buttonClassName="px-2 py-1.5 text-xs"
+            />
             {exportPreset === "custom" && (
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">

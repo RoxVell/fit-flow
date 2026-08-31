@@ -12,10 +12,7 @@ import {
   type BodyMetricField,
 } from "@/lib/body-measurements/metrics";
 import { dateInputToIso, todayDate } from "@/lib/body-measurements/snapshot-summary";
-import {
-  BodyMeasurementValidationError,
-  logBodyMeasurement,
-} from "@/lib/repositories/measurements";
+import { logBodyMeasurement } from "@/lib/repositories/measurements";
 import { useT } from "@/lib/i18n/use-t";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { cn } from "@/lib/utils";
@@ -90,12 +87,8 @@ export function BodyMeasurementForm({
     try {
       await logBodyMeasurement(payload);
       onSuccess?.();
-    } catch (err) {
-      if (err instanceof BodyMeasurementValidationError) {
-        setError(t.progress.atLeastOneMetric);
-      } else {
-        setError(t.progress.atLeastOneMetric);
-      }
+    } catch {
+      setError(t.progress.atLeastOneMetric);
     } finally {
       setSaving(false);
     }

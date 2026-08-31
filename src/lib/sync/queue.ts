@@ -1,5 +1,6 @@
 import { db } from "@/lib/db/dexie";
 import type { EntityType, SyncQueueEntry } from "@/lib/db/types";
+import { generateId } from "@/lib/utils/id";
 
 export async function enqueueSync(input: {
   entityType: EntityType;
@@ -11,7 +12,7 @@ export async function enqueueSync(input: {
   await coalescePending(input.entityType, input.entityId);
 
   const entry: SyncQueueEntry = {
-    id: crypto.randomUUID(),
+    id: generateId(),
     entityType: input.entityType,
     entityId: input.entityId,
     operation: input.operation,

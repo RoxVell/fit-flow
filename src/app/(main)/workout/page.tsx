@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Play, Dumbbell, ChevronDown, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useActiveProgram, useWorkoutDraft } from "@/lib/hooks/use-data";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
+import { useSearchParamTab } from "@/lib/hooks/use-search-param-tab";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,17 +24,12 @@ type Tab = "plan" | "history";
 
 export default function WorkoutPlanPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const t = useT();
-  const [activeTab, setActiveTab] = useState<Tab>("plan");
+  const [activeTab, setActiveTab] = useSearchParamTab<Tab>(
+    ["plan", "history"],
+    "plan"
+  );
   const draft = useWorkoutDraft();
-
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab === "history" || tab === "plan") {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
 
   useEffect(() => {
     if (draft === undefined) return;

@@ -3,43 +3,34 @@
 import { useTheme } from "next-themes";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
-
-const themes = [
-  { value: "system", label: "Системная", icon: Monitor },
-  { value: "dark", label: "Тёмная", icon: Moon },
-  { value: "light", label: "Светлая", icon: Sun },
-] as const;
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { useT } from "@/lib/i18n/use-t";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const t = useT();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  const themes = [
+    { value: "system", label: t.settings.themeSystem, icon: Monitor },
+    { value: "dark", label: t.settings.themeDark, icon: Moon },
+    { value: "light", label: t.settings.themeLight, icon: Sun },
+  ];
+
   return (
-    <div className="inline-flex items-center rounded-lg border bg-muted/50 p-0.5">
-      {themes.map((t) => {
-        const Icon = t.icon;
-        const isActive = mounted && theme === t.value;
-        return (
-          <button
-            key={t.value}
-            type="button"
-            onClick={() => setTheme(t.value)}
-            className={cn(
-              "inline-flex h-9 items-center justify-center rounded-md px-3.5 text-sm font-medium transition-all",
-              isActive
-                ? "bg-card text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Icon className="h-4 w-4" />
-          </button>
-        );
-      })}
-    </div>
+    <SegmentedTabs
+      variant="card"
+      items={themes.map((item) => ({
+        value: item.value,
+        label: <item.icon className="h-4 w-4" aria-label={item.label} />,
+      }))}
+      value={mounted ? theme : undefined}
+      onChange={setTheme}
+      buttonClassName="h-9 px-3.5"
+    />
   );
 }

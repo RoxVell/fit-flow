@@ -1,5 +1,6 @@
 "use client";
 
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import type { ChartPeriod } from "@/lib/charts/periods";
 import { cn } from "@/lib/utils";
 
@@ -17,27 +18,13 @@ export function ChartPeriodSelector({
   className,
 }: ChartPeriodSelectorProps) {
   return (
-    <div
-      className={cn(
-        "inline-flex shrink-0 items-center rounded-lg border bg-muted/50 p-0.5",
-        className
-      )}
-    >
-      {labels.map((p) => (
-        <button
-          key={p.value}
-          type="button"
-          onClick={() => onChange(p.value)}
-          className={cn(
-            "rounded-md px-2 py-1 text-xs font-medium transition-all",
-            period === p.value
-              ? "bg-card text-foreground shadow-xs"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {p.label}
-        </button>
-      ))}
-    </div>
+    <SegmentedTabs
+      variant="card"
+      items={labels}
+      value={period}
+      onChange={onChange}
+      className={cn("shrink-0", className)}
+      buttonClassName="px-2 py-1 text-xs"
+    />
   );
 }

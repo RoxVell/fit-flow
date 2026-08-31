@@ -19,6 +19,7 @@ import { BodyMeasurementHistory } from "@/components/progress/body-measurement-h
 import { useDailyBodyViews } from "@/lib/hooks/use-data";
 import { BODY_METRIC_FIELDS } from "@/lib/body-measurements/metrics";
 import { DEFAULT_CHART_PERIOD, filterByPeriod, type ChartPeriod } from "@/lib/charts/periods";
+import { useChartPeriods } from "@/lib/charts/use-chart-periods";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 
@@ -42,16 +43,9 @@ export function BodyTab() {
   const router = useRouter();
   const dailyViews = useDailyBodyViews();
   const t = useT();
-  const { formatChartDate } = useFormat();
+  const { formatShortDate } = useFormat();
   const [period, setPeriod] = useState<ChartPeriod>(DEFAULT_CHART_PERIOD);
-
-  const periods = [
-    { value: "1m" as const, label: t.progress.period1m },
-    { value: "2m" as const, label: t.progress.period2m },
-    { value: "3m" as const, label: t.progress.period3m },
-    { value: "6m" as const, label: t.progress.period6m },
-    { value: "all" as const, label: t.progress.periodAll },
-  ];
+  const periods = useChartPeriods();
 
   const measurementConfig = CIRCUMFERENCE_CHART_FIELDS.map((key, index) => ({
     key,
@@ -62,7 +56,7 @@ export function BodyTab() {
   const chartData = useMemo(() => {
     if (!dailyViews) return undefined;
     return filterByPeriod(dailyViews, period).map((view) => ({
-      date: formatChartDate(view.date),
+      date: formatShortDate(view.date),
       weight: view.weight,
       chest: view.chest,
       waist: view.waist,
@@ -73,7 +67,7 @@ export function BodyTab() {
       leftCalf: view.leftCalf,
       rightCalf: view.rightCalf,
     }));
-  }, [dailyViews, period, formatChartDate]);
+  }, [dailyViews, period, formatShortDate]);
 
   const hasChartData = chartData && chartData.length > 0;
 

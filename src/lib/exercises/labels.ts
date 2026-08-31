@@ -41,44 +41,10 @@ export const EQUIPMENT_LABELS: LabelMap = {
   WEIGHT_PLATE: { en: "Plate", ru: "Диск" },
 };
 
-export const MECHANICS_LABELS: LabelMap = {
-  COMPOUND: { en: "Compound", ru: "Базовое" },
-  ISOLATION: { en: "Isolation", ru: "Изоляция" },
-};
-
 export const LATERALITY_LABELS: LabelMap = {
   BILATERAL: { en: "Bilateral", ru: "Двустороннее" },
   UNILATERAL: { en: "Unilateral", ru: "Одностороннее" },
   ALTERNATING: { en: "Alternating", ru: "Поочерёдное" },
-};
-
-export const WEIGHT_TYPE_LABELS: LabelMap = {
-  BODYWEIGHT: { en: "Bodyweight", ru: "Свой вес" },
-  BARBELL: { en: "Barbell", ru: "Штанга" },
-  BAND: { en: "Band", ru: "Резинка" },
-  DUMBBELL: { en: "Dumbbell", ru: "Гантели" },
-  UNWEIGHTED: { en: "Unweighted", ru: "Без веса" },
-  MACHINE: { en: "Machine", ru: "Тренажёр" },
-  WEIGHTED: { en: "Weighted", ru: "С отягощением" },
-  ASSISTED_WEIGHT: { en: "Assisted", ru: "С поддержкой" },
-};
-
-export const TAG_LABELS: LabelMap = {
-  BALANCE: { en: "Balance", ru: "Баланс" },
-  CARDIO: { en: "Cardio", ru: "Кардио" },
-  CORE: { en: "Core", ru: "Кор" },
-  EXPLOSIVE: { en: "Explosive", ru: "Взрывное" },
-  FUNCTIONAL: { en: "Functional", ru: "Функциональное" },
-  ISOMETRIC: { en: "Isometric", ru: "Изометрия" },
-  MOBILITY: { en: "Mobility", ru: "Мобильность" },
-  MOTOR: { en: "Motor", ru: "Моторика" },
-  PLYOMETRIC: { en: "Plyometric", ru: "Плиометрика" },
-  PULL: { en: "Pull", ru: "Тяга" },
-  PUSH: { en: "Push", ru: "Жим" },
-  REHAB: { en: "Rehab", ru: "Реабилитация" },
-  STRENGTH: { en: "Strength", ru: "Сила" },
-  STRETCH: { en: "Stretch", ru: "Растяжка" },
-  WARMUP: { en: "Warm-up", ru: "Разминка" },
 };
 
 export function labelFor(

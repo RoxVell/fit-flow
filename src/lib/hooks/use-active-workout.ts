@@ -15,7 +15,7 @@ import {
 } from "@/lib/repositories/records";
 import { createWorkoutLog } from "@/lib/repositories/workouts";
 import { clearDraft, updateDraftExercises } from "@/lib/repositories/drafts";
-import { generateId } from "@/lib/utils/calculations";
+import { generateId } from "@/lib/utils/id";
 import { volume } from "@/lib/training-metrics";
 import { resolveRestDuration } from "@/lib/workout/rest-duration";
 import { buildPreviousSetsMap } from "@/lib/workout/previous-sets";

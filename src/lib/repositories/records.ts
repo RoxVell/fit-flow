@@ -10,7 +10,7 @@ import type {
   WorkoutLogEntity,
 } from "@/lib/db/types";
 import { bestE1RM, bestWeight, volume } from "@/lib/training-metrics";
-import { enqueueSync } from "@/lib/sync/queue";
+import { createEntity, softDeleteEntity } from "./entity-crud";
 
 export async function getPersonalRecords(): Promise<PersonalRecordEntity[]> {
   await ensureSeeded();
@@ -124,40 +124,11 @@ export async function detectNewPRsFromWorkout(
 export async function createPersonalRecord(
   data: Omit<PersonalRecord, "id" | "revision" | "updatedAt">
 ): Promise<PersonalRecordEntity> {
-  const now = new Date().toISOString();
-  const entity: PersonalRecordEntity = {
-    ...data,
-    id: crypto.randomUUID(),
-    revision: 1,
-    updatedAt: now,
-  };
-  await db.personalRecords.put(entity);
-  await enqueueSync({
-    entityType: "personalRecord",
-    entityId: entity.id,
-    operation: "create",
-    payload: entity,
-    revision: entity.revision,
-  });
-  return entity;
+  return createEntity(db.personalRecords, "personalRecord", data);
 }
 
 export async function deletePersonalRecord(id: string): Promise<void> {
-  const existing = await db.personalRecords.get(id);
-  if (!existing || existing.deletedAt) return;
-  const now = new Date().toISOString();
-  const revision = existing.revision + 1;
-  await enqueueSync({
-    entityType: "personalRecord",
-    entityId: id,
-    operation: "delete",
-    revision,
-  });
-  await db.personalRecords.update(id, {
-    deletedAt: now,
-    revision,
-    updatedAt: now,
-  });
+  await softDeleteEntity(db.personalRecords, "personalRecord", id);
 }
 
 function legacyPRMatchesWorkout(
@@ -220,8 +191,8 @@ export async function reconcilePRsAfterWorkoutUpdate(
   );
 
   for (const rec of newRecords) {
-    const { id: _id, ...payload } = rec;
-    await createPersonalRecord({ ...payload, workoutLogId: log.id });
+    // createEntity replaces the transient pr-* id with a persistent one.
+    await createPersonalRecord({ ...rec, workoutLogId: log.id });
   }
 
   return newRecords;

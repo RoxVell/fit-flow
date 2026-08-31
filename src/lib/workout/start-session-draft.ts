@@ -1,6 +1,6 @@
 import type { LoggedExercise, WorkoutSession } from "@/lib/db/types";
 import { initDraft } from "@/lib/repositories/drafts";
-import { generateId } from "@/lib/utils/calculations";
+import { generateId } from "@/lib/utils/id";
 
 export function buildLoggedExercisesFromSession(
   session: WorkoutSession

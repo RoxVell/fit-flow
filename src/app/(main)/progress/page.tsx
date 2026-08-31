@@ -1,27 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { BarChart3, Dumbbell, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GeneralTab } from "@/components/progress/general-tab";
 import { ExercisesTab } from "@/components/progress/exercises-tab";
 import { BodyTab } from "@/components/progress/body-tab";
+import { useSearchParamTab } from "@/lib/hooks/use-search-param-tab";
 import { useT } from "@/lib/i18n/use-t";
 
 type Tab = "general" | "exercises" | "body";
 
 export default function ProgressPage() {
-  const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<Tab>("general");
+  const [activeTab, setActiveTab] = useSearchParamTab<Tab>(
+    ["general", "exercises", "body"],
+    "general"
+  );
   const t = useT();
-
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab === "body" || tab === "exercises" || tab === "general") {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
 
   const tabs = [
     { value: "general" as const, label: t.progress.general, icon: BarChart3 },

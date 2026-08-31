@@ -3,8 +3,10 @@
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUpdateAvailable } from "@/lib/hooks/use-update-available";
+import { useT } from "@/lib/i18n/use-t";
 
 export function UpdateToast() {
+  const t = useT();
   const { updateAvailable, applying, applyUpdate } = useUpdateAvailable();
   if (!updateAvailable && !applying) return null;
 
@@ -18,9 +20,9 @@ export function UpdateToast() {
         <RefreshCw className={`h-5 w-5 ${applying ? "animate-spin" : ""}`} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold">Update available</p>
+        <p className="text-sm font-semibold">{t.pwa.updateAvailable}</p>
         <p className="text-xs text-muted-foreground">
-          {applying ? "Updating…" : "A new version of FitFlow is ready"}
+          {applying ? t.pwa.updating : t.pwa.updateReady}
         </p>
       </div>
       <Button
@@ -29,7 +31,7 @@ export function UpdateToast() {
         className="shrink-0"
         disabled={applying}
       >
-        {applying ? "Updating…" : "Reload"}
+        {applying ? t.pwa.updating : t.pwa.reload}
       </Button>
     </div>
   );
