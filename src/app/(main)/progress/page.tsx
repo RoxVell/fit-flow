@@ -1,7 +1,7 @@
 "use client";
 
 import { BarChart3, Dumbbell, User } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { GeneralTab } from "@/components/progress/general-tab";
 import { ExercisesTab } from "@/components/progress/exercises-tab";
 import { BodyTab } from "@/components/progress/body-tab";
@@ -26,24 +26,12 @@ export default function ProgressPage() {
   return (
     <div className="px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <h1 className="text-2xl font-bold mb-3">{t.progress.title}</h1>
-      <div className="flex rounded-lg bg-muted p-0.5 mb-4">
-        {tabs.map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            onClick={() => setActiveTab(tab.value)}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-all",
-              activeTab === tab.value
-                ? "bg-background text-foreground shadow-xs"
-                : "text-muted-foreground"
-            )}
-          >
-            <tab.icon className="h-4 w-4" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs
+        items={tabs}
+        value={activeTab}
+        onChange={setActiveTab}
+        className="mb-4"
+      />
       {activeTab === "general" && <GeneralTab />}
       {activeTab === "exercises" && <ExercisesTab />}
       {activeTab === "body" && <BodyTab />}

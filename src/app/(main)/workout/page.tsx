@@ -10,6 +10,7 @@ import { useSearchParamTab } from "@/lib/hooks/use-search-param-tab";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { cn } from "@/lib/utils";
 import { startWorkoutDraft } from "@/lib/workout/start-session-draft";
 import { WorkoutHistory } from "@/components/workout/workout-history";
@@ -57,24 +58,7 @@ export default function WorkoutPlanPage() {
     <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <h1 className="text-2xl font-bold">{t.workout.title}</h1>
 
-      <div className="flex rounded-lg bg-muted p-0.5">
-        {tabs.map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            onClick={() => setActiveTab(tab.value)}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-all",
-              activeTab === tab.value
-                ? "bg-background text-foreground shadow-xs"
-                : "text-muted-foreground"
-            )}
-          >
-            <tab.icon className="h-4 w-4" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs items={tabs} value={activeTab} onChange={setActiveTab} />
 
       {activeTab === "plan" && <WorkoutPlanTab />}
       {activeTab === "history" && <WorkoutHistory />}
