@@ -64,7 +64,7 @@ export function ProgressChart() {
 
   return (
     <div className="rounded-xl border bg-card p-4">
-      <div className="mb-3 space-y-2">
+      <div className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-heading font-medium">{t.progress.generalProgress}</p>
           <PeriodChangeIndicator

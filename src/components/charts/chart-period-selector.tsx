@@ -26,9 +26,10 @@ export function ChartPeriodSelector({
       value={period}
       onChange={onChange}
       ariaLabel={t.progress.periodSelector}
+      equalWidth={false}
       truncate={false}
-      className={cn("w-full", className)}
-      buttonClassName="px-1.5 py-1 text-xs"
+      className={cn("shrink-0", className)}
+      buttonClassName="px-2 py-1 text-xs"
     />
   );
 }

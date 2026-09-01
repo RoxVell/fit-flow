@@ -162,7 +162,7 @@ export function BodyPartProgressChart() {
 
   return (
     <div className="rounded-xl border bg-card p-4">
-      <div className="mb-3 space-y-2">
+      <div className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-heading font-medium">{t.progress.bodyPartProgress}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">{t.progress.bodyPartChartHint}</p>
