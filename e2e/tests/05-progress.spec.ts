@@ -9,9 +9,9 @@ test.beforeEach(async ({ page }) => {
 test("progress page shows the three tab controls", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /^Progress$/i })).toBeVisible();
 
-  await expect(page.getByRole("button", { name: /^General$/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Exercises$/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Body$/i })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^General$/i })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^Exercises$/i })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^Body$/i })).toBeVisible();
 });
 
 test("general tab shows the muscle load heatmap", async ({ page }) => {
@@ -21,13 +21,13 @@ test("general tab shows the muscle load heatmap", async ({ page }) => {
 });
 
 test("body tab shows body measurement cards", async ({ page }) => {
-  await page.getByRole("button", { name: /^Body$/i }).click();
+  await page.getByRole("tab", { name: /^Body$/i }).click();
   await expect(page.getByText(/^Body Weight$/i)).toBeVisible();
   await expect(page.getByText(/^Body Measurements$/i)).toBeVisible();
 });
 
 test("exercises tab shows the no-data state on a fresh install", async ({ page }) => {
-  await page.getByRole("button", { name: /^Exercises$/i }).click();
+  await page.getByRole("tab", { name: /^Exercises$/i }).click();
   // Without logged workouts, the tab shows the localized "No data yet" message.
   await expect(page.getByText(/no data yet/i)).toBeVisible();
 });

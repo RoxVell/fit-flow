@@ -33,7 +33,7 @@ export async function finishQuickWorkout(page: Page) {
 export async function openWorkoutHistory(page: Page) {
   await page.getByRole("button", { name: /^Done$/i }).click();
   await page.goto("/workout");
-  await page.getByRole("button", { name: /^History$/i }).click();
+  await page.getByRole("tab", { name: /^History$/i }).click();
   await expect(
     page
       .getByText(/workout history|no completed workouts yet/i)
