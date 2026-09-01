@@ -9,29 +9,24 @@ import { defineConfig, devices } from "@playwright/test";
  *  - Block the Serwist service-worker route so a stale build can never
  *    cache into a test run.
  *
- * Browser selection is driven by `PW_CHANNEL`:
+ * Both locally and in CI this runs Playwright's own browser, which
+ * resolves to the `chrome-headless-shell` build. CI does not download it
+ * per run — the workflow caches ~/.cache/ms-playwright keyed on the
+ * Playwright version. A system Chrome (`channel: "chrome"`) was measured
+ * as an alternative and rejected: it removes the download but runs the
+ * suite ~45s slower on the runner, which more than cancels the saving.
  *
- *  - unset (local default) — Playwright's own download, so a fresh
- *    checkout needs no system browser.
- *  - `chrome` (set by CI) — the Google Chrome already present on the
- *    GitHub Actions runner at /usr/bin/google-chrome, which lets the
- *    workflow skip the ~170 MB `playwright install` download entirely.
+ * `PW_CHANNEL` remains as a local escape hatch for reproducing a
+ * browser-specific failure — `PW_CHANNEL=chrome npm run test:e2e -- --workers=1`
+ * for the runner's Chrome, `chromium` for the full (non-shell) build.
+ * Pass `--workers=1`: on macOS, parallel workers driving the *system*
+ * Chrome pass their tests but then sit through the full 5-minute
+ * shutdown grace period before being force-killed.
  *
- * Set it locally too (`PW_CHANNEL=chrome npm run test:e2e --workers=1`)
- * to reproduce a CI-only failure on the same browser build. Pass
- * `--workers=1` there: on macOS, parallel workers driving the system
- * Chrome pass their tests but then sit for the full 5-minute shutdown
- * grace period before being force-killed. CI is unaffected because it
- * already runs single-worker (see `workers` below), and single-worker
- * runtime is the same on both browsers.
- *
- * The channel does not change process sandboxing: Playwright launches
- * all three of the default headless shell, `channel: "chromium"` and
- * `channel: "chrome"` with `--no-sandbox` (verify with
- * `DEBUG=pw:browser`). The real trade-off is version drift — the
- * runner's Chrome is a moving stable release rather than the build
- * pinned by our Playwright version, so a Chrome update can break CI
- * without a commit. The workflow prints the version for that reason.
+ * Note the channel does not change process sandboxing: Playwright
+ * launches all three of the default headless shell, `channel: "chromium"`
+ * and `channel: "chrome"` with `--no-sandbox` (verify with
+ * `DEBUG=pw:browser`).
  */
 const PORT = Number(process.env.PORT ?? 3100);
 const BASE_URL = `http://127.0.0.1:${PORT}`;

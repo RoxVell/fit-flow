@@ -33,15 +33,12 @@ jobs:
         run: npm run test:unit
 
   e2e:
-    name: Playwright (system Chrome)
+    name: Playwright (e2e)
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     env:
       CI: "true"
-      # Run against the Google Chrome baked into the runner image instead
-      # of a Playwright-managed download — see playwright.config.ts.
-      PW_CHANNEL: chrome
 
     steps:
       - name: Checkout
@@ -62,20 +59,34 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      # The browser is not downloaded: `PW_CHANNEL=chrome` resolves to
-      # /usr/bin/google-chrome, which ships with the runner image along
-      # with its system libraries. ffmpeg is still needed though — it is
-      # a Playwright-managed binary (a few MB, not the ~170 MB browser),
-      # and `video: "retain-on-failure"` fails every `newPage()` without
-      # it, whether or not a video ends up being kept.
-      - name: Install Playwright ffmpeg
-        run: npx playwright install ffmpeg
+      # Key the browser cache on the resolved Playwright version rather
+      # than on package-lock.json: the binaries are pinned to Playwright
+      # itself, so hashing the lockfile would throw the cache away on
+      # every unrelated dependency bump.
+      - name: Resolve Playwright version
+        id: playwright
+        run: |
+          echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
 
-      # Log the Chrome version — it is a moving stable release, so it is
-      # the first thing to check if the suite starts failing without a
-      # code change.
-      - name: Report browser version
-        run: google-chrome --version
+      # ~/.cache/ms-playwright holds the chromium build, the headless
+      # shell and ffmpeg. Restoring it skips the ~170 MB download, and
+      # keeping Playwright's own browser keeps the fast headless shell —
+      # the runner's system Chrome works but runs the suite ~45s slower.
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      # `--with-deps` is deliberately omitted: it apt-installs system
+      # libraries, which live outside the cached directory, so a cache
+      # hit would silently skip them and behave differently from a miss.
+      # The ubuntu-latest image already ships Chrome, Chromium, Edge and
+      # Firefox, so those libraries are present either way.
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
 
       - name: Run Playwright tests
         run: npm run test:e2e
