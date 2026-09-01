@@ -185,6 +185,7 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
               variant="card"
               className="w-full"
               ariaLabel={t.workout.exportPeriod}
+              truncate={false}
               items={EXPORT_PRESETS.map((preset) => ({
                 value: preset,
                 label: t.workout.exportPresets[preset],

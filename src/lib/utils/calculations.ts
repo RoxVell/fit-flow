@@ -16,3 +16,8 @@ export function formatDuration(minutes: number): string {
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
 }
+
+/** Workout elapsed clock (`05:03`), not rest (`5:03`). */
+export function formatElapsedClock(minutes: number, seconds: number): string {
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+}

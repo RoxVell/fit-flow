@@ -73,12 +73,14 @@ export function BodyTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-2">
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => router.push("/progress/body/log")}>
+            <Plus className="h-4 w-4" />
+            {t.progress.logMeasurement}
+          </Button>
+        </div>
         <ChartPeriodSelector period={period} onChange={setPeriod} labels={periods} />
-        <Button size="sm" onClick={() => router.push("/progress/body/log")}>
-          <Plus className="h-4 w-4" />
-          {t.progress.logMeasurement}
-        </Button>
       </div>
 
       <Card>

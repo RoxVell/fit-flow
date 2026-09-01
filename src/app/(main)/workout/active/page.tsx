@@ -21,8 +21,7 @@ import { RestTimer } from "@/components/workout/rest-timer";
 import { TriumphScreen } from "@/components/workout/triumph-screen";
 import { ExerciseHistorySheet } from "@/components/workout/exercise-history-sheet";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { formatDuration } from "@/lib/utils/calculations";
-import { formatRestDuration } from "@/lib/workout/rest-duration";
+import { formatDuration, formatElapsedClock } from "@/lib/utils/calculations";
 
 function CenteredMessage({ children }: { children: ReactNode }) {
   return (
@@ -130,7 +129,7 @@ function ActiveWorkoutContent({
           <div className="flex items-center gap-2">
             <Timer className="h-4 w-4 text-muted-foreground" />
             <span className="text-lg font-bold tabular-nums">
-              {formatRestDuration(minutes * 60 + seconds)}
+              {formatElapsedClock(minutes, seconds)}
             </span>
             <button
               onClick={togglePause}

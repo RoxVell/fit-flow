@@ -28,7 +28,13 @@ export default function ProgramsPage() {
     <div className="flex flex-col h-full pt-[env(safe-area-inset-top)]">
       <div className="px-4 pt-4 pb-3 shrink-0">
         <h1 className="text-2xl font-bold mb-3">{t.programs.title}</h1>
-        <SegmentedTabs items={views} value={view} onChange={setView} />
+        <SegmentedTabs
+          selectionMode="tabs"
+          items={views}
+          value={view}
+          onChange={setView}
+          ariaLabel={t.programs.title}
+        />
       </div>
 
       {view === "programs" ? <ProgramsView /> : <ExercisesView />}

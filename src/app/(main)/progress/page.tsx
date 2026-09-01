@@ -27,9 +27,11 @@ export default function ProgressPage() {
     <div className="px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <h1 className="text-2xl font-bold mb-3">{t.progress.title}</h1>
       <SegmentedTabs
+        selectionMode="tabs"
         items={tabs}
         value={activeTab}
         onChange={setActiveTab}
+        ariaLabel={t.progress.title}
         className="mb-4"
       />
       {activeTab === "general" && <GeneralTab />}

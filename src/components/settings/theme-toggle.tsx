@@ -24,12 +24,16 @@ export function ThemeToggle() {
   return (
     <SegmentedTabs
       variant="card"
+      ariaLabel={t.settings.theme}
       items={themes.map((item) => ({
         value: item.value,
-        label: <item.icon className="h-4 w-4" aria-label={item.label} />,
+        label: <item.icon className="h-4 w-4" aria-hidden />,
+        ariaLabel: item.label,
       }))}
       value={mounted ? theme : undefined}
       onChange={setTheme}
+      equalWidth={false}
+      truncate={false}
       buttonClassName="h-9 px-3.5"
     />
   );

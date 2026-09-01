@@ -58,7 +58,13 @@ export default function WorkoutPlanPage() {
     <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <h1 className="text-2xl font-bold">{t.workout.title}</h1>
 
-      <SegmentedTabs items={tabs} value={activeTab} onChange={setActiveTab} />
+      <SegmentedTabs
+        selectionMode="tabs"
+        items={tabs}
+        value={activeTab}
+        onChange={setActiveTab}
+        ariaLabel={t.workout.title}
+      />
 
       {activeTab === "plan" && <WorkoutPlanTab />}
       {activeTab === "history" && <WorkoutHistory />}

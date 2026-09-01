@@ -2,6 +2,7 @@
 
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import type { ChartPeriod } from "@/lib/charts/periods";
+import { useT } from "@/lib/i18n/use-t";
 import { cn } from "@/lib/utils";
 
 interface ChartPeriodSelectorProps {
@@ -17,14 +18,17 @@ export function ChartPeriodSelector({
   labels,
   className,
 }: ChartPeriodSelectorProps) {
+  const t = useT();
   return (
     <SegmentedTabs
       variant="card"
       items={labels}
       value={period}
       onChange={onChange}
-      className={cn("shrink-0", className)}
-      buttonClassName="px-2 py-1 text-xs"
+      ariaLabel={t.progress.periodSelector}
+      truncate={false}
+      className={cn("w-full", className)}
+      buttonClassName="px-1.5 py-1 text-xs"
     />
   );
 }
