@@ -1,4 +1,5 @@
 import { test, expect, waitForSeed } from "../fixtures/base";
+import { programCard } from "../fixtures/programs";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/dashboard");
@@ -41,12 +42,8 @@ test("user can set a different program as active", async ({ page }) => {
   await expect(page.getByText(/^PPL$/i).first()).toBeVisible();
   await expect(page.getByText(/^Upper \/ Lower$/i).first()).toBeVisible();
 
-  const pplCard = page.locator(".overflow-hidden").filter({
-    has: page.getByText(/^PPL$/i),
-  });
-  const upperLowerCard = page.locator(".overflow-hidden").filter({
-    has: page.getByText(/^Upper \/ Lower$/i),
-  });
+  const pplCard = programCard(page, "PPL");
+  const upperLowerCard = programCard(page, "Upper / Lower");
   const pplRadio = pplCard.getByRole("radio", { name: /set active:\s*PPL/i });
   const upperLowerRadio = upperLowerCard.getByRole("radio", {
     name: /set active:\s*Upper \/ Lower/i,
