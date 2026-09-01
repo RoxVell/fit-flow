@@ -1,4 +1,5 @@
 import { test, expect, waitForSeed } from "../fixtures/base";
+import { programCard } from "../fixtures/programs";
 
 /**
  * The full "bring your own program" journey, which is the main reason a
@@ -34,17 +35,6 @@ async function pickExercise(page: import("@playwright/test").Page, name: string)
   // deliberately a substring match.
   await page.getByRole("button", { name }).click();
   await expect(search).toBeHidden();
-}
-
-/**
- * The card for one program in the library. Each program renders exactly
- * one `Set active: <name>` radio, which is the only per-card unique
- * handle — `.overflow-hidden` on its own also matches shared ancestors.
- */
-function programCard(page: import("@playwright/test").Page, name: string) {
-  return page.locator('[data-slot="card"]').filter({
-    has: page.getByRole("radio", { name: `Set active: ${name}` }),
-  });
 }
 
 test("user can create a program, activate it and train from it", async ({ page }) => {

@@ -9,14 +9,33 @@ import { defineConfig, devices } from "@playwright/test";
  *  - Block the Serwist service-worker route so a stale build can never
  *    cache into a test run.
  *
- * `channel` is intentionally omitted — Playwright's default uses the
- * bundled chromium with the sandbox enabled. The previous
- * `channel: "chromium"` value resolved to the same binary but with
- * the sandbox disabled, which weakens isolation on developer
- * machines for no gain.
+ * Browser selection is driven by `PW_CHANNEL`:
+ *
+ *  - unset (local default) — Playwright's own download, so a fresh
+ *    checkout needs no system browser.
+ *  - `chrome` (set by CI) — the Google Chrome already present on the
+ *    GitHub Actions runner at /usr/bin/google-chrome, which lets the
+ *    workflow skip the ~170 MB `playwright install` download entirely.
+ *
+ * Set it locally too (`PW_CHANNEL=chrome npm run test:e2e --workers=1`)
+ * to reproduce a CI-only failure on the same browser build. Pass
+ * `--workers=1` there: on macOS, parallel workers driving the system
+ * Chrome pass their tests but then sit for the full 5-minute shutdown
+ * grace period before being force-killed. CI is unaffected because it
+ * already runs single-worker (see `workers` below), and single-worker
+ * runtime is the same on both browsers.
+ *
+ * The channel does not change process sandboxing: Playwright launches
+ * all three of the default headless shell, `channel: "chromium"` and
+ * `channel: "chrome"` with `--no-sandbox` (verify with
+ * `DEBUG=pw:browser`). The real trade-off is version drift — the
+ * runner's Chrome is a moving stable release rather than the build
+ * pinned by our Playwright version, so a Chrome update can break CI
+ * without a commit. The workflow prints the version for that reason.
  */
 const PORT = Number(process.env.PORT ?? 3100);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const CHANNEL = process.env.PW_CHANNEL || undefined;
 
 export default defineConfig({
   testDir: "./e2e/tests",
@@ -39,9 +58,10 @@ export default defineConfig({
 
   projects: [
     {
-      name: "chromium",
+      name: CHANNEL ?? "chromium",
       use: {
         ...devices["Pixel 5"],
+        channel: CHANNEL,
       },
     },
   ],

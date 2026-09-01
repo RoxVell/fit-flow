@@ -33,12 +33,15 @@ jobs:
         run: npm run test:unit
 
   e2e:
-    name: Playwright (chromium)
+    name: Playwright (system Chrome)
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     env:
       CI: "true"
+      # Run against the Google Chrome baked into the runner image instead
+      # of a Playwright-managed download — see playwright.config.ts.
+      PW_CHANNEL: chrome
 
     steps:
       - name: Checkout
@@ -59,8 +62,13 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+      # No `playwright install` step: `PW_CHANNEL=chrome` resolves to
+      # /usr/bin/google-chrome, which ships with the runner image along
+      # with its system libraries. Log the version — it is a moving
+      # stable release, so it is the first thing to check if the suite
+      # starts failing without a code change.
+      - name: Report browser version
+        run: google-chrome --version
 
       - name: Run Playwright tests
         run: npm run test:e2e
