@@ -30,23 +30,17 @@ import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 import { computeFocusDomain, computePeriodChange } from "@/lib/charts/domain";
 import { DEFAULT_CHART_PERIOD, filterByPeriod, type ChartPeriod } from "@/lib/charts/periods";
+import { useChartPeriods } from "@/lib/charts/use-chart-periods";
 
 export function ExercisesTab() {
   const t = useT();
-  const { formatChartDate } = useFormat();
+  const { formatShortDate } = useFormat();
   const usageCounts = useExerciseUsageCounts();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [chartType, setChartType] = useState<"1rm" | "volume">("1rm");
   const [period, setPeriod] = useState<ChartPeriod>(DEFAULT_CHART_PERIOD);
-
-  const periods = [
-    { value: "1m" as const, label: t.progress.period1m },
-    { value: "2m" as const, label: t.progress.period2m },
-    { value: "3m" as const, label: t.progress.period3m },
-    { value: "6m" as const, label: t.progress.period6m },
-    { value: "all" as const, label: t.progress.periodAll },
-  ];
+  const periods = useChartPeriods();
 
   const usedExerciseIds = useMemo(() => {
     if (!usageCounts) return undefined;
@@ -80,11 +74,11 @@ export function ExercisesTab() {
     );
 
     return filtered.map((h) => ({
-      date: formatChartDate(h.date),
+      date: formatShortDate(h.date),
       estimated1RM: Math.round(h.estimated1RM * 10) / 10,
       volume: Math.round(h.volume),
     }));
-  }, [history, period, formatChartDate]);
+  }, [history, period, formatShortDate]);
 
   const dataKey = chartType === "1rm" ? "estimated1RM" : "volume";
 
@@ -143,7 +137,7 @@ export function ExercisesTab() {
       {selectedId ? (
         <Card>
           <CardHeader className="space-y-2 pb-2">
-            <div className="flex items-start justify-between gap-2">
+            <div className="space-y-2">
               <div className="min-w-0">
                 <CardTitle className="text-sm font-medium">
                   {t.progress.exerciseProgress}

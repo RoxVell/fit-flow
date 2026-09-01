@@ -4,7 +4,6 @@ import { useState } from "react";
 import { CalendarIcon } from "lucide-react";
 import { enUS, ru } from "date-fns/locale";
 import type { Locale as DateFnsLocale } from "date-fns";
-import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";

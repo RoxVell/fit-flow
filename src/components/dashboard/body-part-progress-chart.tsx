@@ -17,6 +17,7 @@ import { ChartPeriodSelector } from "@/components/charts/chart-period-selector";
 import { BODY_PART_CHART_COLORS } from "@/lib/charts/body-part-colors";
 import { computeFocusDomain, type PeriodChange } from "@/lib/charts/domain";
 import { DEFAULT_CHART_PERIOD, type ChartPeriod } from "@/lib/charts/periods";
+import { useChartPeriods } from "@/lib/charts/use-chart-periods";
 import {
   buildWeeklyExerciseBest1RM,
   buildPerExerciseBaseline,
@@ -37,7 +38,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 import { cn } from "@/lib/utils";
 
 function formatChange(value: number): string {
-  const sign = value > 0 ? "+" : value < 0 ? "" : "";
+  const sign = value > 0 ? "+" : "";
   return `${sign}${value}%`;
 }
 
@@ -88,15 +89,8 @@ export function BodyPartProgressChart() {
   const [expandedBodyPart, setExpandedBodyPart] = useState<BodyPart | null>(null);
   const t = useT();
   const locale = useLocale();
-  const { formatChartDate } = useFormat();
-
-  const periods = [
-    { value: "1m" as const, label: t.progress.period1m },
-    { value: "2m" as const, label: t.progress.period2m },
-    { value: "3m" as const, label: t.progress.period3m },
-    { value: "6m" as const, label: t.progress.period6m },
-    { value: "all" as const, label: t.progress.periodAll },
-  ];
+  const { formatShortDate } = useFormat();
+  const periods = useChartPeriods();
 
   const chartModel = useMemo(() => {
     if (!logs?.length || !manifest) return null;
@@ -120,7 +114,7 @@ export function BodyPartProgressChart() {
       filteredWeeks,
       baseline,
       exerciseBodyPart,
-      formatChartDate
+      formatShortDate
     );
 
     if (series.bodyParts.length === 0) return null;
@@ -148,7 +142,7 @@ export function BodyPartProgressChart() {
       exerciseSummaries,
       exerciseNames,
     };
-  }, [logs, manifest, period, formatChartDate, locale]);
+  }, [logs, manifest, period, formatShortDate, locale]);
 
   const yDomain = useMemo(() => {
     if (!chartModel?.chartData.length || chartModel.bodyParts.length === 0) return undefined;
@@ -168,7 +162,7 @@ export function BodyPartProgressChart() {
 
   return (
     <div className="rounded-xl border bg-card p-4">
-      <div className="mb-3 flex items-start justify-between gap-2">
+      <div className="mb-3 space-y-2">
         <div className="min-w-0">
           <p className="text-sm font-heading font-medium">{t.progress.bodyPartProgress}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">{t.progress.bodyPartChartHint}</p>

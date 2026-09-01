@@ -87,36 +87,3 @@ async function doSeed(): Promise<void> {
     await db.programs.bulkPut(programRows);
   }
 }
-
-export async function resetAllData(): Promise<void> {
-  await db.transaction(
-    "rw",
-    [
-      db.exercises,
-      db.programs,
-      db.workoutLogs,
-      db.bodyMeasurements,
-      db.cardioSessions,
-      db.personalRecords,
-      db.syncQueue,
-      db.workoutDrafts,
-      db.meta,
-    ],
-    async () => {
-      await Promise.all([
-        db.exercises.clear(),
-        db.programs.clear(),
-        db.workoutLogs.clear(),
-        db.bodyMeasurements.clear(),
-        db.cardioSessions.clear(),
-        db.personalRecords.clear(),
-        db.syncQueue.clear(),
-        db.workoutDrafts.clear(),
-        db.meta.clear(),
-      ]);
-    }
-  );
-  delete globalThis.__fitflow_seed_promise__;
-  await setAppMeta({ schemaVersion: LIBRARY_SCHEMA_VERSION });
-  await doSeed();
-}

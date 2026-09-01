@@ -15,6 +15,7 @@ import { ChartPeriodSelector } from "@/components/charts/chart-period-selector";
 import { PeriodChangeIndicator } from "@/components/charts/period-change-indicator";
 import { computeFocusDomain, computePeriodChange } from "@/lib/charts/domain";
 import { DEFAULT_CHART_PERIOD, type ChartPeriod } from "@/lib/charts/periods";
+import { useChartPeriods } from "@/lib/charts/use-chart-periods";
 import {
   buildWeeklyExerciseBest1RM,
   buildPerExerciseBaseline,
@@ -29,15 +30,9 @@ export function ProgressChart() {
   const logs = useWorkoutLogs(200);
   const [period, setPeriod] = useState<ChartPeriod>(DEFAULT_CHART_PERIOD);
   const t = useT();
-  const { formatChartDate } = useFormat();
+  const { formatShortDate } = useFormat();
 
-  const periods = [
-    { value: "1m" as const, label: t.progress.period1m },
-    { value: "2m" as const, label: t.progress.period2m },
-    { value: "3m" as const, label: t.progress.period3m },
-    { value: "6m" as const, label: t.progress.period6m },
-    { value: "all" as const, label: t.progress.periodAll },
-  ];
+  const periods = useChartPeriods();
 
   const { chartData, periodChange } = useMemo(() => {
     if (!logs || logs.length === 0) return { chartData: null, periodChange: null };
@@ -50,12 +45,12 @@ export function ProgressChart() {
     if (filteredWeeks.length < 2) return { chartData: null, periodChange: null };
 
     const baseline = buildPerExerciseBaseline(sortedWeeks);
-    const data = computeOverallProgressSeries(filteredWeeks, baseline, formatChartDate);
+    const data = computeOverallProgressSeries(filteredWeeks, baseline, formatShortDate);
     return {
       chartData: data,
       periodChange: computePeriodChange(data.map((d) => d.progress)),
     };
-  }, [logs, period, formatChartDate]);
+  }, [logs, period, formatShortDate]);
 
   const yDomain = useMemo(() => {
     if (!chartData?.length) return undefined;
@@ -69,7 +64,7 @@ export function ProgressChart() {
 
   return (
     <div className="rounded-xl border bg-card p-4">
-      <div className="flex items-start justify-between gap-2 mb-3">
+      <div className="mb-3 space-y-2">
         <div className="min-w-0">
           <p className="text-sm font-heading font-medium">{t.progress.generalProgress}</p>
           <PeriodChangeIndicator

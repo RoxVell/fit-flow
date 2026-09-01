@@ -12,10 +12,8 @@ import {
   setManifestLoadError,
   subscribeExerciseLibraryCacheClear,
 } from "@/lib/exercises/library-client";
-import { pickLocalized } from "@/lib/exercises/locale";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type {
-  BodyPart,
   ExerciseDetail,
   ExerciseLibraryFilters,
   ExerciseManifestItem,
@@ -147,51 +145,4 @@ export function useExerciseDetail(exerciseId: string | null) {
   };
 }
 
-export function useExerciseName(exerciseId: string | undefined): string {
-  const locale = useLocale();
-  const { manifest } = useExerciseManifest();
-
-  return useMemo(() => {
-    if (!exerciseId || !manifest) return "";
-    const item = manifest.find((e) => e.id === exerciseId);
-    return item ? pickLocalized(item.name, locale) : "";
-  }, [exerciseId, manifest, locale]);
-}
-
-export function useExerciseMapFromLibrary() {
-  const locale = useLocale();
-  const { manifest, loading, error } = useExerciseManifest();
-
-  const map = useMemo(() => {
-    if (!manifest) return undefined;
-    return new Map(
-      manifest.map((item) => [
-        item.id,
-        {
-          id: item.id,
-          name: pickLocalized(item.name, locale),
-          bodyPart: item.bodyPart,
-          muscleGroup: item.bodyPart,
-          thumbnailUri: item.thumbnailUri,
-        },
-      ])
-    );
-  }, [manifest, locale]);
-
-  return { map, loading, error };
-}
-
-export function getCachedManifestItem(
-  id: string
-): ExerciseManifestItem | undefined {
-  return getCachedManifest()?.find((e) => e.id === id);
-}
-
 export { ensureManifestLoaded };
-
-export async function getManifestItemBodyPart(
-  id: string
-): Promise<BodyPart | undefined> {
-  const manifest = await ensureManifestLoaded();
-  return manifest.find((e) => e.id === id)?.bodyPart;
-}

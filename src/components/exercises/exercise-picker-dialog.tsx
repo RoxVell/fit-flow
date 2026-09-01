@@ -28,32 +28,10 @@ interface ExercisePickerDialogProps {
   showAddAction?: boolean;
 }
 
-export function ExercisePickerDialog({
-  open,
-  onOpenChange,
-  title,
-  excludeIds,
-  onlyUsed = false,
-  onSelect,
-  emptyMessage,
-  emptyMessageAllExcluded,
-  showAddAction = false,
-}: ExercisePickerDialogProps) {
-  if (!open) return null;
+export function ExercisePickerDialog(props: ExercisePickerDialogProps) {
+  if (!props.open) return null;
 
-  return (
-    <ExercisePickerDialogContent
-      open={open}
-      onOpenChange={onOpenChange}
-      title={title}
-      excludeIds={excludeIds}
-      onlyUsed={onlyUsed}
-      onSelect={onSelect}
-      emptyMessage={emptyMessage}
-      emptyMessageAllExcluded={emptyMessageAllExcluded}
-      showAddAction={showAddAction}
-    />
-  );
+  return <ExercisePickerDialogContent {...props} />;
 }
 
 function ExercisePickerDialogContent({

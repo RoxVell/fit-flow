@@ -9,11 +9,11 @@ test.beforeEach(async ({ page }) => {
 test("workout page shows plan and history tabs", async ({ page }) => {
   await page.goto("/workout");
 
-  await expect(page.getByRole("button", { name: /^Plan$/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^History$/i })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^Plan$/i })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^History$/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /start workout/i })).toBeVisible();
 
-  await page.getByRole("button", { name: /^History$/i }).click();
+  await page.getByRole("tab", { name: /^History$/i }).click();
   await expect(
     page.getByText(/no completed workouts yet/i).first()
   ).toBeVisible();

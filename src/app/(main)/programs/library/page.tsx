@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { Badge } from "@/components/ui/badge";
 import { usePrograms } from "@/lib/hooks/use-data";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
@@ -13,7 +14,6 @@ import { useFormat } from "@/lib/i18n/use-format";
 import { ExerciseLibraryList } from "@/components/exercises/exercise-library-list";
 import { Plus, Pencil, Library, LayoutList, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 
 export default function ProgramsPage() {
   const t = useT();
@@ -28,24 +28,14 @@ export default function ProgramsPage() {
     <div className="flex flex-col h-full pt-[env(safe-area-inset-top)]">
       <div className="px-4 pt-4 pb-3 shrink-0">
         <h1 className="text-2xl font-bold mb-3">{t.programs.title}</h1>
-        <div className="flex rounded-lg bg-muted p-0.5">
-          {views.map((v) => (
-            <button
-              key={v.value}
-              type="button"
-              onClick={() => setView(v.value)}
-              className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-all",
-                view === v.value
-                  ? "bg-background text-foreground shadow-xs"
-                  : "text-muted-foreground"
-              )}
-            >
-              <v.icon className="h-4 w-4" />
-              {v.label}
-            </button>
-          ))}
-        </div>
+        <SegmentedTabs
+          selectionMode="tabs"
+          items={views}
+          value={view}
+          onChange={setView}
+          ariaLabel={t.programs.title}
+          truncate={false}
+        />
       </div>
 
       {view === "programs" ? <ProgramsView /> : <ExercisesView />}

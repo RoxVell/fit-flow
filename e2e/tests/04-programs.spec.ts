@@ -20,9 +20,9 @@ test("library lists the seeded PPL program and exposes a create link", async ({ 
 });
 
 test("library can switch between programs and exercises views", async ({ page }) => {
-  // The Programs / Exercises toggle is a segmented control at the top.
-  const programsTab = page.getByRole("button", { name: /^programs$/i });
-  const exercisesTab = page.getByRole("button", { name: /^exercises$/i });
+  // The Programs / Exercises toggle is a segmented tablist at the top.
+  const programsTab = page.getByRole("tab", { name: /^programs$/i });
+  const exercisesTab = page.getByRole("tab", { name: /^exercises$/i });
 
   await expect(programsTab).toBeVisible();
   await expect(exercisesTab).toBeVisible();

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useMemo, useState } from "react";
+import { Suspense, use, useMemo, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -21,7 +21,15 @@ import { RestTimer } from "@/components/workout/rest-timer";
 import { TriumphScreen } from "@/components/workout/triumph-screen";
 import { ExerciseHistorySheet } from "@/components/workout/exercise-history-sheet";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { formatDuration } from "@/lib/utils/calculations";
+import { formatDuration, formatElapsedClock } from "@/lib/utils/calculations";
+
+function CenteredMessage({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-center justify-center h-full p-4">
+      <p className="text-muted-foreground">{children}</p>
+    </div>
+  );
+}
 
 function ActiveWorkoutContent({
   searchParams,
@@ -84,11 +92,7 @@ function ActiveWorkoutContent({
   }, [exercises, swapTargetLoggedExerciseId]);
 
   if (isAbandoning) {
-    return (
-      <div className="flex items-center justify-center h-full p-4">
-        <p className="text-muted-foreground">{t.workout.starting}</p>
-      </div>
-    );
+    return <CenteredMessage>{t.workout.starting}</CenteredMessage>;
   }
 
   if (showTriumph) {
@@ -109,11 +113,7 @@ function ActiveWorkoutContent({
   }
 
   if (!activeWorkoutId) {
-    return (
-      <div className="flex items-center justify-center h-full p-4">
-        <p className="text-muted-foreground">{t.workout.starting}</p>
-      </div>
-    );
+    return <CenteredMessage>{t.workout.starting}</CenteredMessage>;
   }
 
   const excludedExerciseIds = new Set(exercises.map((ex) => ex.exerciseId));
@@ -129,7 +129,7 @@ function ActiveWorkoutContent({
           <div className="flex items-center gap-2">
             <Timer className="h-4 w-4 text-muted-foreground" />
             <span className="text-lg font-bold tabular-nums">
-              {minutes.toString().padStart(2, "0")}:{seconds.toString().padStart(2, "0")}
+              {formatElapsedClock(minutes, seconds)}
             </span>
             <button
               onClick={togglePause}
@@ -301,11 +301,7 @@ function ActiveWorkoutContent({
 
 function ActiveWorkoutLoading() {
   const t = useT();
-  return (
-    <div className="flex items-center justify-center h-full p-4">
-      <p className="text-muted-foreground">{t.common.loading}</p>
-    </div>
-  );
+  return <CenteredMessage>{t.common.loading}</CenteredMessage>;
 }
 
 export default function ActiveWorkoutPage({
