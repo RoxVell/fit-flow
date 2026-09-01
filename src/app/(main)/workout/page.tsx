@@ -64,6 +64,7 @@ export default function WorkoutPlanPage() {
         value={activeTab}
         onChange={setActiveTab}
         ariaLabel={t.workout.title}
+        truncate={false}
       />
 
       {activeTab === "plan" && <WorkoutPlanTab />}

@@ -32,6 +32,7 @@ export default function ProgressPage() {
         value={activeTab}
         onChange={setActiveTab}
         ariaLabel={t.progress.title}
+        truncate={false}
         className="mb-4"
       />
       {activeTab === "general" && <GeneralTab />}

@@ -34,6 +34,7 @@ export default function ProgramsPage() {
           value={view}
           onChange={setView}
           ariaLabel={t.programs.title}
+          truncate={false}
         />
       </div>
 
