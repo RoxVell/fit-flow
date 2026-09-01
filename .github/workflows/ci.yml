@@ -62,11 +62,18 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      # No `playwright install` step: `PW_CHANNEL=chrome` resolves to
+      # The browser is not downloaded: `PW_CHANNEL=chrome` resolves to
       # /usr/bin/google-chrome, which ships with the runner image along
-      # with its system libraries. Log the version — it is a moving
-      # stable release, so it is the first thing to check if the suite
-      # starts failing without a code change.
+      # with its system libraries. ffmpeg is still needed though — it is
+      # a Playwright-managed binary (a few MB, not the ~170 MB browser),
+      # and `video: "retain-on-failure"` fails every `newPage()` without
+      # it, whether or not a video ends up being kept.
+      - name: Install Playwright ffmpeg
+        run: npx playwright install ffmpeg
+
+      # Log the Chrome version — it is a moving stable release, so it is
+      # the first thing to check if the suite starts failing without a
+      # code change.
       - name: Report browser version
         run: google-chrome --version
 
