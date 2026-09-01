@@ -1,0 +1,190 @@
+/*
+ * Landing-only styles. Everything Tailwind expresses tersely lives inline in
+ * the components; this file holds keyframes, masks, the pointer spotlight and
+ * the film grain, which would be unreadable as arbitrary-value utilities.
+ *
+ * Every animation here is disabled under `prefers-reduced-motion`. Framer
+ * Motion animations are gated separately via <MotionConfig reducedMotion="user">.
+ */
+
+@keyframes lp-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+@keyframes lp-marquee-y {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, -50%, 0); }
+}
+@keyframes lp-shimmer {
+  to { background-position: 200% center; }
+}
+@keyframes lp-aurora {
+  0% { transform: translate3d(-8%, -6%, 0) rotate(0deg) scale(1); }
+  33% { transform: translate3d(6%, 4%, 0) rotate(120deg) scale(1.15); }
+  66% { transform: translate3d(-4%, 8%, 0) rotate(240deg) scale(0.95); }
+  100% { transform: translate3d(-8%, -6%, 0) rotate(360deg) scale(1); }
+}
+@keyframes lp-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -10px, 0); }
+}
+@keyframes lp-ping {
+  0% { transform: scale(0.9); opacity: 0.9; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes lp-sheen {
+  from { transform: translateX(-160%) skewX(-20deg); }
+  to { transform: translateX(260%) skewX(-20deg); }
+}
+@keyframes lp-travel {
+  from { offset-distance: 0%; left: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  to { left: 100%; opacity: 0; }
+}
+@keyframes lp-ecg {
+  to { stroke-dashoffset: -400; }
+}
+@keyframes lp-heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.18); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.12); }
+}
+@keyframes lp-drift {
+  from { background-position: 0 0; }
+  to { background-position: 44px 44px; }
+}
+
+.lp-serif {
+  font-family: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.lp-marquee { animation: lp-marquee var(--lp-duration, 40s) linear infinite; }
+.lp-marquee-y { animation: lp-marquee-y var(--lp-duration, 18s) linear infinite; }
+.lp-marquee-pause:hover .lp-marquee,
+.lp-marquee-pause:hover .lp-marquee-y { animation-play-state: paused; }
+
+.lp-mask-x { mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); }
+.lp-mask-y { mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent); }
+.lp-mask-b { mask-image: linear-gradient(to bottom, #000 50%, transparent); }
+.lp-mask-radial { mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 75%); }
+
+.lp-shimmer {
+  background-image: linear-gradient(
+    110deg,
+    var(--primary) 0%,
+    var(--primary) 38%,
+    oklch(0.86 0.15 80) 50%,
+    var(--primary) 62%,
+    var(--primary) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lp-shimmer 5s linear infinite;
+}
+
+.lp-aurora { animation: lp-aurora 24s ease-in-out infinite; }
+.lp-float { animation: lp-float 5.5s ease-in-out infinite; }
+.lp-ping { animation: lp-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite; }
+.lp-drift { animation: lp-drift 6s linear infinite; }
+.lp-travel { animation: lp-travel 2.4s linear infinite; }
+.lp-ecg { stroke-dasharray: 110 290; animation: lp-ecg 2.6s linear infinite; }
+.lp-heartbeat { animation: lp-heartbeat 1.3s ease-in-out infinite; transform-origin: center; }
+
+/* A light sweep across primary buttons on hover */
+.lp-sheen { position: relative; overflow: hidden; isolation: isolate; }
+.lp-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.4), transparent);
+  transform: translateX(-160%) skewX(-20deg);
+  pointer-events: none;
+}
+.lp-sheen:hover::after { animation: lp-sheen 0.9s ease forwards; }
+
+/* Film grain: an SVG turbulence tile blended over rich surfaces */
+.lp-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+/* Dotted backdrop */
+.lp-dots {
+  background-image: radial-gradient(
+    color-mix(in oklch, var(--foreground) 16%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+}
+
+/*
+ * Spotlight tiles: a radial highlight and a border glow follow the pointer.
+ * The grid container writes --lp-x / --lp-y (px, relative to each tile).
+ */
+.lp-tile {
+  position: relative;
+  --lp-x: 50%;
+  --lp-y: 50%;
+}
+.lp-tile::before,
+.lp-tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+.lp-tile::before {
+  background: radial-gradient(
+    420px circle at var(--lp-x) var(--lp-y),
+    color-mix(in oklch, var(--primary) 16%, transparent),
+    transparent 60%
+  );
+}
+.lp-tile::after {
+  padding: 1px;
+  background: radial-gradient(
+    260px circle at var(--lp-x) var(--lp-y),
+    color-mix(in oklch, var(--primary) 75%, transparent),
+    transparent 70%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+.lp-tile:hover::before,
+.lp-tile:hover::after { opacity: 1; }
+
+/* Smooth anchor jumps from the header nav */
+.lp-root { scroll-behavior: smooth; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-marquee,
+  .lp-marquee-y,
+  .lp-shimmer,
+  .lp-aurora,
+  .lp-float,
+  .lp-ping,
+  .lp-drift,
+  .lp-travel,
+  .lp-ecg,
+  .lp-heartbeat { animation: none; }
+  .lp-sheen:hover::after { animation: none; }
+  .lp-root { scroll-behavior: auto; }
+}

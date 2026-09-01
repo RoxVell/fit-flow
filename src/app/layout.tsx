@@ -59,7 +59,11 @@ export default async function RootLayout({
     <html
       lang={initialLocale}
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // No `h-full` here: the body background propagates to the canvas and is
+      // positioned against the root element's box. A viewport-high <html>
+      // made the gradient tile every viewport, leaving a visible seam on
+      // any page taller than one screen.
+      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: localeBootstrapScript }} />

@@ -1,70 +1,109 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Dumbbell } from "lucide-react";
+import { Instrument_Serif } from "next/font/google";
+import { LandingShell } from "@/components/landing/landing-shell";
+import { LandingHeader } from "@/components/landing/header";
 import { Hero } from "@/components/landing/hero";
-import { TrustBar } from "@/components/landing/trust-bar";
-import { Features } from "@/components/landing/features";
-import { Showcase } from "@/components/landing/showcase";
+import { Ticker } from "@/components/landing/ticker";
+import { Bento } from "@/components/landing/bento";
+import { HowItWorks } from "@/components/landing/how-it-works";
+import { Numbers } from "@/components/landing/numbers";
+import { Faq } from "@/components/landing/faq";
 import { Cta } from "@/components/landing/cta";
 import { Footer } from "@/components/landing/footer";
+import "@/components/landing/landing.css";
+
+// Editorial italic for the accent words in headings. Loaded only on this
+// route; the app itself stays on Geist.
+const instrumentSerif = Instrument_Serif({
+  weight: "400",
+  style: "italic",
+  subsets: ["latin"],
+  variable: "--font-instrument-serif",
+  display: "swap",
+});
+
+const TITLE = "FitFlow — Every rep counted. Even with zero bars.";
+const DESCRIPTION =
+  "An offline-first strength tracker that installs like an app, needs no account, and keeps every set on your phone. Programs, one-tap set logging, auto rest timer, PR detection and progress charts.";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export const metadata: Metadata = {
-  title: "FitFlow — Train smarter. Track every gain.",
-  description:
-    "An offline-first strength training PWA. Build programs, log sets in real time, and watch your progress climb — all on your phone, even offline.",
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  keywords: [
+    "workout tracker",
+    "strength training app",
+    "offline workout log",
+    "PWA fitness app",
+    "one rep max calculator",
+    "push pull legs",
+  ],
+  alternates: { canonical: "/landing" },
   openGraph: {
-    title: "FitFlow — Train smarter. Track every gain.",
-    description:
-      "An offline-first strength training PWA. Build programs, log sets in real time, and track every PR.",
+    title: TITLE,
+    description: DESCRIPTION,
     type: "website",
+    url: "/landing",
+    siteName: "FitFlow",
+    locale: "en_US",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  robots: { index: true, follow: true },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "FitFlow",
+  applicationCategory: "HealthApplication",
+  operatingSystem: "Web, iOS, Android",
+  description: DESCRIPTION,
+  url: `${SITE_URL}/landing`,
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  featureList: [
+    "Offline-first workout logging",
+    "824 illustrated exercises",
+    "Automatic rest timer",
+    "Personal record detection",
+    "Estimated 1RM and volume charts",
+    "English and Russian",
+  ],
 };
 
 export default function LandingPage() {
   return (
-    // Transparent wrapper lets the global BlockOne grid (fixed -z-10) show
-    // through as a decorative backdrop, layered under the orange body glow
-    // already defined in globals.css.
-    <div className="relative min-h-dvh">
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-          <Link href="/landing" className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Dumbbell className="size-4" />
-            </div>
-            <span className="font-mono text-base font-bold text-foreground">
-              FitFlow
-            </span>
-          </Link>
-          <nav className="hidden items-center gap-7 text-sm text-muted-foreground sm:flex">
-            <Link href="#features" className="transition-colors hover:text-foreground">
-              Features
-            </Link>
-            <Link
-              href="/dashboard"
-              className="transition-colors hover:text-foreground"
-            >
-              Dashboard
-            </Link>
-          </nav>
-          <Link
-            href="/dashboard"
-            className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-transform active:translate-y-px"
-          >
-            Open app
-          </Link>
-        </div>
-      </header>
+    <LandingShell>
+      <div className={`lp-root relative min-h-dvh ${instrumentSerif.variable}`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+        />
+        <a
+          href="#main"
+          className="sr-only z-50 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+        >
+          Skip to content
+        </a>
 
-      <main>
-        <Hero />
-        <TrustBar />
-        <Features />
-        <Showcase />
-        <Cta />
-      </main>
+        <LandingHeader />
 
-      <Footer />
-    </div>
+        <main id="main">
+          <Hero />
+          <Ticker />
+          <Bento />
+          <HowItWorks />
+          <Numbers />
+          <Faq />
+          <Cta />
+        </main>
+
+        <Footer />
+      </div>
+    </LandingShell>
   );
 }
