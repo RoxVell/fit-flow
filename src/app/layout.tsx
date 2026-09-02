@@ -1,15 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
-import { headers } from "next/headers";
-import {
-  localeBootstrapScript,
-  LOCALE_COOKIE,
-  getServerLocale,
-} from "@/lib/i18n/locale-cookie";
+import { localeBootstrapScript } from "@/lib/i18n/locale-cookie";
 import { appHeightBootstrapScript } from "@/lib/pwa/app-height";
-import type { Locale } from "@/lib/exercises/types";
 import { ServiceWorkerRegister } from "@/components/shared/service-worker-register";
 import { OfflineBanner } from "@/components/shared/offline-banner";
 import { InstallPrompt } from "@/components/shared/install-prompt";
@@ -43,21 +36,17 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default async function RootLayout({
+// Pages are prerendered as static HTML in the default locale. The bootstrap
+// script below sets `lang` before the first paint; translated strings switch
+// in LocaleProvider right after hydration.
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = await cookies();
-  const headerStore = await headers();
-  const initialLocale: Locale = getServerLocale(
-    cookieStore.get(LOCALE_COOKIE)?.value,
-    headerStore.get("accept-language")
-  );
-
   return (
     <html
-      lang={initialLocale}
+      lang="en"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
@@ -66,7 +55,7 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: appHeightBootstrapScript }} />
       </head>
       <body className="flex min-h-dvh flex-col text-foreground">
-        <Providers initialLocale={initialLocale}>
+        <Providers>
           <BlockOne />
           <ServiceWorkerRegister />
           <OfflineBanner />

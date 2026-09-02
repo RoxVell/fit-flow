@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { Suspense, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Play, Dumbbell, ChevronDown, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,17 @@ import {
 
 type Tab = "plan" | "history";
 
-export default function WorkoutPlanPage() {
+function WorkoutPlanSkeleton() {
+  return (
+    <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
+      <Skeleton className="h-8 w-32 rounded-lg" />
+      <Skeleton className="h-10 w-full rounded-lg" />
+      <Skeleton className="h-64 w-full rounded-xl" />
+    </div>
+  );
+}
+
+function WorkoutPlanPageInner() {
   const router = useRouter();
   const t = useT();
   const [activeTab, setActiveTab] = useSearchParamTab<Tab>(
@@ -45,13 +55,7 @@ export default function WorkoutPlanPage() {
   ];
 
   if (draft === undefined) {
-    return (
-      <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
-        <Skeleton className="h-8 w-32 rounded-lg" />
-        <Skeleton className="h-10 w-full rounded-lg" />
-        <Skeleton className="h-64 w-full rounded-xl" />
-      </div>
-    );
+    return <WorkoutPlanSkeleton />;
   }
 
   return (
@@ -255,5 +259,15 @@ function WorkoutPlanTab() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// useSearchParams needs a Suspense boundary for static prerendering; the
+// fallback is what ends up in the precached HTML.
+export default function WorkoutPlanPage() {
+  return (
+    <Suspense fallback={<WorkoutPlanSkeleton />}>
+      <WorkoutPlanPageInner />
+    </Suspense>
   );
 }
