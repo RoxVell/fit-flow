@@ -69,7 +69,8 @@ const serwist = new Serwist({
     matchOptions: { ignoreVary: true },
   },
   skipWaiting: false,
-  clientsClaim: true,
+  // Claimed manually at the end of `activate`, after the RSC warm-up.
+  clientsClaim: false,
   // Navigations are served from precache, so a parallel network request
   // would just be wasted bandwidth.
   navigationPreload: false,
@@ -126,7 +127,8 @@ const serwist = new Serwist({
       // so opening the bare origin works offline.
       matcher: ({ request, url }) =>
         request.mode === "navigate" && url.pathname === "/",
-      handler: async () => Response.redirect("/dashboard", 307),
+      handler: async () =>
+        Response.redirect(new URL("/dashboard", self.location.origin), 307),
     },
     {
       // Only routes missing from the precache manifest end up here.
@@ -158,14 +160,18 @@ const serwist = new Serwist({
 // The precache route is registered first and matches by URL alone, so an
 // RSC fetch for `/dashboard?_rsc=…` would receive the precached HTML.
 // Put the RSC route ahead of it.
-serwist.routes
-  .get("GET")
-  ?.unshift(new Route(({ request }) => isRscRequest(request), rscStrategy));
+const getRoutes = serwist.routes.get("GET");
+if (!getRoutes) throw new Error("Serwist registered no GET routes");
+getRoutes.unshift(new Route(({ request }) => isRscRequest(request), rscStrategy));
 
 /**
  * A new build means new chunks and payloads: drop the build-bound runtime
  * caches, then warm the RSC cache so client-side navigation between tabs
- * works offline without the user visiting every page first.
+ * works offline without the user visiting every page first. Clients are
+ * claimed only after that, so the reload triggered by `controllerchange`
+ * never sees a half-filled cache. Warming during `install` would be too
+ * early: the old worker is still serving and would hand out payloads that
+ * reference chunks it does not have.
  */
 self.addEventListener("activate", (event) => {
   event.waitUntil(
@@ -176,12 +182,18 @@ self.addEventListener("activate", (event) => {
           .filter((key) => BUILD_BOUND_CACHES.some((name) => key.includes(name)))
           .map((key) => caches.delete(key))
       );
-      await Promise.allSettled(
+      const results = await Promise.allSettled(
         APP_ROUTES.map((url) => {
           const request = new Request(url, { headers: { RSC: "1" } });
           return Promise.all(rscStrategy.handleAll({ request, event }));
         })
       );
+      results.forEach((result, i) => {
+        if (result.status === "rejected") {
+          console.warn(`[sw] RSC warm-up failed for ${APP_ROUTES[i]}`, result.reason);
+        }
+      });
+      await self.clients.claim();
     })()
   );
 });

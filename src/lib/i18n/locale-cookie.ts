@@ -47,5 +47,8 @@ export function resolveClientLocale(): Locale {
   return readCookieLocale() ?? readPersistedLocale() ?? detectBrowserLocale();
 }
 
-/** Inline script: sync cookie from localStorage before React hydrates. */
-export const localeBootstrapScript = `(function(){try{var l=null;var r=localStorage.getItem("${LOCALE_STORAGE_KEY}");if(r){var p=JSON.parse(r);if(p&&p.state&&p.state.locale)l=p.state.locale;}if(!l){var m=document.cookie.match(/(?:^|; )${LOCALE_COOKIE}=([^;]*)/);if(m)l=decodeURIComponent(m[1]);}if(l==="en"||l==="ru"){document.documentElement.lang=l;document.cookie="${LOCALE_COOKIE}="+l+";path=/;max-age=31536000;SameSite=Lax";}}catch(e){}})();`;
+/**
+ * Inline script: resolve the locale (localStorage → cookie → browser language)
+ * and set `lang` + cookie before React hydrates. Mirrors `resolveClientLocale`.
+ */
+export const localeBootstrapScript = `(function(){try{var l=null;var r=localStorage.getItem("${LOCALE_STORAGE_KEY}");if(r){var p=JSON.parse(r);if(p&&p.state&&p.state.locale)l=p.state.locale;}if(!l){var m=document.cookie.match(/(?:^|; )${LOCALE_COOKIE}=([^;]*)/);if(m)l=decodeURIComponent(m[1]);}if(l!=="en"&&l!=="ru"){l=/^ru/i.test(navigator.language)?"ru":"en";}document.documentElement.lang=l;document.cookie="${LOCALE_COOKIE}="+l+";path=/;max-age=31536000;SameSite=Lax";}catch(e){}})();`;
