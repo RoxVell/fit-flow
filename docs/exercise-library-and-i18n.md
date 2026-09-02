@@ -82,7 +82,7 @@ If sources are missing but `manifest.json` exists, the script exits successfully
 
 `public/exercises/*.json` is part of the precache manifest, so the catalog is downloaded when the service worker installs and refreshed (by content hash) on every new build. The `exercise-library` **CacheFirst** rule only matters in dev, where precaching is disabled. In-memory client cache is cleared via `clearExerciseLibraryCache()` in `ServiceWorkerRegister` on SW activation.
 
-All app pages (`APP_ROUTES` in `src/lib/pwa/cache.ts`) are static and precached as HTML with a per-build revision; on `activate` the SW drops the build-bound runtime caches and warms `rsc-cache` with each page's RSC payload, so tab navigation works offline right after an update. RSC responses are keyed by path only (query string stripped, `Vary` ignored).
+All app pages (`APP_ROUTES` in `src/lib/pwa/cache.ts`) are static and precached as HTML with a per-build revision; on `activate` the SW drops the build-bound runtime caches, warms `rsc-cache`, then `clients.claim()`. RSC responses are keyed by path only (query string stripped, `Vary` ignored) — valid only while payloads are user- and query-independent.
 
 Thumbnail images (`api.smartworkout.app`) stay **NetworkOnly** — offline list shows a Dumbbell placeholder via `ExerciseThumbnail` `onError` fallback.
 
@@ -131,7 +131,7 @@ t.dashboard.greetings.morning("Anton")
 | Layer | Mechanism |
 |-------|-----------|
 | Server | None: pages are static, HTML is always rendered with `lang="en"` |
-| Bootstrap | Inline `<head>` script syncs localStorage → cookie and sets `lang` before React |
+| Bootstrap | Inline `<head>` script: localStorage → cookie → `navigator.language`; sets `lang` before React |
 | Client | `LocaleProvider` (React Context) resolves cookie → localStorage → `navigator.language` in a layout effect |
 | Persist | Cookie + localStorage (`fitflow-locale`) |
 

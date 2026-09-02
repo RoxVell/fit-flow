@@ -35,6 +35,10 @@ declare const self: ServiceWorkerGlobalScope;
  * same route gets a different URL depending on where the user navigates
  * from. All pages are static, so the payload is identical regardless of the
  * query string (`?session=`, `?tab=`): key by path only.
+ *
+ * This is only valid while RSC payloads are user- and query-independent
+ * (no cookie-gated or search-param-driven RSC). If that changes, include
+ * the relevant query/cookie in the cache key and stop ignoring Vary.
  */
 const pathOnlyKey: SerwistPlugin = {
   cacheKeyWillBeUsed: async ({ request }) => {
