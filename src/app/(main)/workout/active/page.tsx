@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, use, useMemo, useState, type ReactNode } from "react";
+import { Suspense, useMemo, useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -31,12 +32,8 @@ function CenteredMessage({ children }: { children: ReactNode }) {
   );
 }
 
-function ActiveWorkoutContent({
-  searchParams,
-}: {
-  searchParams: Promise<{ session?: string }>;
-}) {
-  const { session: sessionId } = use(searchParams);
+function ActiveWorkoutContent() {
+  const sessionId = useSearchParams().get("session") ?? undefined;
   const restStore = useWorkoutStore();
   const t = useT();
   const { getName } = useExerciseLookup();
@@ -304,14 +301,11 @@ function ActiveWorkoutLoading() {
   return <CenteredMessage>{t.common.loading}</CenteredMessage>;
 }
 
-export default function ActiveWorkoutPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ session?: string }>;
-}) {
+// useSearchParams (instead of the searchParams prop) keeps the page static.
+export default function ActiveWorkoutPage() {
   return (
     <Suspense fallback={<ActiveWorkoutLoading />}>
-      <ActiveWorkoutContent searchParams={searchParams} />
+      <ActiveWorkoutContent />
     </Suspense>
   );
 }

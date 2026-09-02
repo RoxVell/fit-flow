@@ -6,6 +6,7 @@ import { ProgramForm } from "@/components/programs/program-form";
 import { useProgram } from "@/lib/hooks/use-data";
 import { createProgram, updateProgram } from "@/lib/repositories/programs";
 import { useT } from "@/lib/i18n/use-t";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function CreateProgramInner() {
   const router = useRouter();
@@ -56,9 +57,21 @@ function CreateProgramInner() {
   );
 }
 
+// The fallback is what ends up in the precached HTML.
+function CreateProgramSkeleton() {
+  return (
+    <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+      <Skeleton className="h-8 w-40 rounded-lg" />
+      <Skeleton className="h-10 w-full rounded-lg" />
+      <Skeleton className="h-24 w-full rounded-lg" />
+      <Skeleton className="h-40 w-full rounded-xl" />
+    </div>
+  );
+}
+
 export default function CreateProgramPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<CreateProgramSkeleton />}>
       <CreateProgramInner />
     </Suspense>
   );

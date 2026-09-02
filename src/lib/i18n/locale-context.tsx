@@ -10,7 +10,7 @@ import {
 } from "react";
 import type { Locale } from "@/lib/exercises/types";
 import {
-  readCookieLocale,
+  resolveClientLocale,
   setLocaleCookie,
   writePersistedLocale,
 } from "@/lib/i18n/locale-cookie";
@@ -29,25 +29,23 @@ export function getActiveLocale(): Locale {
   return activeLocale;
 }
 
-export function LocaleProvider({
-  initialLocale,
-  children,
-}: {
-  initialLocale: Locale;
-  children: React.ReactNode;
-}) {
-  activeLocale = initialLocale;
-  const [locale, setLocaleState] = useState(initialLocale);
+const DEFAULT_LOCALE: Locale = "en";
+
+export function LocaleProvider({ children }: { children: React.ReactNode }) {
+  // Server HTML is static and always rendered in the default locale.
+  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
   activeLocale = locale;
 
-  // Bootstrap script may set cookie from localStorage before React hydrates.
-  // Sync React state in the same frame — avoids delayed zustand rehydrate flash.
+  // The bootstrap script in the root layout syncs the cookie from
+  // localStorage before hydration; pick up the result (or the browser
+  // language on a fresh install) in the same frame to avoid a flash.
   useLayoutEffect(() => {
-    const fromCookie = readCookieLocale();
-    if (fromCookie && fromCookie !== locale) {
-      writePersistedLocale(fromCookie);
-      activeLocale = fromCookie;
-      setLocaleState(fromCookie);
+    const resolved = resolveClientLocale();
+    if (resolved !== locale) {
+      setLocaleCookie(resolved);
+      writePersistedLocale(resolved);
+      activeLocale = resolved;
+      setLocaleState(resolved);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

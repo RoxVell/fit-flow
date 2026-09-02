@@ -80,7 +80,9 @@ If sources are missing but `manifest.json` exists, the script exits successfully
 
 ### Service Worker (`src/app/sw.ts`)
 
-`/exercises/*` uses **CacheFirst** (`exercise-library` cache, 30 days). After the first online visit, manifest and detail chunks work offline. On each new SW `activate`, the `exercise-library` cache is deleted so redeploys pick up rebuilt JSON; in-memory client cache is cleared via `clearExerciseLibraryCache()` in `ServiceWorkerRegister`.
+`public/exercises/*.json` is part of the precache manifest, so the catalog is downloaded when the service worker installs and refreshed (by content hash) on every new build. The `exercise-library` **CacheFirst** rule only matters in dev, where precaching is disabled. In-memory client cache is cleared via `clearExerciseLibraryCache()` in `ServiceWorkerRegister` on SW activation.
+
+All app pages (`APP_ROUTES` in `src/lib/pwa/cache.ts`) are static and precached as HTML with a per-build revision; on `activate` the SW drops the build-bound runtime caches, warms `rsc-cache`, then `clients.claim()`. RSC responses are keyed by path only (query string stripped, `Vary` ignored) — valid only while payloads are user- and query-independent.
 
 Thumbnail images (`api.smartworkout.app`) stay **NetworkOnly** — offline list shows a Dumbbell placeholder via `ExerciseThumbnail` `onError` fallback.
 
@@ -128,9 +130,9 @@ t.dashboard.greetings.morning("Anton")
 
 | Layer | Mechanism |
 |-------|-----------|
-| Server | Cookie `fitflow-locale` + `Accept-Language` → `lang` on `<html>` |
-| Bootstrap | Inline `<head>` script syncs localStorage → cookie before React |
-| Client | `LocaleProvider` (React Context) in `src/lib/i18n/locale-context.tsx` |
+| Server | None: pages are static, HTML is always rendered with `lang="en"` |
+| Bootstrap | Inline `<head>` script: localStorage → cookie → `navigator.language`; sets `lang` before React |
+| Client | `LocaleProvider` (React Context) resolves cookie → localStorage → `navigator.language` in a layout effect |
 | Persist | Cookie + localStorage (`fitflow-locale`) |
 
 `useLocale()` / `useSetLocale()` — prefer `@/lib/i18n/locale-context` (re-exported from deprecated `@/lib/stores/locale-store`).
@@ -164,8 +166,8 @@ Exercise names use `pickLocalized(field, locale)` from `src/lib/exercises/locale
 | `src/lib/i18n/locale-context.tsx` | Locale React context |
 | `src/lib/i18n/locale-cookie.ts` | Cookie/localStorage/bootstrap script |
 | `src/lib/i18n/use-format.ts` | Memoized date/label formatters |
-| `src/app/layout.tsx` | Server locale + bootstrap script |
-| `src/app/sw.ts` | Offline cache for `/exercises/` |
+| `src/app/layout.tsx` | Bootstrap script |
+| `src/app/sw.ts` | Service worker: precache, RSC cache, offline fallback |
 
 ## Development checklist
 

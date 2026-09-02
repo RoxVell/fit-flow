@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { BarChart3, Dumbbell, User } from "lucide-react";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { GeneralTab } from "@/components/progress/general-tab";
@@ -7,10 +8,11 @@ import { ExercisesTab } from "@/components/progress/exercises-tab";
 import { BodyTab } from "@/components/progress/body-tab";
 import { useSearchParamTab } from "@/lib/hooks/use-search-param-tab";
 import { useT } from "@/lib/i18n/use-t";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Tab = "general" | "exercises" | "body";
 
-export default function ProgressPage() {
+function ProgressPageInner() {
   const [activeTab, setActiveTab] = useSearchParamTab<Tab>(
     ["general", "exercises", "body"],
     "general"
@@ -39,5 +41,25 @@ export default function ProgressPage() {
       {activeTab === "exercises" && <ExercisesTab />}
       {activeTab === "body" && <BodyTab />}
     </div>
+  );
+}
+
+function ProgressSkeleton() {
+  return (
+    <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
+      <Skeleton className="h-8 w-32 rounded-lg" />
+      <Skeleton className="h-10 w-full rounded-lg" />
+      <Skeleton className="h-64 w-full rounded-xl" />
+    </div>
+  );
+}
+
+// useSearchParams needs a Suspense boundary for static prerendering; the
+// fallback is what ends up in the precached HTML.
+export default function ProgressPage() {
+  return (
+    <Suspense fallback={<ProgressSkeleton />}>
+      <ProgressPageInner />
+    </Suspense>
   );
 }

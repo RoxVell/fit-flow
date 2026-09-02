@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { onSerwistEvent } from "@/components/shared/service-worker-register";
-import { clearRuntimeCaches, forceHardReload } from "@/lib/pwa/cache";
+import { reloadApp } from "@/lib/pwa/cache";
 
 export interface UpdateAvailableState {
   updateAvailable: boolean;
@@ -54,9 +54,8 @@ async function finishUpdate(reloadingRef: { current: boolean }): Promise<void> {
   reloadingRef.current = true;
   sessionStorage.removeItem(RELOAD_KEY);
   sessionStorage.removeItem(RETRY_KEY);
-  await clearRuntimeCaches();
   if (navigator.onLine) {
-    forceHardReload();
+    reloadApp();
   } else {
     reloadingRef.current = false;
     sessionStorage.setItem(RELOAD_KEY, "1");
@@ -98,17 +97,16 @@ export function useUpdateAvailable(): UpdateAvailableState {
 
   useEffect(() => {
     const offWaiting = onSerwistEvent("waiting", () => setUpdateAvailable(true));
-    const offActivated = onSerwistEvent("activated", () => {
-      setUpdateAvailable(false);
-      void clearRuntimeCaches();
-    });
+    const offActivated = onSerwistEvent("activated", () =>
+      setUpdateAvailable(false)
+    );
 
     const onOnline = () => {
       void navigator.serviceWorker?.getRegistration().then(async (reg) => {
         if (sessionStorage.getItem(RELOAD_KEY) === "1" && !reg?.waiting) {
           sessionStorage.removeItem(RELOAD_KEY);
           sessionStorage.removeItem(RETRY_KEY);
-          forceHardReload();
+          reloadApp();
         }
       });
     };
