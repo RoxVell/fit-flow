@@ -48,10 +48,23 @@ const pathOnlyKey: SerwistPlugin = {
   },
 };
 
-const isRscRequest = (request: Request) =>
+const isPrefetch = (request: Request) =>
+  request.headers.has("Next-Router-Prefetch") ||
+  request.headers.has("Next-Router-Segment-Prefetch");
+
+/** Full RSC payload fetched on client-side navigation. */
+const isRscNavigation = (request: Request) =>
   request.method === "GET" &&
-  (request.headers.get("RSC") === "1" ||
-    request.headers.get("Next-Router-Prefetch") === "1");
+  request.headers.get("RSC") === "1" &&
+  !isPrefetch(request);
+
+/**
+ * Prefetches (`Next-Router-Prefetch`, segment `/_tree`, `/_index`, ...)
+ * return partial payloads with a different shape. They must never share a
+ * cache key with the navigation payload, so they go straight to the network.
+ */
+const isRscPrefetch = (request: Request) =>
+  request.method === "GET" && isPrefetch(request);
 
 // Responses carry `Vary: RSC, Next-Router-State-Tree, ...`; without
 // ignoreVary the Cache API would only match a request with identical headers.
@@ -163,10 +176,13 @@ const serwist = new Serwist({
 
 // The precache route is registered first and matches by URL alone, so an
 // RSC fetch for `/dashboard?_rsc=…` would receive the precached HTML.
-// Put the RSC route ahead of it.
+// Put both RSC routes ahead of it.
 const getRoutes = serwist.routes.get("GET");
 if (!getRoutes) throw new Error("Serwist registered no GET routes");
-getRoutes.unshift(new Route(({ request }) => isRscRequest(request), rscStrategy));
+getRoutes.unshift(
+  new Route(({ request }) => isRscNavigation(request), rscStrategy),
+  new Route(({ request }) => isRscPrefetch(request), new NetworkOnly())
+);
 
 /**
  * A new build means new chunks and payloads: drop the build-bound runtime
