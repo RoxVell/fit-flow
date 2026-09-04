@@ -50,7 +50,8 @@ export default function CreateProgramScreen() {
     const input = toProgramInput(draft);
     if (editId) updateProgram(editId, input);
     else createProgram(input);
-    close();
+    if (router.canDismiss()) router.dismissTo("/programs");
+    else router.navigate("/programs");
   };
 
   const openSession = (id: string) => router.push({ pathname: "/programs/session", params: { id } });

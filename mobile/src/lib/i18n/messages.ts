@@ -1,7 +1,9 @@
 // Strings are grouped per domain in ./domains (subsets of the web app's
 // src/lib/i18n/messages.ts). Register a new domain in both locales below.
+import { cardio } from "./domains/cardio";
 import { common } from "./domains/common";
 import { dashboard } from "./domains/dashboard";
+import { pwa } from "./domains/pwa";
 import { exercises } from "./domains/exercises";
 import { nav } from "./domains/nav";
 import { programs } from "./domains/programs";
@@ -18,6 +20,8 @@ export const messages = {
     dashboard: dashboard.en,
     exercises: exercises.en,
     workout: workout.en,
+    cardio: cardio.en,
+    pwa: pwa.en,
     common: common.en,
   },
   ru: {
@@ -28,6 +32,8 @@ export const messages = {
     dashboard: dashboard.ru,
     exercises: exercises.ru,
     workout: workout.ru,
+    cardio: cardio.ru,
+    pwa: pwa.ru,
     common: common.ru,
   },
 } as const;

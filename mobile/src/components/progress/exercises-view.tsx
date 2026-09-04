@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "@/components/card";
 import { SectionTitle } from "@/components/dashboard/section-title";
+import { ExerciseThumbnail } from "@/components/exercises/exercise-thumbnail";
 import { Radius, Spacing } from "@/constants/theme";
 import { useScheme, useTheme } from "@/hooks/use-theme";
 import { computePeriodChange, toDeltaSeries } from "@/lib/charts/domain";
@@ -14,7 +15,7 @@ import { DEFAULT_CHART_PERIOD, filterByPeriod, type ChartPeriod } from "@/lib/ch
 import { formatShortDate } from "@/lib/dashboard/date";
 import { TABLES } from "@/lib/db/database";
 import { useLiveQuery } from "@/lib/db/live-query";
-import { getExerciseName } from "@/lib/exercises/catalog";
+import { getExercise, getExerciseName } from "@/lib/exercises/catalog";
 import { useLocale, useT } from "@/lib/i18n/locale-context";
 import {
   buildExerciseHistory,
@@ -61,6 +62,7 @@ export function ExercisesView() {
   const change = computePeriodChange(values);
   const current = values.length > 0 ? values[values.length - 1] : null;
   const name = getExerciseName(selectedId, locale, t.dashboard.unknownExercise);
+  const thumbnail = getExercise(selectedId)?.thumbnailUri ?? null;
 
   return (
     <>
@@ -72,9 +74,7 @@ export function ExercisesView() {
           styles.picker,
           { backgroundColor: pressed ? theme.muted : theme.card, borderColor: theme.border },
         ]}>
-        <View style={[styles.pickerIcon, { backgroundColor: theme.muted }]}>
-          <SymbolView name="dumbbell.fill" size={18} tintColor={theme.primary} />
-        </View>
+        <ExerciseThumbnail uri={thumbnail} style={styles.pickerThumb} symbolSize={18} />
         <Text style={[styles.pickerName, { color: theme.text }]} numberOfLines={1}>
           {name}
         </Text>
@@ -136,12 +136,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  pickerIcon: {
+  pickerThumb: {
     width: 44,
     height: 44,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
   },
   pickerName: {
     flex: 1,

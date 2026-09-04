@@ -12,12 +12,13 @@ export const TABLES = {
   cardioSessions: "cardio_sessions",
   personalRecords: "personal_records",
   workoutDrafts: "workout_drafts",
+  syncQueue: "sync_queue",
   meta: "meta",
 } as const;
 
 export type TableName = (typeof TABLES)[keyof typeof TABLES];
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 const SCHEMA = `
   PRAGMA journal_mode = WAL;
@@ -61,6 +62,13 @@ const SCHEMA = `
     updated_at TEXT NOT NULL,
     data TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS ${TABLES.syncQueue} (
+    id TEXT PRIMARY KEY NOT NULL,
+    entity_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    data TEXT NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS ${TABLES.meta} (
     key TEXT PRIMARY KEY NOT NULL,
     value TEXT NOT NULL
@@ -101,6 +109,17 @@ function migrate(db: SQLiteDatabase) {
     db.getFirstSync<{ value: string }>(`SELECT value FROM ${TABLES.meta} WHERE key = 'schemaVersion'`)
       ?.value ?? 0,
   );
+  if (current < 2) {
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS ${TABLES.syncQueue} (
+        id TEXT PRIMARY KEY NOT NULL,
+        entity_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        data TEXT NOT NULL
+      );
+    `);
+  }
   if (current >= SCHEMA_VERSION) return;
   db.runSync(
     `INSERT OR REPLACE INTO ${TABLES.meta} (key, value) VALUES ('schemaVersion', ?)`,

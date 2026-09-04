@@ -10,6 +10,8 @@ export function Screen({ style, contentContainerStyle, ...props }: ScrollViewPro
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
+      automaticallyAdjustKeyboardInsets
+      keyboardDismissMode="interactive"
       style={[{ backgroundColor: theme.background }, style]}
       contentContainerStyle={[styles.content, contentContainerStyle]}
       {...props}

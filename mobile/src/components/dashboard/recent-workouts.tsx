@@ -44,14 +44,23 @@ function WorkoutDetails({ log }: { log: WorkoutLogEntity }) {
               {exercise.excludeFromStats && <Badge variant="outline">{t.dashboard.excludedFromStats}</Badge>}
             </View>
             {notes ? <Text style={[styles.notes, { color: theme.textSecondary }]}>{notes}</Text> : null}
-            {completed.map((set, index) => (
-              <View key={set.id} style={styles.set}>
-                <Text style={[styles.setIndex, { color: theme.textSecondary }]}>{index + 1}</Text>
-                <Text style={[styles.setText, { color: theme.text }]}>
-                  {set.weight} {t.dashboard.kg} × {set.reps}
-                </Text>
-              </View>
-            ))}
+            {completed.map((set, index) => {
+              const typeLabel =
+                set.type === "warmup"
+                  ? t.progress.warmupSet
+                  : set.type === "dropset"
+                    ? t.progress.dropsetSet
+                    : null;
+              return (
+                <View key={set.id} style={styles.set}>
+                  <Text style={[styles.setIndex, { color: theme.textSecondary }]}>{index + 1}</Text>
+                  <Text style={[styles.setText, { color: theme.text }]}>
+                    {set.weight} {t.dashboard.kg} × {set.reps}
+                    {typeLabel ? ` (${typeLabel})` : ""}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         );
       })}
@@ -117,7 +126,7 @@ export function RecentWorkouts() {
 
       <Pressable
         accessibilityRole="button"
-        onPress={() => router.navigate("/workout")}
+        onPress={() => router.push("/workout/history")}
         style={({ pressed }) => [styles.footer, { borderTopColor: theme.border }, pressed && { backgroundColor: theme.muted }]}>
         <Text style={[styles.footerText, { color: theme.primary }]}>{t.dashboard.viewAllWorkouts}</Text>
       </Pressable>

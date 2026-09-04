@@ -31,3 +31,11 @@ export function buildLoggedExercisesFromSession(session: WorkoutSession): Logged
 export function startWorkoutDraft(session: WorkoutSession) {
   return initDraft(session.id, session.id, buildLoggedExercisesFromSession(session), new Date().toISOString());
 }
+
+export function recommendedSession<T extends { dayOfWeek: number }>(
+  sessions: readonly T[],
+  today = new Date().getDay(),
+): T | null {
+  if (sessions.length === 0) return null;
+  return sessions.find((session) => session.dayOfWeek === today) ?? sessions[0] ?? null;
+}

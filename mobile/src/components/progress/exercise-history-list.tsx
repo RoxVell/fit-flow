@@ -43,12 +43,15 @@ export function ExerciseHistoryList({ sessions }: Props) {
       <View style={styles.header}>
         <SectionTitle symbol="clock.arrow.circlepath" title={t.progress.history} />
         {sessions.length > 0 && (
-          <Pressable accessibilityRole="button" onPress={toggleAll} hitSlop={8}>
+          <Pressable accessibilityRole="button" onPress={toggleAll} hitSlop={8} style={styles.toggleAll}>
             <SymbolView
               name={allOpen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right"}
               size={14}
               tintColor={theme.textSecondary}
             />
+            <Text style={[styles.toggleAllLabel, { color: theme.textSecondary }]}>
+              {allOpen ? t.progress.collapseAll : t.progress.expandAll}
+            </Text>
           </Pressable>
         )}
       </View>
@@ -119,6 +122,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: Spacing.sm,
+  },
+  toggleAll: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 0,
+  },
+  toggleAllLabel: {
+    fontSize: 12,
+    fontWeight: "500",
   },
   empty: {
     fontSize: 14,

@@ -1,6 +1,7 @@
 import { withoutDeleted } from "@/lib/db/active-records";
 import { TABLES, getDb } from "@/lib/db/database";
 import type { ProgramEntity, WorkoutProgram, WorkoutSession } from "@/lib/db/types";
+import { persistSoftDelete, persistWithSync } from "@/lib/repositories/entity-crud";
 import { generateId } from "@/lib/utils/id";
 
 type Row = { data: string };
@@ -84,7 +85,7 @@ export function createProgram(data: ProgramInput): ProgramEntity {
     revision: 1,
     updatedAt: now,
   };
-  put(entity);
+  persistWithSync(put, "program", entity, "create");
   return entity;
 }
 
@@ -102,7 +103,7 @@ export function updateProgram(id: string, data: ProgramInput): ProgramEntity | u
     revision: existing.revision + 1,
     updatedAt: new Date().toISOString(),
   };
-  put(entity);
+  persistWithSync(put, "program", entity, "update");
   return entity;
 }
 
@@ -116,15 +117,17 @@ export function setActiveProgram(id: string) {
     for (const program of all) {
       const shouldBeActive = program.id === id;
       if (program.isActive === shouldBeActive) continue;
-      put({ ...program, isActive: shouldBeActive, revision: program.revision + 1, updatedAt: now });
+      persistWithSync(
+        put,
+        "program",
+        { ...program, isActive: shouldBeActive, revision: program.revision + 1, updatedAt: now },
+        "update",
+      );
     }
   });
 }
 
 // Tombstone so a future sync layer can see the delete, like the web app.
 export function deleteProgram(id: string) {
-  const existing = getProgram(id);
-  if (!existing) return;
-  const now = new Date().toISOString();
-  put({ ...existing, isActive: false, deletedAt: now, revision: existing.revision + 1, updatedAt: now });
+  persistSoftDelete("program", id, getProgram, put, { isActive: false });
 }

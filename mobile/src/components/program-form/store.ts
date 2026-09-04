@@ -88,7 +88,8 @@ function moveItems<T>(items: T[], sources: number[], destination: number): T[] {
 export function startDraft(program: ProgramEntity | undefined) {
   const draft = program ? fromProgram(program) : emptyDraft();
   state = { editId: program?.id ?? null, draft, initial: JSON.stringify(draft) };
-  emit();
+  // No emit: create.tsx calls this from a useState initializer. Notifying
+  // here updates subscribers (including this screen) during render.
 }
 
 export function useProgramDraft(): State {

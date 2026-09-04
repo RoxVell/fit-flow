@@ -1,10 +1,10 @@
 export const common = {
   en: {
     comingSoon: "Coming soon",
-    placeholder: "This screen will be ported in a later iteration.",
+    emDash: "—",
   },
   ru: {
     comingSoon: "Скоро",
-    placeholder: "Этот экран будет перенесён в следующей итерации.",
+    emDash: "—",
   },
 } as const;

@@ -9,6 +9,9 @@ export const settings = {
     language: "Language",
     about: "About",
     version: "Version",
+    buildDate: "Last update",
+    lastSync: "Last sync",
+    never: "Never",
   },
   ru: {
     title: "Настройки",
@@ -20,5 +23,8 @@ export const settings = {
     language: "Язык",
     about: "О приложении",
     version: "Версия",
+    buildDate: "Последнее обновление",
+    lastSync: "Последняя синхронизация",
+    never: "Никогда",
   },
 } as const;

@@ -14,6 +14,11 @@ import { listPersonalRecords } from "@/lib/repositories/records";
 
 import { SectionTitle } from "./section-title";
 
+function formatPrValue(value: number, type: PRType): string {
+  if (type === "estimated_1rm") return value.toFixed(1);
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
 export function RecentPRs() {
   const t = useT();
   const theme = useTheme();
@@ -44,7 +49,7 @@ export function RecentPRs() {
             </View>
             <View style={styles.right}>
               <Text style={[styles.value, { color: theme.text }]}>
-                {record.value} {unit}
+                {formatPrValue(record.value, record.type)} {unit}
               </Text>
               {absDelta !== null && absDelta !== 0 && (
                 <View style={styles.delta}>

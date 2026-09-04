@@ -1,5 +1,6 @@
 import { TABLES, getDb } from "@/lib/db/database";
-import type { LoggedExercise, PersonalRecord, PersonalRecordEntity, PRType } from "@/lib/db/types";
+import type { LoggedExercise, PersonalRecord, PersonalRecordEntity, PRType, WorkoutLogEntity } from "@/lib/db/types";
+import { persistSoftDelete, persistWithSync } from "@/lib/repositories/entity-crud";
 import { bestE1RM, bestWeight, volume } from "@/lib/training-metrics";
 import { generateId } from "@/lib/utils/id";
 
@@ -41,22 +42,49 @@ export function createPersonalRecord(data: Omit<PersonalRecord, "id">): Personal
     revision: 1,
     updatedAt: new Date().toISOString(),
   };
-  put(entity);
+  persistWithSync(put, "personalRecord", entity, "create");
   return entity;
 }
 
 // Tombstone, like the web app (softDeleteEntity).
 export function deletePersonalRecord(id: string) {
-  const existing = getPersonalRecord(id);
-  if (!existing) return;
-  const now = new Date().toISOString();
-  put({ ...existing, deletedAt: now, revision: existing.revision + 1, updatedAt: now });
+  persistSoftDelete("personalRecord", id, getPersonalRecord, put);
 }
 
-export function deletePersonalRecordsForWorkout(workoutLogId: string) {
-  for (const record of listPersonalRecords()) {
-    if (record.workoutLogId === workoutLogId) deletePersonalRecord(record.id);
+function legacyPRMatchesWorkout(
+  record: PersonalRecordEntity,
+  candidates: Omit<PersonalRecord, "id">[],
+  completedAt: string,
+): boolean {
+  if (record.workoutLogId) return false;
+  if (record.date !== completedAt) return false;
+  return candidates.some(
+    (candidate) =>
+      candidate.exerciseId === record.exerciseId &&
+      candidate.type === record.type &&
+      candidate.value === record.value,
+  );
+}
+
+/** Drop PRs linked to this log, plus unlinked legacy PRs that match the same workout. */
+export function deletePersonalRecordsForWorkout(
+  workoutLogId: string,
+  log?: WorkoutLogEntity,
+  getExerciseName?: (exerciseId: string) => string | undefined,
+) {
+  const all = listPersonalRecords();
+  const toDelete = new Set<string>();
+  for (const record of all) {
+    if (record.workoutLogId === workoutLogId) toDelete.add(record.id);
   }
+  if (log && getExerciseName) {
+    const completedAt = log.endedAt ?? log.startedAt;
+    const candidates = createPRsFromWorkout(log.exercises, getExerciseName, completedAt, []);
+    for (const record of all) {
+      if (legacyPRMatchesWorkout(record, candidates, completedAt)) toDelete.add(record.id);
+    }
+  }
+  for (const id of toDelete) deletePersonalRecord(id);
 }
 
 function bestPreviousValue(existing: PersonalRecord[], exerciseId: string, type: PRType): number {

@@ -73,6 +73,8 @@ export const progress = {
     excludedFromStats: "Not in stats",
     circumferences: "Circumferences",
     metric: "Metric",
+    collapseAll: "Collapse all",
+    expandAll: "Expand all",
   },
   ru: {
     title: "Прогресс",
@@ -147,6 +149,8 @@ export const progress = {
     excludedFromStats: "Не в прогрессе",
     circumferences: "Обхваты",
     metric: "Показатель",
+    collapseAll: "Свернуть всё",
+    expandAll: "Развернуть всё",
   },
 } as const;
 

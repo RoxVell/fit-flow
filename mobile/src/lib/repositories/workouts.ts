@@ -1,8 +1,10 @@
 import { TABLES, getDb } from "@/lib/db/database";
-import type { WorkoutLog, WorkoutLogEntity } from "@/lib/db/types";
+import type { LoggedExercise, WorkoutLog, WorkoutLogEntity } from "@/lib/db/types";
+import { getExercise } from "@/lib/exercises/catalog";
+import { persistHardDelete, persistWithSync } from "@/lib/repositories/entity-crud";
 import { generateId } from "@/lib/utils/id";
 
-import { deletePersonalRecordsForWorkout } from "./records";
+import { deletePersonalRecordsForWorkout, createPRsFromWorkout, createPersonalRecord, listPersonalRecords } from "./records";
 
 type Row = { data: string };
 
@@ -43,6 +45,29 @@ export function listCompletedWorkoutLogs(limit = 20): WorkoutLogEntity[] {
   );
 }
 
+export function countCompletedWorkoutLogs(): number {
+  const row = getDb().getFirstSync<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM ${TABLES.workoutLogs}
+     WHERE deleted_at IS NULL AND json_extract(data, '$.endedAt') IS NOT NULL`,
+  );
+  return row?.n ?? 0;
+}
+
+/** Oldest first, matching the web CSV export order. */
+export function getCompletedWorkoutLogsInRange(from: Date, to: Date): WorkoutLogEntity[] {
+  return parse(
+    getDb().getAllSync<Row>(
+      `SELECT data FROM ${TABLES.workoutLogs}
+       WHERE deleted_at IS NULL
+         AND json_extract(data, '$.endedAt') IS NOT NULL
+         AND started_at >= ? AND started_at <= ?
+       ORDER BY started_at ASC`,
+      from.toISOString(),
+      to.toISOString(),
+    ),
+  );
+}
+
 export function getWorkoutLog(id: string): WorkoutLogEntity | undefined {
   const row = getDb().getFirstSync<Row>(
     `SELECT data FROM ${TABLES.workoutLogs} WHERE id = ? AND deleted_at IS NULL`,
@@ -58,7 +83,7 @@ export function createWorkoutLog(data: Omit<WorkoutLog, "id">): WorkoutLogEntity
     revision: 1,
     updatedAt: new Date().toISOString(),
   };
-  put(entity);
+  persistWithSync(put, "workoutLog", entity, "create");
   return entity;
 }
 
@@ -72,20 +97,50 @@ export function updateWorkoutLog(id: string, patch: Partial<WorkoutLog>): Workou
     revision: existing.revision + 1,
     updatedAt: new Date().toISOString(),
   };
-  put(entity);
+  persistWithSync(put, "workoutLog", entity, "update");
   return entity;
 }
 
 // The web app hard-deletes workout logs (the server still gets the delete via sync).
 export function deleteWorkoutLog(id: string) {
-  getDb().runSync(`DELETE FROM ${TABLES.workoutLogs} WHERE id = ?`, id);
+  persistHardDelete("workoutLog", id, getWorkoutLog, (logId) => {
+    getDb().runSync(`DELETE FROM ${TABLES.workoutLogs} WHERE id = ?`, logId);
+  });
+}
+
+function exerciseName(exerciseId: string): string | undefined {
+  return getExercise(exerciseId)?.name.en ?? exerciseId;
 }
 
 /** Delete a log together with the PRs it produced. */
 export function removeWorkoutLog(id: string) {
-  if (!getWorkoutLog(id)) return;
+  const existing = getWorkoutLog(id);
+  if (!existing) return;
   getDb().withTransactionSync(() => {
-    deletePersonalRecordsForWorkout(id);
+    deletePersonalRecordsForWorkout(id, existing, exerciseName);
     deleteWorkoutLog(id);
   });
+}
+
+/** Persist edited sets/notes and rebuild PRs for this log against remaining records. */
+export function saveWorkoutEdits(
+  id: string,
+  exercises: LoggedExercise[],
+  getExerciseName: (exerciseId: string) => string | undefined,
+): WorkoutLogEntity | undefined {
+  const existing = getWorkoutLog(id);
+  if (!existing) return undefined;
+
+  let updated: WorkoutLogEntity | undefined;
+  getDb().withTransactionSync(() => {
+    deletePersonalRecordsForWorkout(id, existing, getExerciseName);
+    updated = updateWorkoutLog(id, { exercises });
+    if (!updated) return;
+    const completedAt = updated.endedAt ?? updated.startedAt;
+    const records = createPRsFromWorkout(exercises, getExerciseName, completedAt, listPersonalRecords());
+    for (const record of records) {
+      createPersonalRecord({ ...record, workoutLogId: id });
+    }
+  });
+  return updated;
 }

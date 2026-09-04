@@ -6,7 +6,7 @@ function secondsSince(iso: string | null): number {
 }
 
 // Whole seconds elapsed since `startedAt`, ticking once per second.
-// TODO(active-workout): pause/resume like the web's togglePause.
+// Pause freezes the displayed value the same way the web timer does.
 export function useElapsedSeconds(startedAt: string | null): number {
   const [elapsed, setElapsed] = useState(() => secondsSince(startedAt));
 

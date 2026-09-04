@@ -15,6 +15,7 @@ type Props = {
   name: string;
   subtitle: string;
   thumbnailUri: string | null;
+  usageLabel?: string;
   first: boolean;
   last: boolean;
   onPress: (id: string) => void;
@@ -27,6 +28,7 @@ export const ExerciseRow = memo(function ExerciseRow({
   name,
   subtitle,
   thumbnailUri,
+  usageLabel,
   first,
   last,
   onPress,
@@ -48,7 +50,7 @@ export const ExerciseRow = memo(function ExerciseRow({
           {name}
         </Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]} numberOfLines={1}>
-          {subtitle}
+          {usageLabel ? `${subtitle} · ${usageLabel}` : subtitle}
         </Text>
       </View>
       <SymbolView name="chevron.right" size={14} weight="semibold" tintColor={theme.textSecondary} />

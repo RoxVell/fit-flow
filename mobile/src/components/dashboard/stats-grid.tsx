@@ -1,5 +1,5 @@
 import { SymbolView, type SFSymbol } from "expo-symbols";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "@/components/card";
 import { Radius, Spacing } from "@/constants/theme";
@@ -19,6 +19,7 @@ type TileProps = {
   unit?: string;
   caption?: string;
   trend?: WeightTrend;
+  onPress?: () => void;
 };
 
 function TrendIcon({ trend }: { trend: WeightTrend }) {
@@ -31,9 +32,9 @@ function TrendIcon({ trend }: { trend: WeightTrend }) {
   return <SymbolView name={icon[trend].name} size={14} tintColor={icon[trend].color} weight="bold" />;
 }
 
-function Tile({ symbol, color, label, value, unit, caption, trend }: TileProps) {
+function Tile({ symbol, color, label, value, unit, caption, trend, onPress }: TileProps) {
   const theme = useTheme();
-  return (
+  const body = (
     <Card style={styles.tile}>
       <View style={styles.tileHeader}>
         <View style={[styles.iconWrap, { backgroundColor: tint(color) }]}>
@@ -55,11 +56,23 @@ function Tile({ symbol, color, label, value, unit, caption, trend }: TileProps) 
       )}
     </Card>
   );
+  if (!onPress) return body;
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={styles.tilePress}>
+      {body}
+    </Pressable>
+  );
 }
 
 // 2x2 "Smart Stats" grid from the design brief. Steps and calories have no
 // data source on the web either; they are HealthKit follow-ups on iOS.
-export function StatsGrid({ currentWeight, weightTrend, hasWeightHistory, activeDays }: DashboardSummary) {
+export function StatsGrid({
+  currentWeight,
+  weightTrend,
+  hasWeightHistory,
+  activeDays,
+  onWeightPress,
+}: DashboardSummary & { onWeightPress?: () => void }) {
   const t = useT();
   const theme = useTheme();
 
@@ -77,6 +90,7 @@ export function StatsGrid({ currentWeight, weightTrend, hasWeightHistory, active
           value={currentWeight != null ? String(currentWeight) : EM_DASH}
           unit={currentWeight != null ? t.dashboard.kg : undefined}
           trend={hasWeightHistory ? weightTrend : undefined}
+          onPress={onWeightPress}
         />
         <Tile
           symbol="calendar"
@@ -96,6 +110,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     gap: Spacing.sm + Spacing.xs,
+  },
+  tilePress: {
+    flex: 1,
   },
   tile: {
     flex: 1,

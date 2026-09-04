@@ -1,5 +1,6 @@
 import { TABLES, getDb } from "@/lib/db/database";
 import type { BodyMeasurement, BodyMeasurementEntity } from "@/lib/db/types";
+import { persistHardDelete, persistWithSync } from "@/lib/repositories/entity-crud";
 import { generateId } from "@/lib/utils/id";
 
 // Tracked body metrics (web: src/lib/body-measurements/metrics.ts).
@@ -62,11 +63,19 @@ export function logBodyMeasurement(data: Omit<BodyMeasurement, "id">): BodyMeasu
     revision: 1,
     updatedAt: new Date().toISOString(),
   };
-  put(entity);
+  persistWithSync(put, "bodyMeasurement", entity, "create");
   return entity;
 }
 
 // Hard delete, like the web app.
 export function deleteBodyMeasurement(id: string) {
-  getDb().runSync(`DELETE FROM ${TABLES.bodyMeasurements} WHERE id = ?`, id);
+  persistHardDelete("bodyMeasurement", id, (measurementId) => {
+    const row = getDb().getFirstSync<{ data: string }>(
+      `SELECT data FROM ${TABLES.bodyMeasurements} WHERE id = ? AND deleted_at IS NULL`,
+      measurementId,
+    );
+    return row ? (JSON.parse(row.data) as BodyMeasurementEntity) : undefined;
+  }, (measurementId) => {
+    getDb().runSync(`DELETE FROM ${TABLES.bodyMeasurements} WHERE id = ?`, measurementId);
+  });
 }

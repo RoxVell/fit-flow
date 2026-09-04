@@ -4,6 +4,10 @@ import { useTheme } from "@/hooks/use-theme";
 import { useT } from "@/lib/i18n/locale-context";
 import { useActiveWorkout } from "@/lib/workout/use-active-workout";
 
+export const unstable_settings = {
+  initialRouteName: "dashboard",
+};
+
 // Native UITabBar: Liquid Glass and scroll-to-minimize on iOS 26.
 // Mirrors src/components/shared/bottom-nav.tsx in the web app.
 export default function TabsLayout() {
@@ -24,7 +28,9 @@ export default function TabsLayout() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="workout">
+      <NativeTabs.Trigger
+        name="workout"
+        accessibilityLabel={isActive ? `${t.nav.workout}, ${t.nav.activeSession}` : t.nav.workout}>
         <NativeTabs.Trigger.Label>{t.nav.workout}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: "dumbbell", selected: "dumbbell.fill" }}

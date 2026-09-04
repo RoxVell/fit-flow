@@ -5,12 +5,16 @@ import { FlatList, StyleSheet, Text, View, type ListRenderItem } from "react-nat
 
 import { Spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
+import { TABLES } from "@/lib/db/database";
+import { useLiveQuery } from "@/lib/db/live-query";
 import { getExerciseCatalog } from "@/lib/exercises/catalog";
 import { filterManifest, sortExercisesByUsage } from "@/lib/exercises/filter";
 import { BODY_PART_LABELS, LATERALITY_LABELS, labelFor } from "@/lib/exercises/labels";
 import { pickLocalized } from "@/lib/exercises/locale";
 import type { BodyPart, ExerciseManifestItem } from "@/lib/exercises/types";
 import { useLocale, useT } from "@/lib/i18n/locale-context";
+import { computeUsageCounts } from "@/lib/progress/exercise-stats";
+import { listCompletedWorkoutLogs } from "@/lib/repositories/workouts";
 
 import { BodyPartChips } from "./body-part-chips";
 import { EXERCISE_ROW_HEIGHT, ExerciseRow } from "./exercise-row";
@@ -31,11 +35,13 @@ export function ExerciseLibraryList({ header }: Props) {
   const theme = useTheme();
   const router = useRouter();
 
+  const logs = useLiveQuery(() => listCompletedWorkoutLogs(200), [TABLES.workoutLogs]);
+  const usage = useMemo(() => computeUsageCounts(logs), [logs]);
+
   const [search, setSearch] = useState("");
   const [bodyPart, setBodyPart] = useState<BodyPart | null>(null);
 
-  // Usage counts (web sorts most-used first) arrive with workout history.
-  const sorted = useMemo(() => sortExercisesByUsage(getExerciseCatalog(), undefined, locale), [locale]);
+  const sorted = useMemo(() => sortExercisesByUsage(getExerciseCatalog(), usage, locale), [locale, usage]);
   const items = useMemo(
     () => filterManifest(sorted, { search, bodyPart }, locale),
     [sorted, search, bodyPart, locale],
@@ -45,20 +51,24 @@ export function ExerciseLibraryList({ header }: Props) {
     router.push({ pathname: "/programs/exercise/[id]", params: { id } });
   };
 
-  const renderItem: ListRenderItem<ExerciseManifestItem> = ({ item, index }) => (
-    <ExerciseRow
-      id={item.id}
-      name={pickLocalized(item.name, locale)}
-      subtitle={[
-        labelFor(BODY_PART_LABELS, item.bodyPart, locale),
-        labelFor(LATERALITY_LABELS, item.laterality, locale),
-      ].join(" · ")}
-      thumbnailUri={item.thumbnailUri}
-      first={index === 0}
-      last={index === items.length - 1}
-      onPress={openDetail}
-    />
-  );
+  const renderItem: ListRenderItem<ExerciseManifestItem> = ({ item, index }) => {
+    const count = usage.get(item.id) ?? 0;
+    return (
+      <ExerciseRow
+        id={item.id}
+        name={pickLocalized(item.name, locale)}
+        subtitle={[
+          labelFor(BODY_PART_LABELS, item.bodyPart, locale),
+          labelFor(LATERALITY_LABELS, item.laterality, locale),
+        ].join(" · ")}
+        thumbnailUri={item.thumbnailUri}
+        usageLabel={count > 0 ? t.exercises.usageTimes(count) : undefined}
+        first={index === 0}
+        last={index === items.length - 1}
+        onPress={openDetail}
+      />
+    );
+  };
 
   return (
     <>

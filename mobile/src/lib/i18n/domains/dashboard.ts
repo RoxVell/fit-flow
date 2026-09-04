@@ -23,6 +23,9 @@ export const dashboard = {
     prMaxWeight: "Max Weight",
     prVolume: "Volume",
     prE1rm: "e1RM",
+    muscleLoad: "Muscle Load",
+    light: "Light",
+    heavy: "Heavy",
     greetings: {
       morning: (name: string) => `Good morning, ${name}!`,
       afternoon: (name: string) => `Good afternoon, ${name}!`,
@@ -61,6 +64,9 @@ export const dashboard = {
     prMaxWeight: "Макс. вес",
     prVolume: "Объём",
     prE1rm: "Пр. 1ПМ",
+    muscleLoad: "Нагрузка на мышцы",
+    light: "Лёгкая",
+    heavy: "Высокая",
     greetings: {
       morning: (name: string) => `Доброе утро, ${name}!`,
       afternoon: (name: string) => `Добрый день, ${name}!`,

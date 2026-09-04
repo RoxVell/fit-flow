@@ -1,7 +1,9 @@
+import { Host, Picker, Text as SwiftText } from "@expo/ui/swift-ui";
+import { labelsHidden, pickerStyle, tag } from "@expo/ui/swift-ui/modifiers";
 import { useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "@/components/card";
 import { GlassButton } from "@/components/glass-button";
@@ -9,30 +11,32 @@ import { Screen } from "@/components/screen";
 import { ContinueWorkoutCard } from "@/components/workout/continue-workout-card";
 import { DaySelector } from "@/components/workout/day-selector";
 import { ExercisePlanList } from "@/components/workout/exercise-plan-list";
+import { WorkoutHistoryList } from "@/components/workout/workout-history";
 import { Radius, Spacing } from "@/constants/theme";
-import { useTheme } from "@/hooks/use-theme";
+import { useScheme, useTheme } from "@/hooks/use-theme";
 import { TABLES } from "@/lib/db/database";
 import { useLiveQuery } from "@/lib/db/live-query";
 import { useLocale, useT } from "@/lib/i18n/locale-context";
 import { clearDraft } from "@/lib/repositories/drafts";
 import { getActiveProgram } from "@/lib/repositories/programs";
-import { startWorkoutDraft } from "@/lib/workout/start-session-draft";
+import { recommendedSession, startWorkoutDraft } from "@/lib/workout/start-session-draft";
 import { useActiveWorkout } from "@/lib/workout/use-active-workout";
 
-// Mirrors the "plan" tab of the web app's src/app/(main)/workout/page.tsx.
-// History tab is out of scope for now.
+type Tab = "plan" | "history";
+
 export default function WorkoutScreen() {
   const t = useT();
   const theme = useTheme();
+  const scheme = useScheme();
   const router = useRouter();
   const { locale } = useLocale();
   const program = useLiveQuery(getActiveProgram, [TABLES.programs]);
   const { isActive, draft } = useActiveWorkout();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("plan");
 
   const sessions = program?.sessions ?? [];
-  const today = new Date().getDay();
-  const recommendedId = sessions.find((s) => s.dayOfWeek === today)?.id ?? sessions[0]?.id ?? null;
+  const recommendedId = recommendedSession(sessions)?.id ?? null;
   const selectedSession =
     sessions.find((s) => s.id === selectedId) ?? sessions.find((s) => s.id === recommendedId) ?? null;
 
@@ -51,6 +55,38 @@ export default function WorkoutScreen() {
     ]);
   };
 
+  const cardioLink = (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push("/workout/cardio")}
+      style={({ pressed }) => [styles.cardio, pressed && { opacity: 0.7 }]}>
+      <SymbolView name="figure.run" size={16} tintColor={theme.primary} />
+      <Text style={[styles.cardioLabel, { color: theme.primary }]}>{t.workout.logCardio}</Text>
+    </Pressable>
+  );
+
+  const picker = (
+    <Host matchContents colorScheme={scheme}>
+      <Picker
+        label={t.workout.title}
+        selection={tab}
+        onSelectionChange={setTab}
+        modifiers={[pickerStyle("segmented"), labelsHidden()]}>
+        <SwiftText modifiers={[tag("plan")]}>{t.workout.tabPlan}</SwiftText>
+        <SwiftText modifiers={[tag("history")]}>{t.workout.tabHistory}</SwiftText>
+      </Picker>
+    </Host>
+  );
+
+  if (tab === "history") {
+    return (
+      <Screen>
+        {picker}
+        <WorkoutHistoryList />
+      </Screen>
+    );
+  }
+
   if (isActive) {
     const draftSession = sessions.find((s) => s.id === draft.sessionId);
     const startedAtLabel = draft.startedAt
@@ -60,6 +96,7 @@ export default function WorkoutScreen() {
       : null;
     return (
       <Screen>
+        {picker}
         <ContinueWorkoutCard
           sessionName={draftSession?.name ?? t.workout.activeSession}
           startedAtLabel={startedAtLabel}
@@ -67,6 +104,7 @@ export default function WorkoutScreen() {
           onDiscard={confirmDiscard}
         />
         {draftSession && <ExercisePlanList exercises={draftSession.exercises} />}
+        {cardioLink}
       </Screen>
     );
   }
@@ -74,6 +112,7 @@ export default function WorkoutScreen() {
   if (!program) {
     return (
       <Screen>
+        {picker}
         <Card style={styles.empty}>
           <View style={[styles.iconWrap, { backgroundColor: theme.muted }]}>
             <SymbolView name="dumbbell" size={28} tintColor={theme.textSecondary} />
@@ -83,6 +122,12 @@ export default function WorkoutScreen() {
             {"\n"}
             {t.workout.createInPrograms}
           </Text>
+          <GlassButton
+            label={t.programs.createNew}
+            symbol="plus"
+            onPress={() => router.push("/programs/create")}
+          />
+          {cardioLink}
         </Card>
       </Screen>
     );
@@ -90,6 +135,7 @@ export default function WorkoutScreen() {
 
   return (
     <Screen>
+      {picker}
       <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
         {program.name} · {program.daysPerWeek} {t.workout.daysPerWeek}
       </Text>
@@ -106,6 +152,8 @@ export default function WorkoutScreen() {
       <ExercisePlanList exercises={selectedSession?.exercises ?? []} />
 
       {selectedSession && <GlassButton label={t.workout.startWorkout} symbol="play.fill" onPress={start} />}
+
+      {cardioLink}
     </Screen>
   );
 }
@@ -130,5 +178,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     textAlign: "center",
+  },
+  cardio: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+  },
+  cardioLabel: {
+    fontSize: 15,
+    fontWeight: "600",
   },
 });

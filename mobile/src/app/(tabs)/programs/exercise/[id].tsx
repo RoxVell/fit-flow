@@ -1,54 +1,103 @@
+import { Image } from "expo-image";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { SymbolView, type SFSymbol } from "expo-symbols";
-import { StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Badge } from "@/components/badge";
 import { Card } from "@/components/card";
 import { ExerciseThumbnail } from "@/components/exercises/exercise-thumbnail";
+import { ExerciseVideo } from "@/components/exercises/exercise-video";
 import { MuscleWeights } from "@/components/exercises/muscle-weights";
-import { Placeholder } from "@/components/placeholder";
+import { EmptyCard } from "@/components/progress/empty-card";
+import { MuscleHeatmap } from "@/components/progress/muscle-heatmap";
 import { Screen } from "@/components/screen";
-import { Fonts, Radius, Spacing } from "@/constants/theme";
+import { Radius, Spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
+import type { MuscleGroup } from "@/lib/db/types";
 import { getExercise } from "@/lib/exercises/catalog";
+import { getExerciseDetail } from "@/lib/exercises/details";
 import {
   BODY_PART_LABELS,
   EQUIPMENT_LABELS,
   LATERALITY_LABELS,
   MECHANICS_LABELS,
-  TAG_LABELS,
   labelFor,
 } from "@/lib/exercises/labels";
-import { pickLocalized } from "@/lib/exercises/locale";
+import { pickLocalized, pickLocalizedList } from "@/lib/exercises/locale";
+import { formatMuscleName, toBodyMuscleLoad, topMuscles } from "@/lib/exercises/muscle-map";
 import { useLocale, useT } from "@/lib/i18n/locale-context";
 
-// Exercise detail pushed from the library list. Only manifest data is
-// bundled; description, instructions and video come with the detail files.
+type DetailTab = "overview" | "instructions" | "tips" | "mistakes" | "muscles";
+
+function weightsToHeatmap(weights: Partial<Record<MuscleGroup, number>>): Partial<Record<MuscleGroup, number>> {
+  const out: Partial<Record<MuscleGroup, number>> = {};
+  for (const [group, percent] of Object.entries(weights) as [MuscleGroup, number][]) {
+    if (!percent) continue;
+    out[group] = Math.min(4, Math.max(1, Math.round(percent / 30)));
+  }
+  return out;
+}
+
 export default function ExerciseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const t = useT();
   const { locale } = useLocale();
   const theme = useTheme();
+  const [tab, setTab] = useState<DetailTab>("overview");
   const exercise = getExercise(id);
 
   if (!exercise) {
     return (
       <Screen>
         <Stack.Title>{t.programs.exercisesTab}</Stack.Title>
-        <Placeholder symbol="questionmark.circle" title={t.exercises.notFound} />
+        <EmptyCard symbol="questionmark.circle" title={t.exercises.notFound} />
       </Screen>
     );
   }
 
   const name = pickLocalized(exercise.name, locale);
   const muscleWeights = exercise.muscleWeights ?? {};
-  const hasMuscles = Object.values(muscleWeights).some((w) => w > 0);
+  const detail = getExerciseDetail(exercise.id, exercise.bodyPart);
+  const namedMuscles = detail?.exerciseMuscles ? topMuscles(detail.exerciseMuscles) : [];
+  const bodyLoad = detail?.exerciseMuscles ? toBodyMuscleLoad(detail.exerciseMuscles) : undefined;
+  const muscleBars =
+    namedMuscles.length > 0
+      ? namedMuscles.map((muscle) => ({ name: formatMuscleName(muscle.name), percent: muscle.percent }))
+      : (Object.entries(muscleWeights) as [keyof typeof muscleWeights, number][])
+          .filter(([, percent]) => percent > 0)
+          .sort(([, a], [, b]) => b - a)
+          .map(([group, percent]) => ({ name: t.exercises.muscleGroups[group] ?? group, percent }));
+  const hasMuscles = muscleBars.length > 0;
+  const description = pickLocalized(detail?.description, locale);
+  const instructions = pickLocalizedList(detail?.instructions, locale);
+  const tips = pickLocalizedList(detail?.tips, locale);
+  const mistakes = pickLocalizedList(detail?.commonMistakes, locale);
+  const heroUri = detail?.imageUri || exercise.thumbnailUri;
+  const hasVideo = Boolean(detail?.videoDarkUrl || detail?.videoLightUrl);
+
+  const tabs: { id: DetailTab; label: string }[] = [
+    { id: "overview", label: t.exercises.overview },
+    { id: "instructions", label: t.exercises.instructions },
+    { id: "tips", label: t.exercises.tips },
+    { id: "mistakes", label: t.exercises.mistakesTab },
+    { id: "muscles", label: t.exercises.muscles },
+  ];
 
   return (
     <Screen>
       <Stack.Title>{name}</Stack.Title>
 
-      <ExerciseThumbnail uri={exercise.thumbnailUri} style={styles.hero} symbolSize={40} contentFit="contain" />
+      {hasVideo && detail ? (
+        <ExerciseVideo
+          videoDarkUrl={detail.videoDarkUrl}
+          videoLightUrl={detail.videoLightUrl}
+          poster={detail.thumbnail1Uri ?? heroUri}
+        />
+      ) : heroUri ? (
+        <Image source={{ uri: heroUri }} style={styles.hero} contentFit="contain" />
+      ) : (
+        <ExerciseThumbnail uri={null} style={styles.hero} symbolSize={40} contentFit="contain" />
+      )}
 
       <View style={styles.chips}>
         <Badge variant="primary">{labelFor(BODY_PART_LABELS, exercise.bodyPart, locale)}</Badge>
@@ -59,56 +108,89 @@ export default function ExerciseDetailScreen() {
         <Badge variant="outline">{labelFor(LATERALITY_LABELS, exercise.laterality, locale)}</Badge>
       </View>
 
-      {hasMuscles && (
+      <View style={[styles.tabs, { backgroundColor: theme.muted }]}>
+        {tabs.map((item) => {
+          const active = item.id === tab;
+          return (
+            <Pressable
+              key={item.id}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              onPress={() => setTab(item.id)}
+              style={[styles.tab, active && { backgroundColor: theme.card }]}>
+              <Text
+                numberOfLines={1}
+                style={[styles.tabLabel, { color: active ? theme.primary : theme.textSecondary }]}>
+                {item.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {tab === "overview" ? (
         <Card>
-          <SectionTitle symbol="figure.strengthtraining.traditional" title={t.exercises.muscles} />
-          <MuscleWeights weights={muscleWeights} />
+          <Text style={[styles.body, { color: theme.text }]}>{description || "—"}</Text>
         </Card>
-      )}
+      ) : null}
 
-      <Card>
-        <SectionTitle symbol="info.circle" title={t.exercises.details} />
-        <DetailRow label={t.exercises.mechanics} value={labelFor(MECHANICS_LABELS, exercise.mechanics, locale)} />
-        <DetailRow
-          label={t.exercises.equipment}
-          value={exercise.equipments.map((eq) => labelFor(EQUIPMENT_LABELS, eq, locale)).join(", ") || "—"}
-        />
-        {exercise.tags.length > 0 && (
-          <View style={styles.tags}>
-            {exercise.tags.map((tag) => (
-              <Badge key={tag} variant="outline">
-                {labelFor(TAG_LABELS, tag, locale)}
-              </Badge>
-            ))}
-          </View>
-        )}
-      </Card>
+      {tab === "instructions" ? (
+        <Card>
+          {instructions.length > 0 ? (
+            instructions.map((step, index) => (
+              <Text key={index} style={[styles.body, { color: theme.text }]}>
+                {index + 1}. {step}
+              </Text>
+            ))
+          ) : (
+            <Text style={[styles.body, { color: theme.textSecondary }]}>—</Text>
+          )}
+        </Card>
+      ) : null}
 
-      <Card>
-        <SectionTitle symbol="play.rectangle" title={`${t.exercises.overview} · ${t.exercises.video}`} />
-        <Text style={[styles.comingSoon, { color: theme.primary }]}>{t.common.comingSoon}</Text>
-      </Card>
+      {tab === "tips" ? (
+        <Card>
+          {tips.length > 0 ? (
+            tips.map((tip, index) => (
+              <Text key={index} style={[styles.body, { color: theme.text }]}>
+                • {tip}
+              </Text>
+            ))
+          ) : (
+            <Text style={[styles.body, { color: theme.textSecondary }]}>—</Text>
+          )}
+        </Card>
+      ) : null}
+
+      {tab === "mistakes" ? (
+        <Card>
+          {mistakes.length > 0 ? (
+            mistakes.map((item, index) => (
+              <Text key={index} style={[styles.body, { color: theme.text }]}>
+                • {item}
+              </Text>
+            ))
+          ) : (
+            <Text style={[styles.body, { color: theme.textSecondary }]}>—</Text>
+          )}
+        </Card>
+      ) : null}
+
+      {tab === "muscles" ? (
+        <Card>
+          {hasMuscles ? (
+            <>
+              <View style={[styles.bodies, { backgroundColor: theme.muted }]}>
+                <MuscleHeatmap data={weightsToHeatmap(muscleWeights)} bodyLoad={bodyLoad} compact />
+              </View>
+              <MuscleWeights items={muscleBars} />
+            </>
+          ) : (
+            <Text style={[styles.body, { color: theme.textSecondary }]}>—</Text>
+          )}
+        </Card>
+      ) : null}
     </Screen>
-  );
-}
-
-function SectionTitle({ symbol, title }: { symbol: SFSymbol; title: string }) {
-  const theme = useTheme();
-  return (
-    <View style={styles.sectionTitle}>
-      <SymbolView name={symbol} size={18} tintColor={theme.primary} />
-      <Text style={[styles.sectionText, { color: theme.text }]}>{title}</Text>
-    </View>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  const theme = useTheme();
-  return (
-    <View style={styles.detailRow}>
-      <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>{label}</Text>
-      <Text style={[styles.detailValue, { color: theme.text }]}>{value}</Text>
-    </View>
   );
 }
 
@@ -123,40 +205,29 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: Spacing.sm,
   },
-  sectionTitle: {
+  tabs: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-    marginBottom: Spacing.xs,
+    borderRadius: Radius.md,
+    padding: 4,
+    gap: 2,
   },
-  sectionText: {
-    fontSize: 16,
+  tab: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md - 4,
+  },
+  tabLabel: {
+    fontSize: 11,
     fontWeight: "600",
   },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: Spacing.md,
+  bodies: {
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.sm,
   },
-  detailLabel: {
-    fontSize: 14,
-  },
-  detailValue: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "500",
-    textAlign: "right",
-  },
-  tags: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.xs,
-    marginTop: Spacing.xs,
-  },
-  comingSoon: {
-    fontFamily: Fonts?.mono,
-    fontSize: 12,
-    textTransform: "uppercase",
-    letterSpacing: 1,
+  body: {
+    fontSize: 15,
+    lineHeight: 22,
   },
 });

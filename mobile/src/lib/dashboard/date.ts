@@ -25,3 +25,15 @@ export function formatDuration(minutes: number): string {
   const m = Math.floor(minutes % 60);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
+
+export function atStartOfDay(date: Date): Date {
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+export function atEndOfDay(date: Date): Date {
+  const copy = new Date(date);
+  copy.setHours(23, 59, 59, 999);
+  return copy;
+}

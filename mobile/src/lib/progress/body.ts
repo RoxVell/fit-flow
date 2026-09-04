@@ -84,3 +84,12 @@ export function metricSeries(views: DailyBodyView[], field: BodyMetricField, for
 export function fieldsWithData(views: DailyBodyView[], fields: readonly BodyMetricField[]): BodyMetricField[] {
   return fields.filter((field) => views.some((view) => hasBodyMetricValue(view[field])));
 }
+
+/** Most recent value of a metric in the views (newest last). */
+export function latestMetricValue(views: DailyBodyView[], field: BodyMetricField): number | null {
+  for (let i = views.length - 1; i >= 0; i--) {
+    const value = views[i][field];
+    if (hasBodyMetricValue(value)) return value;
+  }
+  return null;
+}
