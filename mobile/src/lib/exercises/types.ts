@@ -1,0 +1,54 @@
+import type { MuscleGroup } from "@/lib/db/types";
+
+export type LocalizedString = { en: string; ru: string };
+export type LocalizedList = { en: string[]; ru: string[] };
+
+export type BodyPart =
+  | "ABS"
+  | "BACK"
+  | "BICEPS"
+  | "CHEST"
+  | "FOREARMS"
+  | "GLUTEUS"
+  | "LEGS"
+  | "SHOULDERS"
+  | "TRICEPS";
+
+export type Mechanics = "COMPOUND" | "ISOLATION";
+
+export type Laterality = "BILATERAL" | "UNILATERAL" | "ALTERNATING";
+
+export type ExerciseManifestItem = {
+  id: string;
+  name: LocalizedString;
+  bodyPart: BodyPart;
+  equipments: string[];
+  mechanics: Mechanics;
+  laterality: Laterality;
+  weightType: string;
+  tags: string[];
+  thumbnailUri: string | null;
+  muscleWeights?: Partial<Record<MuscleGroup, number>>;
+};
+
+export type ExerciseDetail = ExerciseManifestItem & {
+  description: LocalizedString;
+  instructions: LocalizedList;
+  tips: LocalizedList;
+  commonMistakes: LocalizedList;
+  imageUri: string | null;
+  thumbnail1Uri: string | null;
+  thumbnail2Uri: string | null;
+  videoDarkUrl: string;
+  videoLightUrl: string;
+  exerciseMuscles: Record<string, number>;
+};
+
+// Mirrors the web app's ExerciseLibraryFilters (src/lib/exercises/types.ts).
+export type ExerciseLibraryFilters = {
+  search?: string;
+  bodyPart?: BodyPart | null;
+  equipment?: string | null;
+  mechanics?: Mechanics | null;
+  tag?: string | null;
+};

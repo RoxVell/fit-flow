@@ -184,6 +184,13 @@ Leave `DATABASE_URL` unset and none of this runs.
 
 ---
 
+## Mobile app (Expo)
+
+A native iOS-first port lives in [`mobile/`](mobile/README.md) (Expo SDK 57,
+Expo Router, native tab bar with Liquid Glass). It is a separate npm project
+with its own `package.json`; the root toolchain (lint, tsc, vitest, Playwright)
+ignores it.
+
 ## Development
 
 | Command | What it does |
