@@ -3,6 +3,13 @@
 import { useEffect, useState } from "react";
 import { APP_ROUTES, RSC_CACHE } from "@/lib/pwa/cache";
 
+/** Serwist names its precache `serwist-precache-v<n>-<origin>`. */
+const PRECACHE_PREFIX = "serwist-precache";
+
+/** Re-read this often while the worker is still warming up. */
+const WARMUP_POLL_MS = 2000;
+const WARMUP_POLL_LIMIT = 15;
+
 export type OfflineReadiness =
   | "checking"
   | "unsupported"
@@ -44,7 +51,7 @@ async function readStatus(): Promise<OfflineStatus> {
   }
 
   const keys = await caches.keys();
-  const precacheKey = keys.find((key) => key.includes("precache"));
+  const precacheKey = keys.find((key) => key.startsWith(PRECACHE_PREFIX));
   let precachedPages = 0;
   if (precacheKey) {
     const paths = new Set(
@@ -59,8 +66,11 @@ async function readStatus(): Promise<OfflineStatus> {
     ? (await (await caches.open(rscKey)).keys()).length
     : 0;
 
+  // Offline tab switches need the RSC payloads too, not just the HTML.
+  const ready =
+    precachedPages === APP_ROUTES.length && rscEntries >= APP_ROUTES.length;
   return {
-    readiness: precachedPages === APP_ROUTES.length ? "ready" : "partial",
+    readiness: ready ? "ready" : "partial",
     precachedPages,
     totalPages: APP_ROUTES.length,
     rscEntries,
@@ -74,25 +84,44 @@ export function useOfflineStatus(): OfflineStatus {
 
   useEffect(() => {
     let cancelled = false;
+    let polls = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
     const refresh = () => {
       void readStatus()
         .then((next) => {
-          if (!cancelled) setStatus(next);
+          if (cancelled) return;
+          setStatus(next);
+          // The worker warms the RSC cache right after activation; keep
+          // polling for a while so the row does not stay stale.
+          const settled =
+            next.readiness === "ready" || next.readiness === "unsupported";
+          if (!settled && polls < WARMUP_POLL_LIMIT) {
+            polls += 1;
+            timer = setTimeout(refresh, WARMUP_POLL_MS);
+          }
         })
         .catch(() => {
           if (!cancelled) setStatus({ ...INITIAL, readiness: "not-installed" });
         });
     };
+    const restart = () => {
+      clearTimeout(timer);
+      polls = 0;
+      refresh();
+    };
+
     refresh();
     const onVisible = () => {
-      if (document.visibilityState === "visible") refresh();
+      if (document.visibilityState === "visible") restart();
     };
     document.addEventListener("visibilitychange", onVisible);
-    navigator.serviceWorker?.addEventListener("controllerchange", refresh);
+    navigator.serviceWorker?.addEventListener("controllerchange", restart);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
-      navigator.serviceWorker?.removeEventListener("controllerchange", refresh);
+      navigator.serviceWorker?.removeEventListener("controllerchange", restart);
     };
   }, []);
 

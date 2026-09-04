@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 
 /**
  * Returns the row that contains the given visible label text. The settings
- * page renders one card with `divide-y`; each row is `flex justify-between`
+ * page renders cards with `divide-y`; each row is `flex justify-between`
  * with a label span on the left and a toggle on the right.
  */
 function settingsRow(page: import("@playwright/test").Page, label: RegExp) {

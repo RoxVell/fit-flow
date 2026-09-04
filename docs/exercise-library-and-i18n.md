@@ -84,10 +84,6 @@ If sources are missing but `manifest.json` exists, the script exits successfully
 
 All app pages (`APP_ROUTES` in `src/lib/pwa/cache.ts`) are static and precached as HTML with a per-build revision; on `activate` the SW drops the build-bound runtime caches, warms `rsc-cache`, then `clients.claim()`. Navigation RSC responses are keyed by path only (query string stripped, `Vary` ignored) — valid only while payloads are user- and query-independent. Prefetches (`Next-Router-Prefetch`, `Next-Router-Segment-Prefetch`) return partial payloads of a different shape and are never cached.
 
-Settings → "Offline mode" (`src/lib/hooks/use-offline-status.ts`) shows the worker state, how many `APP_ROUTES` are in the precache and how many RSC payloads are warmed; use it to debug offline issues on devices without a web inspector. `public/offline.html` (the navigation fallback) reloads only after a real request succeeds, because `navigator.onLine` is `true` on LTE without data and would otherwise loop forever.
-
-Offline must be verified against a stopped server: DevTools network emulation only affects page requests, the service worker's own fetches still reach the network.
-
 Thumbnail images (`api.smartworkout.app`) stay **NetworkOnly** — offline list shows a Dumbbell placeholder via `ExerciseThumbnail` `onError` fallback.
 
 ### Hooks

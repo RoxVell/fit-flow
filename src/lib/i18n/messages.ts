@@ -30,7 +30,7 @@ export const messages = {
       offlineUnsupported: "Not supported",
       offlineChecking: "Checking…",
       offlineDetails: (pages: number, total: number, rsc: number) =>
-        `${pages}/${total} pages, ${rsc} payloads`,
+        `Pages ${pages}/${total}, RSC ${rsc}/${total}`,
       offlineUpdateWaiting: "Update waiting to be applied",
     },
     dashboard: {
@@ -348,7 +348,7 @@ export const messages = {
       offlineUnsupported: "Не поддерживается",
       offlineChecking: "Проверка…",
       offlineDetails: (pages: number, total: number, rsc: number) =>
-        `${pages}/${total} страниц, ${rsc} payload`,
+        `Страницы ${pages}/${total}, RSC ${rsc}/${total}`,
       offlineUpdateWaiting: "Обновление ждёт применения",
     },
     dashboard: {
