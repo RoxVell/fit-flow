@@ -23,6 +23,15 @@ export const messages = {
       buildDate: "Last update",
       lastSync: "Last sync",
       never: "Never",
+      offlineStatus: "Offline mode",
+      offlineReady: "Ready",
+      offlinePartial: "Partially cached",
+      offlineNotInstalled: "Not installed",
+      offlineUnsupported: "Not supported",
+      offlineChecking: "Checking…",
+      offlineDetails: (pages: number, total: number, rsc: number) =>
+        `${pages}/${total} pages, ${rsc} payloads`,
+      offlineUpdateWaiting: "Update waiting to be applied",
     },
     dashboard: {
       weight: "Weight",
@@ -332,6 +341,15 @@ export const messages = {
       buildDate: "Последнее обновление",
       lastSync: "Последняя синхронизация",
       never: "Никогда",
+      offlineStatus: "Офлайн-режим",
+      offlineReady: "Готов",
+      offlinePartial: "Закеширован частично",
+      offlineNotInstalled: "Не установлен",
+      offlineUnsupported: "Не поддерживается",
+      offlineChecking: "Проверка…",
+      offlineDetails: (pages: number, total: number, rsc: number) =>
+        `${pages}/${total} страниц, ${rsc} payload`,
+      offlineUpdateWaiting: "Обновление ждёт применения",
     },
     dashboard: {
       weight: "Вес",

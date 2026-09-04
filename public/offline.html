@@ -119,18 +119,66 @@
       <button id="retry" type="button">Retry</button>
     </main>
     <script>
+      // `navigator.onLine` only means "there is a network interface" (LTE
+      // with no data, Wi-Fi without internet). Reloading on it alone spins
+      // forever, so reload only after a real request succeeds.
       const btn = document.getElementById("retry");
-      const update = () => {
-        btn.disabled = !navigator.onLine;
-        btn.textContent = navigator.onLine ? "Reload" : "Waiting for connection…";
+      const PING = "/manifest.webmanifest";
+      const MAX_AUTO_CHECKS = 6;
+      let checking = false;
+      let autoChecks = 0;
+
+      const label = () => {
+        if (checking) return "Checking connection\u2026";
+        return navigator.onLine ? "Retry" : "Waiting for connection\u2026";
       };
-      update();
-      window.addEventListener("online", update);
-      window.addEventListener("offline", update);
-      btn.addEventListener("click", () => {
-        if (navigator.onLine) location.reload();
-      });
-      if (navigator.onLine) location.reload();
+      const render = () => {
+        btn.disabled = checking || !navigator.onLine;
+        btn.textContent = label();
+      };
+
+      async function isReachable() {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 4000);
+        try {
+          const res = await fetch(PING + "?ping=" + Date.now(), {
+            method: "HEAD",
+            cache: "no-store",
+            signal: ctrl.signal,
+          });
+          return res.ok;
+        } catch {
+          return false;
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+
+      async function tryReload() {
+        if (checking || !navigator.onLine) return;
+        checking = true;
+        render();
+        const ok = await isReachable();
+        checking = false;
+        render();
+        if (ok) location.reload();
+      }
+
+      const autoCheck = () => {
+        if (autoChecks >= MAX_AUTO_CHECKS) return;
+        autoChecks += 1;
+        void tryReload();
+      };
+
+      render();
+      window.addEventListener("online", () => { render(); autoCheck(); });
+      window.addEventListener("offline", render);
+      btn.addEventListener("click", () => void tryReload());
+      autoCheck();
+      const poll = setInterval(() => {
+        if (autoChecks >= MAX_AUTO_CHECKS) { clearInterval(poll); return; }
+        autoCheck();
+      }, 10000);
     </script>
   </body>
 </html>
