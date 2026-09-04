@@ -3,6 +3,7 @@
 import { CalendarClock, Languages, Palette, Info, RefreshCw } from "lucide-react";
 import { ThemeToggle } from "@/components/settings/theme-toggle";
 import { LanguageToggle } from "@/components/settings/language-toggle";
+import { OfflineStatusRow } from "@/components/settings/offline-status";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 import { useSyncState } from "@/lib/sync/sync-service";
@@ -72,6 +73,7 @@ export default function SettingsPage() {
               {lastSyncAt ? formatDateTime(lastSyncAt) : t.settings.never}
             </span>
           </div>
+          <OfflineStatusRow />
         </div>
       </section>
     </div>

@@ -118,19 +118,6 @@
       </section>
       <button id="retry" type="button">Retry</button>
     </main>
-    <script>
-      const btn = document.getElementById("retry");
-      const update = () => {
-        btn.disabled = !navigator.onLine;
-        btn.textContent = navigator.onLine ? "Reload" : "Waiting for connection…";
-      };
-      update();
-      window.addEventListener("online", update);
-      window.addEventListener("offline", update);
-      btn.addEventListener("click", () => {
-        if (navigator.onLine) location.reload();
-      });
-      if (navigator.onLine) location.reload();
-    </script>
+    <script src="/offline.js"></script>
   </body>
 </html>
