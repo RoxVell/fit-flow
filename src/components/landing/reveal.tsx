@@ -3,11 +3,6 @@
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 
-/**
- * Lightweight fade-and-rise entrance for marketing sections. Animates once
- * when scrolled into view; the content renders normally (just at the end
- * state via the `whileInView` fallback) if JS/animation is unavailable.
- */
 export function Reveal({
   children,
   delay = 0,
@@ -20,10 +15,10 @@ export function Reveal({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 28 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.5, ease: "easeOut", delay }}
+      viewport={{ once: true, amount: 0.3, margin: "0px 0px -60px 0px" }}
+      transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay }}
     >
       {children}
     </motion.div>

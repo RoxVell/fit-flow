@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Download, Share, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,11 @@ export function InstallPrompt() {
   const [installed, setInstalled] = useState(false);
   const [ios, setIos] = useState(false);
   const t = useT();
+  // The desktop workspace has no bottom tab bar, and a centred card would sit
+  // on top of charts — tuck it into the corner instead.
+  const placement = usePathname().startsWith("/desktop")
+    ? "fixed right-4 bottom-4 z-40 w-[22rem]"
+    : "fixed bottom-20 left-1/2 z-40 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm";
 
   useEffect(() => {
     if (isStandalone()) {
@@ -98,7 +104,7 @@ export function InstallPrompt() {
         role="dialog"
         aria-label={t.pwa.installIosAria}
         className={cn(
-          "fixed bottom-20 left-1/2 z-40 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm",
+          placement,
           "rounded-xl border bg-background/95 backdrop-blur shadow-lg p-3 flex items-start gap-3"
         )}
       >
@@ -144,7 +150,7 @@ export function InstallPrompt() {
       role="dialog"
       aria-label={t.pwa.installAria}
       className={cn(
-        "fixed bottom-20 left-1/2 z-40 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm",
+        placement,
         "rounded-xl border bg-background/95 backdrop-blur shadow-lg p-3 flex items-center gap-3"
       )}
     >

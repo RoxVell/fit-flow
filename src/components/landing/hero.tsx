@@ -2,141 +2,83 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Dumbbell, Play, ChevronRight } from "lucide-react";
-import { PhoneMockup } from "./phone-mockup";
-import { Reveal } from "./reveal";
+import { ArrowRight } from "lucide-react";
+import { Barbell } from "./barbell";
+import { Phone } from "./phone";
+
+const LINES = ["Every rep.", "Every kilo.", "Counted."];
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden">
-      {/* Ambient glow */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-[-10%] h-[480px] w-[680px] -translate-x-1/2 rounded-full bg-primary/20 blur-[120px]"
-      />
+    <section className="relative overflow-hidden px-6 pt-16 pb-20 sm:pt-24">
+      <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
+        <div>
+        <motion.p
+          className="fl-eyebrow"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
+        >
+          Offline-first training log
+        </motion.p>
 
-      <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-20 pt-28 lg:grid-cols-2 lg:gap-8 lg:pt-32">
-        {/* Copy */}
-        <div className="relative text-center lg:text-left">
-          <Reveal>
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Offline-first strength training
+        <h1 className="fl-display mt-5 text-[clamp(3.2rem,8.5vw,5.9rem)]">
+          {LINES.map((line, i) => (
+            <span key={line} className="block overflow-hidden pb-[0.06em]">
+              <motion.span
+                className={`block ${i === 2 ? "fl-heat-text" : ""}`}
+                initial={{ y: "105%" }}
+                animate={{ y: 0 }}
+                transition={{
+                  duration: 0.75,
+                  ease: [0.16, 1, 0.3, 1],
+                  delay: 0.1 + i * 0.13,
+                }}
+              >
+                {line}
+              </motion.span>
             </span>
-          </Reveal>
+          ))}
+        </h1>
 
-          <Reveal delay={0.05}>
-            <h1 className="mt-6 text-balance text-5xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-[4rem] lg:leading-[1.05]">
-              Train smarter.
-              <br />
-              <span className="text-primary">Track every gain.</span>
-            </h1>
-          </Reveal>
+        <motion.p
+          className="mt-7 max-w-xl text-lg leading-relaxed text-[var(--fl-muted)]"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        >
+          FitFlow is a training log for people who run real programs. Build the
+          plan, log sets as you lift, and watch your e1RM climb — even with no
+          signal in a basement gym.
+        </motion.p>
 
-          <Reveal delay={0.1}>
-            <p className="mx-auto mt-6 max-w-xl text-pretty text-lg text-muted-foreground lg:mx-0">
-              FitFlow is an intelligent workout companion for strength
-              training — build programs, log sets in real time, and watch your
-              progress climb. All on your phone, even offline.
-            </p>
-          </Reveal>
-
-          <Reveal delay={0.15}>
-            <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
-              <Link
-                href="/dashboard"
-                className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition-transform active:translate-y-px sm:w-auto"
-              >
-                <Dumbbell className="size-5" />
-                Open FitFlow
-                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-              <Link
-                href="#features"
-                className="inline-flex h-12 w-full items-center justify-center gap-1 rounded-xl border border-border bg-background px-6 text-base font-medium text-foreground transition-colors hover:bg-muted sm:w-auto"
-              >
-                See features
-                <ChevronRight className="size-4" />
-              </Link>
-            </div>
-          </Reveal>
+        <motion.div
+          className="mt-9 flex flex-wrap items-center gap-4"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <Link href="/dashboard" className="fl-btn h-12 px-7 text-base">
+            Start training
+            <ArrowRight className="size-4" />
+          </Link>
+          <Link href="#log" className="fl-btn-ghost h-12 px-6 text-base">
+            See how it works
+          </Link>
+          <span className="fl-mono w-full text-[0.7rem] tracking-[0.18em] text-[var(--fl-muted)] uppercase sm:w-auto">
+            PWA · installs on your phone · free
+          </span>
+        </motion.div>
         </div>
 
-        {/* Phone mockup */}
-        <Reveal delay={0.2} className="relative">
-          <HeroPhone />
-        </Reveal>
+        <div className="hidden lg:block">
+          <Phone />
+        </div>
+
+        <div className="fl-bar-wrap mt-4 w-full lg:col-span-2 lg:mt-14">
+          <Barbell />
+        </div>
       </div>
     </section>
-  );
-}
-
-/** A faux dashboard rendered inside the phone frame. */
-function HeroPhone() {
-  return (
-    <PhoneMockup>
-      <div className="flex h-full flex-col gap-3 overflow-hidden px-4 pb-4 pt-2">
-        {/* Greeting */}
-        <div>
-          <p className="font-mono text-sm text-foreground">
-            Ready to crush it, <span className="text-primary">Anton</span>?
-          </p>
-          <p className="text-xs text-muted-foreground">Tuesday · Push day</p>
-        </div>
-
-        {/* 2x2 stats */}
-        <div className="grid grid-cols-2 gap-2">
-          <StatTile tint="text-sky-500" label="Steps" value="8,420" />
-          <StatTile tint="text-primary" label="Calories" value="612" />
-          <StatTile tint="text-emerald-500" label="Weight" value="78.4 kg" />
-          <StatTile tint="text-rose-500" label="Active days" value="12" />
-        </div>
-
-        {/* Mini PR card */}
-        <div className="rounded-xl bg-card p-3 ring-1 ring-foreground/10">
-          <p className="text-xs font-medium text-muted-foreground">
-            Recent PR
-          </p>
-          <div className="mt-1.5 flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">
-              Bench Press
-            </span>
-            <span className="font-mono text-sm text-primary">82.5 kg</span>
-          </div>
-          <div className="mt-0.5 text-[10px] text-emerald-500">+2.5 kg</div>
-        </div>
-
-        {/* Pulsing CTA */}
-        <motion.div
-          className="relative mt-auto flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-primary-foreground shadow-lg shadow-primary/30"
-          animate={{ scale: [1, 1.03, 1] }}
-          transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-        >
-          <Dumbbell className="size-4" />
-          <span className="text-sm font-semibold">Start Workout</span>
-          <Play className="size-3" fill="currentColor" />
-        </motion.div>
-      </div>
-    </PhoneMockup>
-  );
-}
-
-function StatTile({
-  tint,
-  label,
-  value,
-}: {
-  tint: string;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-xl bg-card p-2.5 ring-1 ring-foreground/10">
-      <div className={`size-6 rounded-md bg-current/15 ${tint}`} />
-      <p className="mt-1.5 text-[10px] text-muted-foreground">{label}</p>
-      <p className="font-mono text-sm font-semibold text-foreground">
-        {value}
-      </p>
-    </div>
   );
 }
