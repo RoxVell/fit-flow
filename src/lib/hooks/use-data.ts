@@ -4,11 +4,14 @@ import { useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { isActiveRecord, withoutDeleted } from "@/lib/db/active-records";
 import { db } from "@/lib/db/dexie";
-import type {
-  DashboardStats,
-  Exercise,
-  ExerciseFilters,
-  MuscleGroup,
+import {
+  MUSCLE_GROUPS,
+  type DashboardStats,
+  type Exercise,
+  type ExerciseFilters,
+  type MuscleGroup,
+  type ProgramEntity,
+  type WorkoutLogEntity,
 } from "@/lib/db/types";
 import {
   bodyPartToMuscleGroup,
@@ -19,11 +22,12 @@ import {
   matchesUnilateralFilter,
   toLibraryFilters,
 } from "@/lib/exercises/filter-adapter";
+import type { MuscleWeights } from "@/lib/exercises/types";
 import {
   buildDailyBodyViews,
   getWeightTrendFromDailyViews,
 } from "@/lib/body-measurements/daily-view";
-import { attachExercisesToSessions } from "@/lib/repositories/exercises";
+import { attachExercises } from "@/lib/repositories/exercises";
 import { volume } from "@/lib/training-metrics";
 import {
   toExerciseDetailedHistorySession,
@@ -34,6 +38,7 @@ import {
   useExerciseManifest,
 } from "@/lib/hooks/use-exercise-library";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { compareByDate } from "@/lib/utils/date";
 
 export function useExercises(filters?: ExerciseFilters): Exercise[] | undefined {
   const locale = useLocale();
@@ -78,97 +83,75 @@ export function useExercise(id: string) {
   }, [manifest, loading, id, locale]);
 }
 
-export function usePrograms() {
+/** Resolves session exercises against the localized manifest; undefined while it loads. */
+function useSessionExerciseAttacher() {
   const locale = useLocale();
   const { manifest } = useExerciseManifest();
-  return useLiveQuery(async () => {
-    const raw = withoutDeleted(await db.programs.toArray());
+  return useMemo(() => {
     if (!manifest) return undefined;
     const map = buildExerciseMapFromManifest(manifest, locale);
-    return raw.map((p) => ({
-      ...p,
-      sessions: attachExercisesToSessions(p.sessions, map),
-    }));
-  }, [locale, manifest]);
+    return (program: ProgramEntity): ProgramEntity => ({
+      ...program,
+      sessions: attachExercises(program.sessions, map),
+    });
+  }, [manifest, locale]);
+}
+
+export function usePrograms() {
+  const attach = useSessionExerciseAttacher();
+  return useLiveQuery(async () => {
+    const raw = withoutDeleted(await db.programs.toArray());
+    return attach ? raw.map(attach) : undefined;
+  }, [attach]);
 }
 
 export function useActiveProgram() {
-  const locale = useLocale();
-  const { manifest } = useExerciseManifest();
+  const attach = useSessionExerciseAttacher();
   return useLiveQuery(async () => {
     const active = await db.programs.filter((p) => p.isActive && !p.deletedAt).first();
     if (!active) return null;
-    if (!manifest) return undefined;
-    const map = buildExerciseMapFromManifest(manifest, locale);
-    return {
-      ...active,
-      sessions: attachExercisesToSessions(active.sessions, map),
-    };
-  }, [locale, manifest]);
+    return attach ? attach(active) : undefined;
+  }, [attach]);
 }
 
 export function useProgram(id: string) {
-  const locale = useLocale();
-  const { manifest } = useExerciseManifest();
+  const attach = useSessionExerciseAttacher();
   return useLiveQuery(async () => {
     const program = await db.programs.get(id);
     if (!isActiveRecord(program)) return null;
-    if (!manifest) return undefined;
-    const map = buildExerciseMapFromManifest(manifest, locale);
-    return {
-      ...program,
-      sessions: attachExercisesToSessions(program.sessions, map),
-    };
-  }, [id, locale, manifest]);
+    return attach ? attach(program) : undefined;
+  }, [id, attach]);
+}
+
+function isCompletedLog(log: WorkoutLogEntity): boolean {
+  return !log.deletedAt && !!log.endedAt;
+}
+
+function recentLogs(limit: number, predicate: (log: WorkoutLogEntity) => boolean) {
+  return db.workoutLogs
+    .orderBy("startedAt")
+    .reverse()
+    .filter(predicate)
+    .limit(limit)
+    .toArray();
 }
 
 export function useWorkoutLogs(limit = 20) {
-  return useLiveQuery(
-    () =>
-      db.workoutLogs
-        .orderBy("startedAt")
-        .reverse()
-        .filter((l) => !l.deletedAt)
-        .limit(limit)
-        .toArray(),
-    [limit]
-  );
+  return useLiveQuery(() => recentLogs(limit, isActiveRecord), [limit]);
 }
 
 export function useCompletedWorkoutLogs(limit: number) {
-  return useLiveQuery(
-    () =>
-      db.workoutLogs
-        .orderBy("startedAt")
-        .reverse()
-        .filter((l) => !l.deletedAt && !!l.endedAt)
-        .limit(limit)
-        .toArray(),
-    [limit]
-  );
+  return useLiveQuery(() => recentLogs(limit, isCompletedLog), [limit]);
 }
 
 export function useCompletedWorkoutLogsCount() {
-  return useLiveQuery(
-    () =>
-      db.workoutLogs
-        .filter((l) => !l.deletedAt && !!l.endedAt)
-        .count(),
-    []
-  );
-}
-
-export function useWorkoutLog(id: string) {
-  return useLiveQuery(async () => {
-    const log = await db.workoutLogs.get(id);
-    return isActiveRecord(log) ? log : null;
-  }, [id]);
+  return useLiveQuery(() => db.workoutLogs.filter(isCompletedLog).count(), []);
 }
 
 export function useBodyMeasurements() {
   return useLiveQuery(async () => {
-    return withoutDeleted(await db.bodyMeasurements.toArray()).sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    return withoutDeleted(await db.bodyMeasurements.toArray()).sort((a, b) =>
+      compareByDate(a.date, b.date)
     );
   }, []);
 }
@@ -190,14 +173,49 @@ export function usePersonalRecords() {
 
 export function useCardioSessions() {
   return useLiveQuery(async () => {
-    return withoutDeleted(await db.cardioSessions.toArray()).sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    return withoutDeleted(await db.cardioSessions.toArray()).sort((a, b) =>
+      compareByDate(b.date, a.date)
     );
   }, []);
 }
 
 export function useWorkoutDraft() {
   return useLiveQuery(async () => (await db.workoutDrafts.get("active")) ?? null, []);
+}
+
+type HeatmapExerciseRef = {
+  muscleWeights?: MuscleWeights;
+  fallbackGroup: MuscleGroup;
+};
+
+/** Sums completed sets per muscle group, weighted by the exercise's muscle split. */
+function buildWeeklyHeatmap(
+  logs: WorkoutLogEntity[],
+  refs: Map<string, HeatmapExerciseRef>
+): Record<MuscleGroup, number> {
+  const heatmap = Object.fromEntries(
+    MUSCLE_GROUPS.map((group) => [group, 0])
+  ) as Record<MuscleGroup, number>;
+
+  for (const log of logs) {
+    for (const ex of log.exercises) {
+      const ref = refs.get(ex.exerciseId);
+      if (!ref) continue;
+      const completedSets = ex.sets.filter((s) => s.completed);
+      if (completedSets.length === 0) continue;
+
+      const weights = ref.muscleWeights;
+      if (weights && Object.keys(weights).length > 0) {
+        for (const [group, percent] of Object.entries(weights)) {
+          heatmap[group as MuscleGroup] += ((percent ?? 0) / 100) * completedSets.length;
+        }
+      } else {
+        heatmap[ref.fallbackGroup] += completedSets.length;
+      }
+    }
+  }
+
+  return heatmap;
 }
 
 export function useDashboardStats(): DashboardStats | undefined {
@@ -209,7 +227,7 @@ export function useDashboardStats(): DashboardStats | undefined {
   return useMemo(() => {
     if (!logs || !measurements || !programs || !manifest) return undefined;
 
-    const exerciseMap = new Map(
+    const exerciseRefs = new Map<string, HeatmapExerciseRef>(
       manifest.map((item) => [
         item.id,
         {
@@ -237,42 +255,6 @@ export function useDashboardStats(): DashboardStats | undefined {
       activeProgram?.sessions.find((s) => s.dayOfWeek === today) ??
       activeProgram?.sessions[0];
 
-    const heatmapData: Record<MuscleGroup, number> = {
-      chest: 0,
-      back: 0,
-      shoulders: 0,
-      biceps: 0,
-      triceps: 0,
-      forearms: 0,
-      quads: 0,
-      hamstrings: 0,
-      glutes: 0,
-      calves: 0,
-      abs: 0,
-      traps: 0,
-      hip_flexors: 0,
-      full_body: 0,
-    };
-
-    for (const log of thisWeek) {
-      for (const ex of log.exercises) {
-        const ref = exerciseMap.get(ex.exerciseId);
-        if (!ref) continue;
-        const completedSets = ex.sets.filter((s) => s.completed);
-        if (completedSets.length === 0) continue;
-
-        const weights = ref.muscleWeights;
-        if (weights && Object.keys(weights).length > 0) {
-          const setCount = completedSets.length;
-          for (const [group, percent] of Object.entries(weights)) {
-            heatmapData[group as MuscleGroup] += (percent / 100) * setCount;
-          }
-        } else {
-          heatmapData[ref.fallbackGroup] += completedSets.length;
-        }
-      }
-    }
-
     const activeDays = new Set(
       thisWeek.map((l) => new Date(l.startedAt).toDateString())
     ).size;
@@ -285,17 +267,20 @@ export function useDashboardStats(): DashboardStats | undefined {
       hasWeightHistory,
       activeDays,
       nextSession,
-      heatmapData,
+      heatmapData: buildWeeklyHeatmap(thisWeek, exerciseRefs),
     };
   }, [logs, measurements, programs, manifest]);
 }
 
+async function logsContainingExercise(exerciseId: string): Promise<WorkoutLogEntity[]> {
+  return withoutDeleted(await db.workoutLogs.toArray())
+    .filter((l) => l.exercises.some((e) => e.exerciseId === exerciseId))
+    .sort((a, b) => compareByDate(a.startedAt, b.startedAt));
+}
+
 export function useExerciseHistory(exerciseId: string) {
   return useLiveQuery(async () => {
-    const logs = withoutDeleted(await db.workoutLogs.toArray())
-      .filter((l) => l.exercises.some((e) => e.exerciseId === exerciseId))
-      .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
-
+    const logs = await logsContainingExercise(exerciseId);
     return logs
       .map((l) => toExerciseHistoryPoint(l, exerciseId))
       .filter((point): point is NonNullable<typeof point> => point !== null);
@@ -304,10 +289,7 @@ export function useExerciseHistory(exerciseId: string) {
 
 export function useExerciseDetailedHistory(exerciseId: string) {
   return useLiveQuery(async () => {
-    const logs = withoutDeleted(await db.workoutLogs.toArray())
-      .filter((l) => l.exercises.some((e) => e.exerciseId === exerciseId))
-      .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
-
+    const logs = await logsContainingExercise(exerciseId);
     return logs
       .map((l) => toExerciseDetailedHistorySession(l, exerciseId))
       .filter((session): session is NonNullable<typeof session> => session !== null);

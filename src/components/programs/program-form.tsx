@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { useExercises } from "@/lib/hooks/use-data";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
@@ -91,7 +90,7 @@ interface ProgramFormProps {
 
 export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initialData }: ProgramFormProps) {
   const t = useT();
-  const { dayOptions, muscleGroupLabel } = useFormat();
+  const { dayOptions } = useFormat();
   const [name, setName] = useState(initialData?.name ?? "");
   const [description, setDescription] = useState(initialData?.description ?? "");
   const [restDurationSeconds, setRestDurationSeconds] = useState(
@@ -166,13 +165,19 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
 
   if (!asPage && !open) return null;
 
-  const container = asPage ? (
-    <div className="flex h-full flex-col overflow-hidden">
+  return (
+    <div
+      className={
+        asPage
+          ? "flex h-full flex-col overflow-hidden"
+          : "fixed inset-0 z-50 flex flex-col bg-background"
+      }
+    >
       {/* Header */}
       <div className="flex items-center justify-between border-b bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3">
         <button
           type="button"
-          onClick={onBack}
+          onClick={asPage ? onBack : () => onOpenChange?.(false)}
           className="flex items-center gap-1 text-sm text-muted-foreground active:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -197,147 +202,7 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-lg space-y-8 px-4 py-6 pb-24">
-          {/* Info section */}
-          <section>
-            <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {t.programs.programInfo}
-            </div>
-            <div className="overflow-hidden rounded-xl border bg-card">
-              <div className="space-y-0 divide-y divide-border">
-                <div className="px-4 py-3.5">
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">{t.programs.name}</label>
-                  <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder={t.programs.namePlaceholder}
-                    className="border-0 bg-muted/50 px-3 py-2 text-sm"
-                  />
-                </div>
-                <div className="px-4 py-3.5">
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">{t.programs.description}</label>
-                  <Textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder={t.programs.descriptionPlaceholder}
-                    rows={2}
-                    className="border-0 bg-muted/50 px-3 py-2 text-sm resize-none"
-                  />
-                </div>
-                <RestDurationStepper
-                  label={t.programs.restDuration}
-                  value={restDurationSeconds}
-                  onChange={setRestDurationSeconds}
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Sessions section */}
-          <section>
-            <div className="mb-2 flex items-center justify-between px-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t.programs.sessionsHeader(sessions.length)}
-              </span>
-              <button
-                type="button"
-                onClick={addSession}
-                className="flex items-center gap-1 text-xs font-medium text-primary"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                {t.programs.addSession}
-              </button>
-            </div>
-
-            {sessions.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/20 py-10">
-                <Calendar className="h-8 w-8 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground/60">{t.programs.noSessionsYet}</p>
-                <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={addSession}>
-                  <Plus className="h-3 w-3" /> {t.programs.createFirstSession}
-                </Button>
-              </div>
-            ) : (
-              <div className="overflow-hidden rounded-xl border bg-card divide-y divide-border">
-                {sessions.map((s, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "flex items-center gap-3 px-4 py-3.5 cursor-pointer active:bg-accent/50 transition-colors",
-                      editingSessionIdx === i && "bg-accent/30"
-                    )}
-                    onClick={() => setEditingSessionIdx(i)}
-                  >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                      <List className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{s.name}</p>
-                        <Badge variant="secondary" className="text-[10px] font-normal px-1.5 py-0">
-                          {dayOptions.find((d) => d.value === s.dayOfWeek)?.label}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {s.exercises.length > 0
-                          ? t.programs.sessionExercises(s.exercises.length)
-                          : t.programs.noExercisesYet}
-                      </p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-      </div>
-
-      {/* Session editor dialog */}
-      <SessionEditorDialog
-        session={editingSessionIdx !== null ? sessions[editingSessionIdx] : null}
-        open={editingSessionIdx !== null}
-        onOpenChange={(open) => { if (!open) setEditingSessionIdx(null); }}
-        onSave={(updated) => {
-          if (editingSessionIdx !== null) saveEditingSession(editingSessionIdx, updated);
-        }}
-        onDelete={() => {
-          if (editingSessionIdx !== null) removeSession(editingSessionIdx);
-        }}
-      />
-    </div>
-  ) : (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3">
-        <button
-          type="button"
-          onClick={() => onOpenChange?.(false)}
-          className="flex items-center gap-1 text-sm text-muted-foreground active:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {t.programs.back}
-        </button>
-        <h1 className="text-base font-semibold">
-          {isEditMode ? t.programs.editProgram : t.programs.newProgram}
-        </h1>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!canSave}
-          className={cn(
-            "flex items-center gap-1 text-sm font-semibold transition-colors",
-            canSave ? "text-primary" : "text-muted-foreground/30"
-          )}
-        >
-          <Check className="h-4 w-4" />
-          {isEditMode ? t.programs.update : t.programs.save}
-        </button>
-      </div>
-
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-lg space-y-8 px-4 py-6">
+        <div className={cn("mx-auto max-w-lg space-y-8 px-4 py-6", asPage && "pb-24")}>
           {/* Info section */}
           <section>
             <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -447,8 +312,6 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
       />
     </div>
   );
-
-  return container;
 }
 
 function SessionEditorDialog({
@@ -508,7 +371,6 @@ function SessionEditorContent({
   const t = useT();
   const { dayOptions } = useFormat();
   const [showExercisePicker, setShowExercisePicker] = useState(false);
-  const exercises = useExercises();
   const { getName } = useExerciseLookup();
 
   const sensors = useSensors(
@@ -595,11 +457,7 @@ function SessionEditorContent({
                       <SortableExerciseRow
                         key={ex.exerciseId}
                         id={ex.exerciseId}
-                        index={i}
-                        exerciseName={
-                          exercises?.find((e) => e.id === ex.exerciseId)?.name ||
-                          getName(ex.exerciseId, t.programs.unknownExercise)
-                        }
+                        exerciseName={getName(ex.exerciseId, t.programs.unknownExercise)}
                         targetSets={ex.targetSets}
                         targetReps={ex.targetReps}
                         onUpdate={(data) => {
@@ -656,7 +514,6 @@ function SessionEditorContent({
 
 function SortableExerciseRow({
   id,
-  index,
   exerciseName,
   targetSets,
   targetReps,
@@ -664,7 +521,6 @@ function SortableExerciseRow({
   onRemove,
 }: {
   id: string;
-  index: number;
   exerciseName: string;
   targetSets: number;
   targetReps: string;

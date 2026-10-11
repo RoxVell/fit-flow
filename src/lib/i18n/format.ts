@@ -30,13 +30,6 @@ export function formatShortDate(iso: string, locale: Locale): string {
   });
 }
 
-export function formatChartDate(iso: string, locale: Locale): string {
-  return new Date(iso).toLocaleDateString(LOCALE_TAG[locale], {
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export function formatHistoryDate(iso: string, locale: Locale): string {
   return new Date(iso).toLocaleDateString(LOCALE_TAG[locale], {
     weekday: "short",

@@ -17,9 +17,7 @@ export function formatDuration(minutes: number): string {
   return `${m}m`;
 }
 
-export function generateId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
+/** Workout elapsed clock (`05:03`), not rest (`5:03`). */
+export function formatElapsedClock(minutes: number, seconds: number): string {
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }

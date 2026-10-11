@@ -4,13 +4,21 @@ import { e1RM } from "@/lib/training-metrics";
 import { CHART_PERIOD_DAYS, type ChartPeriod } from "./periods";
 import { computePeriodChange, type PeriodChange } from "./domain";
 
-export function getMonday(date: Date): Date {
+/** Week start ISO string plus each exercise's best e1RM for that week. */
+export type WeekEntry = [string, Map<string, number>];
+
+function getMonday(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   d.setDate(diff);
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+/** Progress vs baseline as a percentage with one decimal (100 = baseline). */
+function progressPercent(value: number, baseValue: number): number {
+  return Math.round((value / baseValue) * 1000) / 10;
 }
 
 export function buildWeeklyExerciseBest1RM(
@@ -50,16 +58,16 @@ export function buildWeeklyExerciseBest1RM(
 
 export function getSortedWeeks(
   weeksMap: Map<string, Map<string, number>>
-): [string, Map<string, number>][] {
+): WeekEntry[] {
   return [...weeksMap.entries()].sort(
     ([a], [b]) => new Date(a).getTime() - new Date(b).getTime()
   );
 }
 
 export function filterWeeksByPeriod(
-  sortedWeeks: [string, Map<string, number>][],
+  sortedWeeks: WeekEntry[],
   period: ChartPeriod
-): [string, Map<string, number>][] {
+): WeekEntry[] {
   const days = CHART_PERIOD_DAYS[period];
   if (days === Infinity) return sortedWeeks;
 
@@ -69,7 +77,7 @@ export function filterWeeksByPeriod(
 }
 
 export function buildPerExerciseBaseline(
-  sortedWeeks: [string, Map<string, number>][]
+  sortedWeeks: WeekEntry[]
 ): Map<string, number> {
   const baseline = new Map<string, number>();
   for (const [, exercises] of sortedWeeks) {
@@ -82,9 +90,7 @@ export function buildPerExerciseBaseline(
   return baseline;
 }
 
-function getPeriodCohort(
-  filteredWeeks: [string, Map<string, number>][]
-): Set<string> {
+function getPeriodCohort(filteredWeeks: WeekEntry[]): Set<string> {
   const cohort = new Set<string>();
   for (const [, exercises] of filteredWeeks) {
     for (const exId of exercises.keys()) {
@@ -95,7 +101,7 @@ function getPeriodCohort(
 }
 
 function getPeriodStartProgress(
-  filteredWeeks: [string, Map<string, number>][],
+  filteredWeeks: WeekEntry[],
   baseline: Map<string, number>,
   exerciseId: string
 ): number | null {
@@ -103,14 +109,14 @@ function getPeriodStartProgress(
     const value = exercises.get(exerciseId);
     const baseValue = baseline.get(exerciseId);
     if (value !== undefined && baseValue && baseValue > 0) {
-      return Math.round((value / baseValue) * 1000) / 10;
+      return progressPercent(value, baseValue);
     }
   }
   return null;
 }
 
 function buildPeriodStartProgress(
-  filteredWeeks: [string, Map<string, number>][],
+  filteredWeeks: WeekEntry[],
   baseline: Map<string, number>,
   cohort: Set<string>
 ): Map<string, number> {
@@ -122,6 +128,19 @@ function buildPeriodStartProgress(
     }
   }
   return periodStartProgress;
+}
+
+function updateRunningProgress(
+  runningProgress: Map<string, number>,
+  weekExercises: Map<string, number>,
+  baseline: Map<string, number>
+): void {
+  for (const [exId, value] of weekExercises) {
+    const baseValue = baseline.get(exId);
+    if (baseValue && baseValue > 0) {
+      runningProgress.set(exId, progressPercent(value, baseValue));
+    }
+  }
 }
 
 function computePeriodIndexedAverage(
@@ -142,9 +161,7 @@ function computePeriodIndexedAverage(
   return count > 0 ? Math.round((total / count) * 10) / 10 : null;
 }
 
-function getRepeatSessionExerciseIds(
-  filteredWeeks: [string, Map<string, number>][]
-): Set<string> {
+function getRepeatSessionExerciseIds(filteredWeeks: WeekEntry[]): Set<string> {
   const sessionCounts = new Map<string, number>();
   for (const [, exercises] of filteredWeeks) {
     for (const exId of exercises.keys()) {
@@ -159,20 +176,15 @@ function getRepeatSessionExerciseIds(
 }
 
 function getBodyPartPeriodCohort(
-  filteredWeeks: [string, Map<string, number>][],
+  filteredWeeks: WeekEntry[],
   exerciseBodyPart: Map<string, BodyPart>,
   bodyPart: BodyPart,
   repeatSessionIds: Set<string>
 ): Set<string> {
   const cohort = new Set<string>();
-  for (const [, exercises] of filteredWeeks) {
-    for (const exId of exercises.keys()) {
-      if (
-        exerciseBodyPart.get(exId) === bodyPart &&
-        repeatSessionIds.has(exId)
-      ) {
-        cohort.add(exId);
-      }
+  for (const exId of getPeriodCohort(filteredWeeks)) {
+    if (exerciseBodyPart.get(exId) === bodyPart && repeatSessionIds.has(exId)) {
+      cohort.add(exId);
     }
   }
   return cohort;
@@ -180,7 +192,7 @@ function getBodyPartPeriodCohort(
 
 /** Weekly series indexed to 100 at each exercise's first week in the period. */
 export function computeOverallProgressSeries(
-  filteredWeeks: [string, Map<string, number>][],
+  filteredWeeks: WeekEntry[],
   baseline: Map<string, number>,
   formatChartDate: (iso: string) => string
 ): { week: string; progress: number }[] {
@@ -189,13 +201,7 @@ export function computeOverallProgressSeries(
   const runningProgress = new Map<string, number>();
 
   return filteredWeeks.map(([weekStart, exercises]) => {
-    for (const [exId, value] of exercises) {
-      const baseValue = baseline.get(exId);
-      if (baseValue && baseValue > 0) {
-        runningProgress.set(exId, Math.round((value / baseValue) * 1000) / 10);
-      }
-    }
-
+    updateRunningProgress(runningProgress, exercises, baseline);
     return {
       week: formatChartDate(weekStart),
       progress: computePeriodIndexedAverage(cohort, periodStartProgress, runningProgress) ?? 100,
@@ -204,25 +210,15 @@ export function computeOverallProgressSeries(
 }
 
 export function computeOverallProgressSummary(
-  filteredWeeks: [string, Map<string, number>][],
+  filteredWeeks: WeekEntry[],
   baseline: Map<string, number>
 ): { current: number | null; change: PeriodChange | null } {
-  const summaries: ExerciseProgressSummary[] = [];
-
-  for (const exerciseId of baseline.keys()) {
-    const values = getExerciseProgressValues(filteredWeeks, baseline, exerciseId);
-    if (values.length === 0) continue;
-    summaries.push({
-      exerciseId,
-      current: values[values.length - 1],
-      change: computePeriodChange(values),
-    });
-  }
-
-  return computeBodyPartSummaryFromExercises(summaries);
+  return computeBodyPartSummaryFromExercises(
+    summarizeExercises(filteredWeeks, baseline, baseline.keys())
+  );
 }
 
-export const BODY_PART_ORDER: BodyPart[] = [
+const BODY_PART_ORDER: BodyPart[] = [
   "ABS",
   "BACK",
   "BICEPS",
@@ -240,18 +236,8 @@ function sortBodyParts(bodyParts: BodyPart[]): BodyPart[] {
   );
 }
 
-export function getExercisesForBodyPart(
-  baseline: Map<string, number>,
-  exerciseBodyPart: Map<string, BodyPart>,
-  bodyPart: BodyPart
-): string[] {
-  return [...baseline.keys()].filter(
-    (exId) => exerciseBodyPart.get(exId) === bodyPart
-  );
-}
-
-export function getExerciseProgressValues(
-  filteredWeeks: [string, Map<string, number>][],
+function getExerciseProgressValues(
+  filteredWeeks: WeekEntry[],
   baseline: Map<string, number>,
   exerciseId: string
 ): number[] {
@@ -262,7 +248,7 @@ export function getExerciseProgressValues(
   for (const [, exercises] of filteredWeeks) {
     const value = exercises.get(exerciseId);
     if (value !== undefined) {
-      values.push(Math.round((value / baseValue) * 1000) / 10);
+      values.push(progressPercent(value, baseValue));
     }
   }
   return values;
@@ -274,15 +260,12 @@ export interface ExerciseProgressSummary {
   change: PeriodChange | null;
 }
 
-export function computeExerciseProgressSummaries(
-  filteredWeeks: [string, Map<string, number>][],
+function summarizeExercises(
+  filteredWeeks: WeekEntry[],
   baseline: Map<string, number>,
-  exerciseBodyPart: Map<string, BodyPart>,
-  bodyPart: BodyPart
+  exerciseIds: Iterable<string>
 ): ExerciseProgressSummary[] {
-  const exerciseIds = getExercisesForBodyPart(baseline, exerciseBodyPart, bodyPart);
   const summaries: ExerciseProgressSummary[] = [];
-
   for (const exerciseId of exerciseIds) {
     const values = getExerciseProgressValues(filteredWeeks, baseline, exerciseId);
     if (values.length === 0) continue;
@@ -292,13 +275,26 @@ export function computeExerciseProgressSummaries(
       change: computePeriodChange(values),
     });
   }
+  return summaries;
+}
 
-  return summaries.sort((a, b) => (b.current ?? 0) - (a.current ?? 0));
+export function computeExerciseProgressSummaries(
+  filteredWeeks: WeekEntry[],
+  baseline: Map<string, number>,
+  exerciseBodyPart: Map<string, BodyPart>,
+  bodyPart: BodyPart
+): ExerciseProgressSummary[] {
+  const exerciseIds = [...baseline.keys()].filter(
+    (exId) => exerciseBodyPart.get(exId) === bodyPart
+  );
+  return summarizeExercises(filteredWeeks, baseline, exerciseIds).sort(
+    (a, b) => (b.current ?? 0) - (a.current ?? 0)
+  );
 }
 
 /** Weekly body-part lines indexed to 100 at each exercise's first week in the period. */
 export function computeBodyPartProgressSeries(
-  filteredWeeks: [string, Map<string, number>][],
+  filteredWeeks: WeekEntry[],
   baseline: Map<string, number>,
   exerciseBodyPart: Map<string, BodyPart>,
   formatChartDate: (iso: string) => string
@@ -307,11 +303,9 @@ export function computeBodyPartProgressSeries(
   bodyParts: BodyPart[];
 } {
   const bodyPartsWithData = new Set<BodyPart>();
-  for (const [, exercises] of filteredWeeks) {
-    for (const exId of exercises.keys()) {
-      const bodyPart = exerciseBodyPart.get(exId);
-      if (bodyPart) bodyPartsWithData.add(bodyPart);
-    }
+  for (const exId of getPeriodCohort(filteredWeeks)) {
+    const bodyPart = exerciseBodyPart.get(exId);
+    if (bodyPart) bodyPartsWithData.add(bodyPart);
   }
 
   const bodyParts = sortBodyParts([...bodyPartsWithData]);
@@ -338,12 +332,7 @@ export function computeBodyPartProgressSeries(
       week: formatChartDate(weekStart),
     };
 
-    for (const [exId, value] of exercises) {
-      const baseValue = baseline.get(exId);
-      if (baseValue && baseValue > 0) {
-        runningProgress.set(exId, Math.round((value / baseValue) * 1000) / 10);
-      }
-    }
+    updateRunningProgress(runningProgress, exercises, baseline);
 
     for (const bodyPart of bodyParts) {
       const cohort = bodyPartCohorts.get(bodyPart)!;
@@ -369,7 +358,7 @@ export function computeBodyPartProgressSeries(
   return { chartData, bodyParts: activeBodyParts };
 }
 
-export function computeBodyPartSummaryFromExercises(
+function computeBodyPartSummaryFromExercises(
   summaries: ExerciseProgressSummary[]
 ): { current: number | null; change: PeriodChange | null } {
   if (summaries.length === 0) {
@@ -405,7 +394,7 @@ export function computeBodyPartSummaryFromExercises(
 }
 
 export function computeBodyPartSummariesFromExercises(
-  filteredWeeks: [string, Map<string, number>][],
+  filteredWeeks: WeekEntry[],
   baseline: Map<string, number>,
   exerciseBodyPart: Map<string, BodyPart>,
   bodyParts: BodyPart[]

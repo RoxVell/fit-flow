@@ -9,7 +9,7 @@ import {
 } from "./programs";
 
 vi.mock("@/lib/repositories/exercises", () => ({
-  attachExercisesToSessions: <T>(sessions: T) => sessions,
+  attachExercises: <T>(items: T) => items,
   getExerciseMap: vi.fn().mockResolvedValue(new Map()),
 }));
 

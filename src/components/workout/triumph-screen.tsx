@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import type { PersonalRecord } from "@/lib/db/types";
 import { useT } from "@/lib/i18n/use-t";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
+import { getPrTypeLabels } from "@/lib/workout/pr-labels";
 
 interface TriumphScreenProps {
   records: PersonalRecord[];
@@ -65,11 +66,7 @@ export function TriumphScreen({ records, volume, duration, onClose }: TriumphScr
   const reduceMotion = useReducedMotion();
   const closedRef = useRef(false);
 
-  const prLabels: Record<string, string> = {
-    weight: t.dashboard.prMaxWeight,
-    volume: t.dashboard.prVolume,
-    estimated_1rm: t.dashboard.prE1rm,
-  };
+  const prLabels = getPrTypeLabels(t);
 
   const groupedRecords = useMemo(() => groupRecordsByExercise(records), [records]);
   const hasRecords = groupedRecords.length > 0;

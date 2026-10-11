@@ -9,14 +9,28 @@ import { defineConfig, devices } from "@playwright/test";
  *  - Block the Serwist service-worker route so a stale build can never
  *    cache into a test run.
  *
- * `channel` is intentionally omitted — Playwright's default uses the
- * bundled chromium with the sandbox enabled. The previous
- * `channel: "chromium"` value resolved to the same binary but with
- * the sandbox disabled, which weakens isolation on developer
- * machines for no gain.
+ * Both locally and in CI this runs Playwright's own browser, which
+ * resolves to the `chrome-headless-shell` build. CI does not download it
+ * per run — the workflow caches ~/.cache/ms-playwright keyed on the
+ * Playwright version. A system Chrome (`channel: "chrome"`) was measured
+ * as an alternative and rejected: it removes the download but runs the
+ * suite ~45s slower on the runner, which more than cancels the saving.
+ *
+ * `PW_CHANNEL` remains as a local escape hatch for reproducing a
+ * browser-specific failure — `PW_CHANNEL=chrome npm run test:e2e -- --workers=1`
+ * for the runner's Chrome, `chromium` for the full (non-shell) build.
+ * Pass `--workers=1`: on macOS, parallel workers driving the *system*
+ * Chrome pass their tests but then sit through the full 5-minute
+ * shutdown grace period before being force-killed.
+ *
+ * Note the channel does not change process sandboxing: Playwright
+ * launches all three of the default headless shell, `channel: "chromium"`
+ * and `channel: "chrome"` with `--no-sandbox` (verify with
+ * `DEBUG=pw:browser`).
  */
 const PORT = Number(process.env.PORT ?? 3100);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const CHANNEL = process.env.PW_CHANNEL || undefined;
 
 export default defineConfig({
   testDir: "./e2e/tests",
@@ -39,9 +53,10 @@ export default defineConfig({
 
   projects: [
     {
-      name: "chromium",
+      name: CHANNEL ?? "chromium",
       use: {
         ...devices["Pixel 5"],
+        channel: CHANNEL,
       },
     },
   ],

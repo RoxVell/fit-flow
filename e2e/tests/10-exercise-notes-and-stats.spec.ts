@@ -46,7 +46,7 @@ test("active workout numbers exercises and can save a note plus deload flag", as
 
   await page.getByRole("button", { name: /^Done$/i }).click();
   await page.goto("/workout");
-  await page.getByRole("button", { name: /^History$/i }).click();
+  await page.getByRole("tab", { name: /^History$/i }).click();
 
   const firstRow = page
     .locator(".divide-y.divide-border\\/50 > div")

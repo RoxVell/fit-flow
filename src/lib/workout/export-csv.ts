@@ -1,4 +1,5 @@
 import type { WorkoutLogEntity } from "@/lib/db/types";
+import { atEndOfDay, atStartOfDay, formatDateKey } from "@/lib/utils/date";
 
 export type WorkoutExportRange = {
   from: Date;
@@ -22,18 +23,6 @@ export const WORKOUT_EXPORT_HEADERS = [
   "workout_notes",
   "exercise_notes",
 ] as const;
-
-function atStartOfDay(date: Date) {
-  const copy = new Date(date);
-  copy.setHours(0, 0, 0, 0);
-  return copy;
-}
-
-function atEndOfDay(date: Date) {
-  const copy = new Date(date);
-  copy.setHours(23, 59, 59, 999);
-  return copy;
-}
 
 export function createWorkoutExportRange(
   preset: Exclude<WorkoutExportPreset, "custom">,
@@ -86,11 +75,5 @@ export function buildWorkoutLogsCsv(logs: WorkoutLogEntity[]): string {
 }
 
 export function getWorkoutExportFilename(range: WorkoutExportRange): string {
-  const datePart = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-  return `workout-logs-${datePart(range.from)}_${datePart(range.to)}.csv`;
+  return `workout-logs-${formatDateKey(range.from)}_${formatDateKey(range.to)}.csv`;
 }

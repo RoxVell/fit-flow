@@ -4,17 +4,14 @@ import { Trophy, Dumbbell, TrendingUp } from "lucide-react";
 import { usePersonalRecords } from "@/lib/hooks/use-data";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
 import { useT } from "@/lib/i18n/use-t";
+import { getPrTypeLabels } from "@/lib/workout/pr-labels";
 
 export function RecentPRs() {
   const records = usePersonalRecords();
   const t = useT();
   const { getName } = useExerciseLookup();
 
-  const prLabels: Record<string, string> = {
-    weight: t.dashboard.prMaxWeight,
-    volume: t.dashboard.prVolume,
-    estimated_1rm: t.dashboard.prE1rm,
-  };
+  const prLabels = getPrTypeLabels(t);
 
   const prUnit = t.dashboard.kg;
 

@@ -1,18 +1,21 @@
-export type MuscleGroup =
-  | "chest"
-  | "back"
-  | "shoulders"
-  | "biceps"
-  | "triceps"
-  | "forearms"
-  | "quads"
-  | "hamstrings"
-  | "glutes"
-  | "calves"
-  | "abs"
-  | "traps"
-  | "hip_flexors"
-  | "full_body";
+export const MUSCLE_GROUPS = [
+  "chest",
+  "back",
+  "shoulders",
+  "biceps",
+  "triceps",
+  "forearms",
+  "quads",
+  "hamstrings",
+  "glutes",
+  "calves",
+  "abs",
+  "traps",
+  "hip_flexors",
+  "full_body",
+] as const;
+
+export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
 
 export type Equipment =
   | "barbell"

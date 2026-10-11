@@ -19,7 +19,7 @@ test("exercises tab renders the library inside a shared card container", async (
   page,
 }) => {
   await page.goto("/programs/library");
-  await page.getByRole("button", { name: /^exercises$/i }).click();
+  await page.getByRole("tab", { name: /^exercises$/i }).click();
 
   const card = page.locator(".rounded-xl.border.bg-card").first();
   await expect(card).toBeVisible();

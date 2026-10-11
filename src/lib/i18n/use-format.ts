@@ -4,7 +4,6 @@ import { useCallback, useMemo } from "react";
 import type { MuscleGroup } from "@/lib/db/types";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
-  formatChartDate,
   formatDateTime,
   formatHistoryDate,
   formatShortDate,
@@ -21,10 +20,6 @@ export function useFormat() {
 
   const formatShortDateFn = useCallback(
     (iso: string) => formatShortDate(iso, locale),
-    [locale]
-  );
-  const formatChartDateFn = useCallback(
-    (iso: string) => formatChartDate(iso, locale),
     [locale]
   );
   const formatHistoryDateFn = useCallback(
@@ -45,7 +40,6 @@ export function useFormat() {
     dayLabels,
     dayOptions,
     formatShortDate: formatShortDateFn,
-    formatChartDate: formatChartDateFn,
     formatHistoryDate: formatHistoryDateFn,
     formatDateTime: formatDateTimeFn,
     muscleGroupLabel: muscleGroupLabelFn,

@@ -1,15 +1,12 @@
 import type {
   BodyPart,
   ExerciseDetail,
-  ExerciseLibraryMeta,
   ExerciseManifestItem,
 } from "./types";
 
 const MANIFEST_URL = "/exercises/manifest.json";
-const META_URL = "/exercises/meta.json";
 
 let manifestPromise: Promise<ExerciseManifestItem[]> | null = null;
-let metaPromise: Promise<ExerciseLibraryMeta> | null = null;
 const detailCache = new Map<BodyPart, Promise<Record<string, ExerciseDetail>>>();
 
 let cachedManifest: ExerciseManifestItem[] | null = null;
@@ -43,7 +40,6 @@ export function subscribeExerciseLibraryCacheClear(
 
 export function clearExerciseLibraryCache() {
   manifestPromise = null;
-  metaPromise = null;
   detailCache.clear();
   cachedManifest = null;
   manifestLoadError = null;
@@ -65,22 +61,7 @@ export async function fetchManifest(): Promise<ExerciseManifestItem[]> {
   return manifestPromise;
 }
 
-export async function fetchMeta(): Promise<ExerciseLibraryMeta> {
-  if (!metaPromise) {
-    metaPromise = fetch(META_URL)
-      .then((r) => {
-        if (!r.ok) throw new Error("Failed to load exercise meta");
-        return r.json() as Promise<ExerciseLibraryMeta>;
-      })
-      .catch((err) => {
-        metaPromise = null;
-        throw err;
-      });
-  }
-  return metaPromise;
-}
-
-export async function fetchBodyPartDetails(
+async function fetchBodyPartDetails(
   bodyPart: BodyPart
 ): Promise<Record<string, ExerciseDetail>> {
   let promise = detailCache.get(bodyPart);

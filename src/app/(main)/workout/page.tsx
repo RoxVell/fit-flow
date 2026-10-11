@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Play, Dumbbell, ChevronDown, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useActiveProgram, useWorkoutDraft } from "@/lib/hooks/use-data";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
+import { useSearchParamTab } from "@/lib/hooks/use-search-param-tab";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { cn } from "@/lib/utils";
 import { startWorkoutDraft } from "@/lib/workout/start-session-draft";
 import { WorkoutHistory } from "@/components/workout/workout-history";
@@ -21,19 +23,24 @@ import {
 
 type Tab = "plan" | "history";
 
-export default function WorkoutPlanPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const t = useT();
-  const [activeTab, setActiveTab] = useState<Tab>("plan");
-  const draft = useWorkoutDraft();
+function WorkoutPlanSkeleton() {
+  return (
+    <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
+      <Skeleton className="h-8 w-32 rounded-lg" />
+      <Skeleton className="h-10 w-full rounded-lg" />
+      <Skeleton className="h-64 w-full rounded-xl" />
+    </div>
+  );
+}
 
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab === "history" || tab === "plan") {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
+function WorkoutPlanPageInner() {
+  const router = useRouter();
+  const t = useT();
+  const [activeTab, setActiveTab] = useSearchParamTab<Tab>(
+    ["plan", "history"],
+    "plan"
+  );
+  const draft = useWorkoutDraft();
 
   useEffect(() => {
     if (draft === undefined) return;
@@ -48,37 +55,21 @@ export default function WorkoutPlanPage() {
   ];
 
   if (draft === undefined) {
-    return (
-      <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
-        <Skeleton className="h-8 w-32 rounded-lg" />
-        <Skeleton className="h-10 w-full rounded-lg" />
-        <Skeleton className="h-64 w-full rounded-xl" />
-      </div>
-    );
+    return <WorkoutPlanSkeleton />;
   }
 
   return (
     <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <h1 className="text-2xl font-bold">{t.workout.title}</h1>
 
-      <div className="flex rounded-lg bg-muted p-0.5">
-        {tabs.map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            onClick={() => setActiveTab(tab.value)}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-all",
-              activeTab === tab.value
-                ? "bg-background text-foreground shadow-xs"
-                : "text-muted-foreground"
-            )}
-          >
-            <tab.icon className="h-4 w-4" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs
+        selectionMode="tabs"
+        items={tabs}
+        value={activeTab}
+        onChange={setActiveTab}
+        ariaLabel={t.workout.title}
+        truncate={false}
+      />
 
       {activeTab === "plan" && <WorkoutPlanTab />}
       {activeTab === "history" && <WorkoutHistory />}
@@ -268,5 +259,15 @@ function WorkoutPlanTab() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// useSearchParams needs a Suspense boundary for static prerendering; the
+// fallback is what ends up in the precached HTML.
+export default function WorkoutPlanPage() {
+  return (
+    <Suspense fallback={<WorkoutPlanSkeleton />}>
+      <WorkoutPlanPageInner />
+    </Suspense>
   );
 }

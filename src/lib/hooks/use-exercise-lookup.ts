@@ -5,7 +5,6 @@ import {
   buildExerciseMapFromManifest,
   manifestToExercise,
 } from "@/lib/exercises/adapter";
-import { pickLocalized } from "@/lib/exercises/locale";
 import type { Exercise } from "@/lib/db/types";
 import { useExerciseManifest } from "@/lib/hooks/use-exercise-library";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -20,15 +19,6 @@ export function useExerciseLookup() {
     return buildExerciseMapFromManifest(manifest, locale);
   }, [manifest, locale]);
 
-  const getName = (exerciseId: string | undefined, fallback = ""): string => {
-    if (!exerciseId) return fallback;
-    const fromMap = exerciseMap.get(exerciseId)?.name;
-    if (fromMap) return fromMap;
-    if (!manifest) return fallback;
-    const item = manifest.find((e) => e.id === exerciseId);
-    return item ? pickLocalized(item.name, locale) : fallback;
-  };
-
   const getExercise = (exerciseId: string | undefined): Exercise | undefined => {
     if (!exerciseId) return undefined;
     const cached = exerciseMap.get(exerciseId);
@@ -37,6 +27,9 @@ export function useExerciseLookup() {
     const item = manifest.find((e) => e.id === exerciseId);
     return item ? manifestToExercise(item, locale) : undefined;
   };
+
+  const getName = (exerciseId: string | undefined, fallback = ""): string =>
+    getExercise(exerciseId)?.name || fallback;
 
   return { exerciseMap, getName, getExercise, loading, error, manifest };
 }

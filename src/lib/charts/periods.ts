@@ -21,12 +21,3 @@ export function filterByPeriod<T extends { date: string }>(
   cutoff.setDate(cutoff.getDate() - days);
   return items.filter((item) => new Date(item.date) >= cutoff);
 }
-
-export function filterDatesByPeriod(dates: string[], period: ChartPeriod): string[] {
-  const days = CHART_PERIOD_DAYS[period];
-  if (days === Infinity) return dates;
-
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  return dates.filter((date) => new Date(date) >= cutoff);
-}

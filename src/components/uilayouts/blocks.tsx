@@ -26,8 +26,11 @@ function Blocks({
         const containerHeight = container.clientHeight;
         const blockSize = containerWidth * 0.06; // Using 6% of section width for the block size
 
-        const columns = Math.floor(containerWidth / blockSize);
-        const rows = Math.floor(containerHeight / blockSize);
+        // Round up so the partial last row/column is drawn too; the container
+        // clips the overflow. Flooring left an unfilled strip at the bottom of
+        // the viewport that read as a horizontal seam across every page.
+        const columns = Math.ceil(containerWidth / blockSize);
+        const rows = Math.ceil(containerHeight / blockSize);
 
         const newBlocks = Array.from({ length: columns }, (_, columnIndex) => (
           <div key={columnIndex} className='w-[6vw] h-full'>

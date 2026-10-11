@@ -1,6 +1,7 @@
 "use client";
 
 import BodyModel from "react-body-highlighter";
+import type { Muscle } from "react-body-highlighter";
 import type { MuscleGroup } from "@/lib/db/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useT } from "@/lib/i18n/use-t";
@@ -9,7 +10,7 @@ interface MuscleHeatmapProps {
   data: Partial<Record<MuscleGroup, number>>;
 }
 
-const muscleMap: Partial<Record<MuscleGroup, string>> = {
+const muscleMap: Partial<Record<MuscleGroup, Muscle>> = {
   chest: "chest",
   back: "upper-back",
   shoulders: "front-deltoids",
@@ -27,12 +28,12 @@ const muscleMap: Partial<Record<MuscleGroup, string>> = {
 export function MuscleHeatmap({ data }: MuscleHeatmapProps) {
   const t = useT();
   const exercises = Object.entries(data)
-    .filter(([_, freq]) => freq > 0)
     .map(([muscle, freq]) => {
+      if (!freq || freq <= 0) return null;
       const mapped = muscleMap[muscle as MuscleGroup];
       return mapped ? { name: muscle, muscles: [mapped], frequency: freq } : null;
     })
-    .filter(Boolean) as { name: string; muscles: string[]; frequency: number }[];
+    .filter((e): e is NonNullable<typeof e> => e !== null);
 
   return (
     <Card>
@@ -41,20 +42,16 @@ export function MuscleHeatmap({ data }: MuscleHeatmapProps) {
       </CardHeader>
       <CardContent>
         <div className="flex justify-center gap-2">
-          <BodyModel
-            type="anterior"
-            data={exercises as any}
-            bodyColor="var(--color-muted)"
-            highlightedColors={["#fde68a", "#fb923c", "#f97316", "#ea580c"]}
-            svgStyle={{ width: "140px", height: "auto" }}
-          />
-          <BodyModel
-            type="posterior"
-            data={exercises as any}
-            bodyColor="var(--color-muted)"
-            highlightedColors={["#fde68a", "#fb923c", "#f97316", "#ea580c"]}
-            svgStyle={{ width: "140px", height: "auto" }}
-          />
+          {(["anterior", "posterior"] as const).map((side) => (
+            <BodyModel
+              key={side}
+              type={side}
+              data={exercises}
+              bodyColor="var(--color-muted)"
+              highlightedColors={["#fde68a", "#fb923c", "#f97316", "#ea580c"]}
+              svgStyle={{ width: "140px", height: "auto" }}
+            />
+          ))}
         </div>
         <div className="mt-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
           <span className="h-2 w-4 rounded bg-[#fde68a]" />

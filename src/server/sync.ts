@@ -12,6 +12,26 @@ import type { EntityType } from "@/lib/db/types";
 import type { ServerChange, SyncChange, SyncResponse } from "@/lib/sync/types";
 import { ensureServerSeeded } from "./db/seed";
 
+const ENTITY_TABLES = {
+  exercise: exercises,
+  program: programs,
+  workoutLog: workoutLogs,
+  bodyMeasurement: bodyMeasurements,
+  cardioSession: cardioSessions,
+  personalRecord: personalRecords,
+} as const;
+
+type SyncTable = (typeof ENTITY_TABLES)[EntityType];
+
+/**
+ * All sync tables share the id/revision/updatedAt/deletedAt columns; a
+ * single-table cast keeps drizzle's fluent builder types workable where only
+ * those shared columns are touched. The runtime table is always the real one.
+ */
+function entityTable(entityType: EntityType) {
+  return ENTITY_TABLES[entityType] as typeof exercises | undefined;
+}
+
 function toIso(value: Date | string | null | undefined): string | undefined {
   if (!value) return undefined;
   return value instanceof Date ? value.toISOString() : value;
@@ -118,18 +138,39 @@ function mapPersonalRecord(row: typeof personalRecords.$inferSelect) {
 }
 
 async function shouldApply(entityType: EntityType, entityId: string, revision: number): Promise<boolean> {
-  const tables = {
-    exercise: exercises,
-    program: programs,
-    workoutLog: workoutLogs,
-    bodyMeasurement: bodyMeasurements,
-    cardioSession: cardioSessions,
-    personalRecord: personalRecords,
-  } as const;
-  const table = tables[entityType];
-  const [row] = await db.select({ revision: table.revision }).from(table).where(eq(table.id, entityId)).limit(1);
+  const table = entityTable(entityType);
+  if (!table) return false;
+  const [row] = await db
+    .select({ revision: table.revision })
+    .from(table)
+    .where(eq(table.id, entityId))
+    .limit(1);
   if (!row) return true;
   return revision > row.revision;
+}
+
+/**
+ * Insert-or-update by id. On conflict every column from `values` is updated
+ * except `id` and `insertOnlyColumns` (e.g. createdAt must survive updates).
+ */
+async function upsertRow<TTable extends SyncTable>(
+  table: TTable,
+  values: TTable["$inferInsert"] & { id: string },
+  insertOnlyColumns: readonly string[] = []
+): Promise<void> {
+  const set = Object.fromEntries(
+    Object.entries(values).filter(
+      ([column]) => column !== "id" && !insertOnlyColumns.includes(column)
+    )
+  );
+  const t = table as typeof exercises;
+  await db
+    .insert(t)
+    .values(values as unknown as typeof exercises.$inferInsert)
+    .onConflictDoUpdate({
+      target: t.id,
+      set: set as Partial<typeof exercises.$inferInsert>,
+    });
 }
 
 type ApplyResult =
@@ -138,6 +179,10 @@ type ApplyResult =
   | { ok: false; reason: string };
 
 async function applyChange(change: SyncChange): Promise<ApplyResult> {
+  if (!entityTable(change.entityType)) {
+    return { ok: false, reason: "Unknown entity type" };
+  }
+
   const canApply = await shouldApply(change.entityType, change.entityId, change.revision);
   if (!canApply) {
     return { ok: true, applied: false, reason: "superseded" };
@@ -146,29 +191,11 @@ async function applyChange(change: SyncChange): Promise<ApplyResult> {
   const now = new Date();
 
   if (change.operation === "delete") {
-    const patch = { deletedAt: now, updatedAt: now, revision: change.revision };
-    switch (change.entityType) {
-      case "exercise":
-        await db.update(exercises).set(patch).where(eq(exercises.id, change.entityId));
-        break;
-      case "program":
-        await db.update(programs).set(patch).where(eq(programs.id, change.entityId));
-        break;
-      case "workoutLog":
-        await db.update(workoutLogs).set(patch).where(eq(workoutLogs.id, change.entityId));
-        break;
-      case "bodyMeasurement":
-        await db.update(bodyMeasurements).set(patch).where(eq(bodyMeasurements.id, change.entityId));
-        break;
-      case "cardioSession":
-        await db.update(cardioSessions).set(patch).where(eq(cardioSessions.id, change.entityId));
-        break;
-      case "personalRecord":
-        await db.update(personalRecords).set(patch).where(eq(personalRecords.id, change.entityId));
-        break;
-      default:
-        return { ok: false, reason: "Unknown entity type" };
-    }
+    const table = entityTable(change.entityType)!;
+    await db
+      .update(table)
+      .set({ deletedAt: now, updatedAt: now, revision: change.revision })
+      .where(eq(table.id, change.entityId));
     return { ok: true, applied: true };
   }
 
@@ -178,7 +205,7 @@ async function applyChange(change: SyncChange): Promise<ApplyResult> {
   switch (change.entityType) {
     case "exercise": {
       const p = payload as ReturnType<typeof mapExercise>;
-      const values = {
+      await upsertRow(exercises, {
         id: p.id,
         name: p.name,
         muscleGroup: p.muscleGroup,
@@ -192,58 +219,32 @@ async function applyChange(change: SyncChange): Promise<ApplyResult> {
         revision: change.revision,
         updatedAt: now,
         deletedAt: null,
-      };
-      await db.insert(exercises).values(values).onConflictDoUpdate({
-        target: exercises.id,
-        set: {
-          name: values.name,
-          muscleGroup: values.muscleGroup,
-          secondaryMuscles: values.secondaryMuscles,
-          equipment: values.equipment,
-          unilateral: values.unilateral,
-          category: values.category,
-          description: values.description,
-          imageUrl: values.imageUrl,
-          videoUrl: values.videoUrl,
-          revision: values.revision,
-          updatedAt: values.updatedAt,
-          deletedAt: null,
-        },
       });
       return { ok: true, applied: true };
     }
     case "program": {
       const p = payload as ReturnType<typeof mapProgram>;
-      const values = {
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        daysPerWeek: p.daysPerWeek,
-        isActive: p.isActive,
-        createdAt: new Date(p.createdAt),
-        sessions: p.sessions,
-        revision: change.revision,
-        updatedAt: now,
-        deletedAt: null,
-      };
-      await db.insert(programs).values(values).onConflictDoUpdate({
-        target: programs.id,
-        set: {
-          name: values.name,
-          description: values.description,
-          daysPerWeek: values.daysPerWeek,
-          isActive: values.isActive,
-          sessions: values.sessions,
-          revision: values.revision,
-          updatedAt: values.updatedAt,
+      await upsertRow(
+        programs,
+        {
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          daysPerWeek: p.daysPerWeek,
+          isActive: p.isActive,
+          createdAt: new Date(p.createdAt),
+          sessions: p.sessions,
+          revision: change.revision,
+          updatedAt: now,
           deletedAt: null,
         },
-      });
+        ["createdAt"]
+      );
       return { ok: true, applied: true };
     }
     case "workoutLog": {
       const p = payload as ReturnType<typeof mapWorkoutLog>;
-      const values = {
+      await upsertRow(workoutLogs, {
         id: p.id,
         startedAt: new Date(p.startedAt),
         endedAt: p.endedAt ? new Date(p.endedAt) : null,
@@ -256,28 +257,12 @@ async function applyChange(change: SyncChange): Promise<ApplyResult> {
         revision: change.revision,
         updatedAt: now,
         deletedAt: null,
-      };
-      await db.insert(workoutLogs).values(values).onConflictDoUpdate({
-        target: workoutLogs.id,
-        set: {
-          startedAt: values.startedAt,
-          endedAt: values.endedAt,
-          programId: values.programId,
-          sessionId: values.sessionId,
-          programName: values.programName,
-          sessionName: values.sessionName,
-          notes: values.notes,
-          exercises: values.exercises,
-          revision: values.revision,
-          updatedAt: values.updatedAt,
-          deletedAt: null,
-        },
       });
       return { ok: true, applied: true };
     }
     case "bodyMeasurement": {
       const p = payload as ReturnType<typeof mapBodyMeasurement>;
-      const values = {
+      await upsertRow(bodyMeasurements, {
         id: p.id,
         date: new Date(p.date),
         weight: p.weight,
@@ -293,31 +278,12 @@ async function applyChange(change: SyncChange): Promise<ApplyResult> {
         revision: change.revision,
         updatedAt: now,
         deletedAt: null,
-      };
-      await db.insert(bodyMeasurements).values(values).onConflictDoUpdate({
-        target: bodyMeasurements.id,
-        set: {
-          date: values.date,
-          weight: values.weight,
-          bodyFat: values.bodyFat,
-          chest: values.chest,
-          waist: values.waist,
-          leftArm: values.leftArm,
-          rightArm: values.rightArm,
-          leftThigh: values.leftThigh,
-          rightThigh: values.rightThigh,
-          leftCalf: values.leftCalf,
-          rightCalf: values.rightCalf,
-          revision: values.revision,
-          updatedAt: values.updatedAt,
-          deletedAt: null,
-        },
       });
       return { ok: true, applied: true };
     }
     case "cardioSession": {
       const p = payload as ReturnType<typeof mapCardioSession>;
-      const values = {
+      await upsertRow(cardioSessions, {
         id: p.id,
         type: p.type,
         distance: p.distance,
@@ -328,26 +294,12 @@ async function applyChange(change: SyncChange): Promise<ApplyResult> {
         revision: change.revision,
         updatedAt: now,
         deletedAt: null,
-      };
-      await db.insert(cardioSessions).values(values).onConflictDoUpdate({
-        target: cardioSessions.id,
-        set: {
-          type: values.type,
-          distance: values.distance,
-          duration: values.duration,
-          avgHeartRate: values.avgHeartRate,
-          workoutLogId: values.workoutLogId,
-          date: values.date,
-          revision: values.revision,
-          updatedAt: values.updatedAt,
-          deletedAt: null,
-        },
       });
       return { ok: true, applied: true };
     }
     case "personalRecord": {
       const p = payload as ReturnType<typeof mapPersonalRecord>;
-      const values = {
+      await upsertRow(personalRecords, {
         id: p.id,
         exerciseId: p.exerciseId,
         exerciseName: p.exerciseName,
@@ -358,20 +310,6 @@ async function applyChange(change: SyncChange): Promise<ApplyResult> {
         revision: change.revision,
         updatedAt: now,
         deletedAt: null,
-      };
-      await db.insert(personalRecords).values(values).onConflictDoUpdate({
-        target: personalRecords.id,
-        set: {
-          exerciseId: values.exerciseId,
-          exerciseName: values.exerciseName,
-          type: values.type,
-          value: values.value,
-          date: values.date,
-          workoutLogId: values.workoutLogId,
-          revision: values.revision,
-          updatedAt: values.updatedAt,
-          deletedAt: null,
-        },
       });
       return { ok: true, applied: true };
     }
@@ -416,98 +354,52 @@ async function withRetry<T>(
   throw lastError;
 }
 
+/** Rows changed since the given moment, or all live rows on the initial pull. */
+async function selectChangedRows<TTable extends SyncTable>(
+  table: TTable,
+  since: Date | null
+): Promise<TTable["$inferSelect"][]> {
+  const t = table as typeof exercises;
+  const rows = await withRetry(() =>
+    since
+      ? db.select().from(t).where(changedSince(t, since))
+      : db.select().from(t).where(isNull(t.deletedAt))
+  );
+  return rows as TTable["$inferSelect"][];
+}
+
+function toServerChanges<TRow extends { revision: number }>(
+  entityType: EntityType,
+  rows: TRow[],
+  mapRow: (row: TRow) => unknown
+): ServerChange[] {
+  return rows.map((row) => ({
+    entityType,
+    entity: mapRow(row),
+    revision: row.revision,
+  }));
+}
+
 async function pullChanges(lastPullAt: string | null): Promise<ServerChange[]> {
   const since = lastPullAt ? new Date(lastPullAt) : null;
 
-  const [
-    exerciseRows,
-    programRows,
-    logRows,
-    measurementRows,
-    cardioRows,
-    recordRows,
-  ] = await Promise.all([
-    withRetry(() =>
-      since
-        ? db.select().from(exercises).where(changedSince(exercises, since))
-        : db.select().from(exercises).where(isNull(exercises.deletedAt))
-    ),
-    withRetry(() =>
-      since
-        ? db.select().from(programs).where(changedSince(programs, since))
-        : db.select().from(programs).where(isNull(programs.deletedAt))
-    ),
-    withRetry(() =>
-      since
-        ? db.select().from(workoutLogs).where(changedSince(workoutLogs, since))
-        : db.select().from(workoutLogs).where(isNull(workoutLogs.deletedAt))
-    ),
-    withRetry(() =>
-      since
-        ? db
-            .select()
-            .from(bodyMeasurements)
-            .where(changedSince(bodyMeasurements, since))
-        : db
-            .select()
-            .from(bodyMeasurements)
-            .where(isNull(bodyMeasurements.deletedAt))
-    ),
-    withRetry(() =>
-      since
-        ? db
-            .select()
-            .from(cardioSessions)
-            .where(changedSince(cardioSessions, since))
-        : db
-            .select()
-            .from(cardioSessions)
-            .where(isNull(cardioSessions.deletedAt))
-    ),
-    withRetry(() =>
-      since
-        ? db
-            .select()
-            .from(personalRecords)
-            .where(changedSince(personalRecords, since))
-        : db
-            .select()
-            .from(personalRecords)
-            .where(isNull(personalRecords.deletedAt))
-    ),
-  ]);
+  const [exerciseRows, programRows, logRows, measurementRows, cardioRows, recordRows] =
+    await Promise.all([
+      selectChangedRows(exercises, since),
+      selectChangedRows(programs, since),
+      selectChangedRows(workoutLogs, since),
+      selectChangedRows(bodyMeasurements, since),
+      selectChangedRows(cardioSessions, since),
+      selectChangedRows(personalRecords, since),
+    ]);
 
   return [
-    ...exerciseRows.map((r) => ({
-      entityType: "exercise" as EntityType,
-      entity: mapExercise(r),
-      revision: r.revision,
-    })),
-    ...programRows.map((r) => ({
-      entityType: "program" as EntityType,
-      entity: mapProgram(r),
-      revision: r.revision,
-    })),
-    ...logRows.map((r) => ({
-      entityType: "workoutLog" as EntityType,
-      entity: mapWorkoutLog(r),
-      revision: r.revision,
-    })),
-    ...measurementRows.map((r) => ({
-      entityType: "bodyMeasurement" as EntityType,
-      entity: mapBodyMeasurement(r),
-      revision: r.revision,
-    })),
-    ...cardioRows.map((r) => ({
-      entityType: "cardioSession" as EntityType,
-      entity: mapCardioSession(r),
-      revision: r.revision,
-    })),
-    ...recordRows.map((r) => ({
-      entityType: "personalRecord" as EntityType,
-      entity: mapPersonalRecord(r),
-      revision: r.revision,
-    })),
+    ...toServerChanges("exercise", exerciseRows, mapExercise),
+    ...toServerChanges("program", programRows, mapProgram),
+    ...toServerChanges("workoutLog", logRows, mapWorkoutLog),
+    ...toServerChanges("bodyMeasurement", measurementRows, mapBodyMeasurement),
+    ...toServerChanges("cardioSession", cardioRows, mapCardioSession),
+    ...toServerChanges("personalRecord", recordRows, mapPersonalRecord),
   ];
 }
 

@@ -16,6 +16,15 @@ import { calculatePace, formatPace } from "@/lib/utils/calculations";
 import type { CardioType } from "@/lib/db/types";
 import { useT } from "@/lib/i18n/use-t";
 
+/**
+ * An empty field parses to `NaN`, which propagates through every sum it
+ * touches. Blank means "none entered", so read it as zero.
+ */
+function toNumber(value: string): number {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
   const [type, setType] = useState<CardioType>("run");
   const [distance, setDistance] = useState("");
@@ -25,19 +34,19 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
   const [saving, setSaving] = useState(false);
   const t = useT();
 
-  const totalMinutes = parseFloat(minutes) + parseFloat(seconds) / 60 || 0;
-  const distKm = parseFloat(distance) || 0;
-  const pace = calculatePace(totalMinutes, distKm);
+  const durationSeconds = toNumber(minutes) * 60 + toNumber(seconds);
+  const distKm = toNumber(distance);
+  const pace = calculatePace(durationSeconds / 60, distKm);
+  const canSave = distKm > 0 && durationSeconds > 0;
 
   const handleSubmit = async () => {
-    const duration = parseFloat(minutes) * 60 + parseFloat(seconds);
-    if (!distance || !duration) return;
+    if (!canSave) return;
     setSaving(true);
     try {
       await createCardioSession({
         type,
-        distance: parseFloat(distance),
-        duration,
+        distance: distKm,
+        duration: durationSeconds,
         avgHeartRate: heartRate ? parseInt(heartRate) : undefined,
         date: new Date().toISOString(),
       });
@@ -117,7 +126,7 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
         <Button
           className="w-full"
           onClick={() => void handleSubmit()}
-          disabled={!distance || !minutes || saving}
+          disabled={!canSave || saving}
         >
           {saving ? t.cardio.saving : t.cardio.save}
         </Button>

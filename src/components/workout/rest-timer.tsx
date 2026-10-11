@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { useT } from "@/lib/i18n/use-t";
+import { formatRestDuration } from "@/lib/workout/rest-duration";
 
 interface RestTimerProps {
   endTime: number | null;
@@ -41,8 +42,6 @@ export function RestTimer({ endTime, duration, isRunning, onStop }: RestTimerPro
 
   if (!isRunning || remaining <= 0) return null;
 
-  const minutes = Math.floor(remaining / 60);
-  const seconds = remaining % 60;
   const progress = duration > 0 ? remaining / duration : 0;
 
   return (
@@ -56,7 +55,7 @@ export function RestTimer({ endTime, duration, isRunning, onStop }: RestTimerPro
         <div className="relative flex items-center justify-center shrink-0">
           <CircularProgress progress={progress} />
           <span className="absolute text-lg font-bold tabular-nums">
-            {minutes}:{seconds.toString().padStart(2, "0")}
+            {formatRestDuration(remaining)}
           </span>
         </div>
         <span className="text-sm font-medium text-muted-foreground">
