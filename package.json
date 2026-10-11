@@ -11,8 +11,6 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "npx tsx scripts/db/apply-migrations.ts",
     "build:exercises": "npx tsx scripts/build-exercise-library.ts",
-    "boostcamp:map": "npx tsx scripts/boostcamp/generate-mapping.ts",
-    "boostcamp:import": "npx tsx scripts/boostcamp/import.ts",
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
