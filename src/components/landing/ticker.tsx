@@ -1,49 +1,51 @@
-import {
-  Activity,
-  Download,
-  Languages,
-  Library,
-  MoonStar,
-  Smartphone,
-  Timer,
-  TrendingUp,
-  Trophy,
-  UserX,
-  WifiOff,
-} from "lucide-react";
+/*
+ * A chalkboard ticker of log lines — the raw material of the app.
+ * PR entries burn ember; everything else stays chalk.
+ */
 
-const items = [
-  { icon: WifiOff, label: "Offline-first" },
-  { icon: UserX, label: "No account" },
-  { icon: Library, label: "824 exercises" },
-  { icon: Timer, label: "Auto rest timer" },
-  { icon: Trophy, label: "PR detection" },
-  { icon: TrendingUp, label: "e1RM & volume charts" },
-  { icon: Activity, label: "Muscle heatmap" },
-  { icon: Languages, label: "English & Русский" },
-  { icon: MoonStar, label: "Light & dark" },
-  { icon: Smartphone, label: "Installable PWA" },
-  { icon: Download, label: "CSV export" },
+const ENTRIES: Array<{ text: string; pr?: boolean }> = [
+  { text: "SQUAT 140×5", pr: true },
+  { text: "REST 02:30" },
+  { text: "BENCH 102.5×3" },
+  { text: "+2.5 KG NEXT SESSION" },
+  { text: "DEADLIFT 180×1", pr: true },
+  { text: "PULL-UP BW×12" },
+  { text: "SYNCED · OFFLINE ✓" },
+  { text: "WEEK 7 — DELOAD" },
+  { text: "OHP 60×5" },
+  { text: "e1RM 152.3 KG", pr: true },
+  { text: "ROW 90×8" },
+  { text: "REST 01:30" },
 ];
 
-/** An infinite, pause-on-hover ticker of what ships in the box. */
+function Row({ hidden }: { hidden?: boolean }) {
+  return (
+    <div
+      className="flex shrink-0 items-center gap-10 py-3.5 pr-10"
+      aria-hidden={hidden}
+    >
+      {ENTRIES.map((e) => (
+        <span
+          key={e.text}
+          className={`fl-mono text-[0.78rem] tracking-[0.14em] whitespace-nowrap ${
+            e.pr ? "text-[var(--fl-ember)]" : "text-[var(--fl-muted)]"
+          }`}
+        >
+          {e.text}
+          {e.pr && <span className="ml-2 font-bold">PR</span>}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function Ticker() {
   return (
-    <section aria-label="Highlights" className="lp-marquee-pause relative py-6">
-      <div className="lp-mask-x overflow-hidden">
-        <ul className="lp-marquee flex w-max items-center gap-3 pr-3" style={{ "--lp-duration": "46s" } as React.CSSProperties}>
-          {[...items, ...items].map(({ icon: Icon, label }, i) => (
-            <li
-              key={`${label}-${i}`}
-              aria-hidden={i >= items.length}
-              className="flex shrink-0 items-center gap-2 rounded-full border border-border/70 bg-card/60 px-4 py-2 text-sm font-medium text-foreground/85 backdrop-blur"
-            >
-              <Icon className="size-4 text-primary" />
-              {label}
-            </li>
-          ))}
-        </ul>
+    <div className="fl-ticker">
+      <div className="fl-ticker-track">
+        <Row />
+        <Row hidden />
       </div>
-    </section>
+    </div>
   );
 }

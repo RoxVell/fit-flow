@@ -1,109 +1,89 @@
 import type { Metadata } from "next";
-import { Instrument_Serif } from "next/font/google";
-import { LandingShell } from "@/components/landing/landing-shell";
-import { LandingHeader } from "@/components/landing/header";
+import Link from "next/link";
+import localFont from "next/font/local";
 import { Hero } from "@/components/landing/hero";
 import { Ticker } from "@/components/landing/ticker";
-import { Bento } from "@/components/landing/bento";
-import { HowItWorks } from "@/components/landing/how-it-works";
-import { Numbers } from "@/components/landing/numbers";
-import { Faq } from "@/components/landing/faq";
-import { Cta } from "@/components/landing/cta";
+import { LiveLog } from "@/components/landing/live-log";
+import { PlateRack } from "@/components/landing/plate-rack";
+import { ProgressChart } from "@/components/landing/progress-chart";
+import { ForgeCta } from "@/components/landing/forge-cta";
 import { Footer } from "@/components/landing/footer";
-import "@/components/landing/landing.css";
+import { LandingMotionConfig } from "@/components/landing/motion-config";
+import "./landing.css";
 
-// Editorial italic for the accent words in headings. Loaded only on this
-// route; the app itself stays on Geist.
-const instrumentSerif = Instrument_Serif({
+// Self-hosted: the dev machine can't always reach fonts.googleapis.com,
+// and an offline-first app shouldn't depend on it anyway.
+const anton = localFont({
+  src: "./fonts/anton-latin.woff2",
   weight: "400",
-  style: "italic",
-  subsets: ["latin"],
-  variable: "--font-instrument-serif",
+  variable: "--font-display",
   display: "swap",
+  adjustFontFallback: "Arial",
 });
 
-const TITLE = "FitFlow — Every rep counted. Even with zero bars.";
-const DESCRIPTION =
-  "An offline-first strength tracker that installs like an app, needs no account, and keeps every set on your phone. Programs, one-tap set logging, auto rest timer, PR detection and progress charts.";
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: TITLE,
-  description: DESCRIPTION,
-  keywords: [
-    "workout tracker",
-    "strength training app",
-    "offline workout log",
-    "PWA fitness app",
-    "one rep max calculator",
-    "push pull legs",
-  ],
-  alternates: { canonical: "/landing" },
+  title: "FitFlow — Every rep. Every kilo. Counted.",
+  description:
+    "An offline-first training log for people who run real programs. Build the plan, log sets as you lift, and watch your e1RM climb — even with no signal.",
   openGraph: {
-    title: TITLE,
-    description: DESCRIPTION,
+    title: "FitFlow — Every rep. Every kilo. Counted.",
+    description:
+      "Offline-first training log: programs, live set logging, rest timer, automatic PRs, and progress analytics.",
     type: "website",
-    url: "/landing",
-    siteName: "FitFlow",
-    locale: "en_US",
   },
-  twitter: {
-    card: "summary_large_image",
-    title: TITLE,
-    description: DESCRIPTION,
-  },
-  robots: { index: true, follow: true },
 };
 
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  name: "FitFlow",
-  applicationCategory: "HealthApplication",
-  operatingSystem: "Web, iOS, Android",
-  description: DESCRIPTION,
-  url: `${SITE_URL}/landing`,
-  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-  featureList: [
-    "Offline-first workout logging",
-    "824 illustrated exercises",
-    "Automatic rest timer",
-    "Personal record detection",
-    "Estimated 1RM and volume charts",
-    "English and Russian",
-  ],
-};
+/** Bar-and-plates logo mark, echoing the hero. */
+function LogoMark() {
+  return (
+    <svg viewBox="0 0 32 20" className="h-5 w-8" aria-hidden>
+      <rect x="0" y="8.5" width="32" height="3" rx="1.5" fill="var(--fl-muted)" />
+      <rect x="5" y="2" width="3.4" height="16" rx="1.6" fill="var(--fl-ember)" />
+      <rect x="9.6" y="4.5" width="2.8" height="11" rx="1.4" fill="var(--fl-ember)" opacity="0.7" />
+      <rect x="23.6" y="2" width="3.4" height="16" rx="1.6" fill="var(--fl-ember)" />
+      <rect x="19.6" y="4.5" width="2.8" height="11" rx="1.4" fill="var(--fl-ember)" opacity="0.7" />
+    </svg>
+  );
+}
 
 export default function LandingPage() {
   return (
-    <LandingShell>
-      <div className={`lp-root relative min-h-dvh ${instrumentSerif.variable}`}>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
-        />
-        <a
-          href="#main"
-          className="sr-only z-50 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
-        >
-          Skip to content
-        </a>
+    <div className={`fl ${anton.variable} relative min-h-dvh`}>
+      <header className="sticky top-0 z-30 border-b border-[var(--fl-line)] bg-[rgb(12_10_8/0.8)] backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
+          <Link href="/landing" className="flex items-center gap-2.5">
+            <LogoMark />
+            <span className="fl-display text-lg tracking-[0.04em]">FitFlow</span>
+          </Link>
+          <nav className="fl-mono hidden items-center gap-8 text-[0.72rem] tracking-[0.18em] text-[var(--fl-muted)] uppercase sm:flex">
+            <Link href="#log" className="transition-colors hover:text-[var(--fl-text)]">
+              The set
+            </Link>
+            <Link href="#rack" className="transition-colors hover:text-[var(--fl-text)]">
+              The rack
+            </Link>
+            <Link href="#progress" className="transition-colors hover:text-[var(--fl-text)]">
+              Progress
+            </Link>
+          </nav>
+          <Link href="/dashboard" className="fl-btn h-9 px-4 text-sm">
+            Open app
+          </Link>
+        </div>
+      </header>
 
-        <LandingHeader />
-
-        <main id="main">
+      <LandingMotionConfig>
+        <main>
           <Hero />
           <Ticker />
-          <Bento />
-          <HowItWorks />
-          <Numbers />
-          <Faq />
-          <Cta />
+          <LiveLog />
+          <PlateRack />
+          <ProgressChart />
+          <ForgeCta />
         </main>
+      </LandingMotionConfig>
 
-        <Footer />
-      </div>
-    </LandingShell>
+      <Footer />
+    </div>
   );
 }
