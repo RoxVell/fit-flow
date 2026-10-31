@@ -1,6 +1,7 @@
 "use client";
 
-import { Trophy, Dumbbell, TrendingUp } from "lucide-react";
+import { Trophy, Dumbbell } from "lucide-react";
+import { PrImprovement } from "@/components/workout/pr-improvement";
 import { usePersonalRecords } from "@/lib/hooks/use-data";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
 import { useT } from "@/lib/i18n/use-t";
@@ -29,19 +30,6 @@ export function RecentPRs() {
       </div>
       <div className="space-y-2">
         {sorted.slice(0, 5).map((pr) => {
-          const prev = records
-            .filter(
-              (r) =>
-                r.exerciseId === pr.exerciseId &&
-                r.type === pr.type &&
-                r.id !== pr.id &&
-                new Date(r.date) <= new Date(pr.date)
-            )
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-
-          const absDelta = prev ? pr.value - prev.value : null;
-          const pctDelta = prev && prev.value > 0 ? (pr.value / prev.value - 1) * 100 : null;
-
           return (
             <div
               key={pr.id}
@@ -62,17 +50,7 @@ export function RecentPRs() {
                 <p className="text-sm font-bold">
                   {pr.value} {prUnit}
                 </p>
-                {absDelta !== null && absDelta !== 0 && (
-                  <p className="flex items-center gap-0.5 text-[11px] text-green-500 justify-end">
-                    <TrendingUp className="h-3 w-3" />
-                    +{absDelta.toFixed(2)} {prUnit}
-                    {pctDelta !== null && (
-                      <span className="text-green-500/70">
-                        (+{pctDelta.toFixed(1)}%)
-                      </span>
-                    )}
-                  </p>
-                )}
+                <PrImprovement record={pr} history={records} unit={prUnit} />
               </div>
             </div>
           );

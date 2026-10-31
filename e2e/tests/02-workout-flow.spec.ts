@@ -53,6 +53,27 @@ test("user can start a workout, log a set, and finish the session", async ({ pag
   // We should now be on the active workout screen.
   await expect(page).toHaveURL(/\/workout\/active/);
 
+  // A prior weight record lets Triumph show growth even while this workout's
+  // records are being saved under their persistent IDs.
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open("fitflow_v2");
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const database = request.result;
+      const tx = database.transaction(["workoutDrafts", "personalRecords"], "readwrite");
+      const draft = tx.objectStore("workoutDrafts").get("active");
+      draft.onsuccess = () => {
+        tx.objectStore("personalRecords").put({
+          id: "previous-weight", exerciseId: draft.result.exercises[0].exerciseId,
+          exerciseName: "Previous record", type: "weight", value: 50,
+          date: "2026-01-01T00:00:00Z", revision: 1, updatedAt: "2026-01-01T00:00:00Z",
+        });
+      };
+      tx.oncomplete = () => { database.close(); resolve(); };
+      tx.onerror = () => { database.close(); reject(tx.error); };
+    };
+  }));
+
   const firstWeight = page.getByRole("textbox", { name: /set 1 weight/i }).first();
   await expect(firstWeight).toBeVisible({ timeout: 10_000 });
   await firstWeight.fill("60");
@@ -78,4 +99,6 @@ test("user can start a workout, log a set, and finish the session", async ({ pag
   await expect(
     page.getByText(/workout (complete|completed|finished)/i).first(),
   ).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/\+10\.00 kg/i)).toBeVisible();
+  await expect(page.getByText("(+20.0%)", { exact: true })).toBeVisible();
 });

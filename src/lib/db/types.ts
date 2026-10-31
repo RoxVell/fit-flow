@@ -222,3 +222,10 @@ export interface WorkoutDraft {
   startedAt: string | null;
   updatedAt: string;
 }
+
+/** Local replacement preferences, independent of completed workout history. */
+export interface ExerciseReplacement {
+  fromExerciseId: string;
+  toExerciseId: string;
+  lastUsedAt: string;
+}

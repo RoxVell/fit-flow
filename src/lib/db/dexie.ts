@@ -4,6 +4,7 @@ import type {
   BodyMeasurementEntity,
   CardioSessionEntity,
   ExerciseEntity,
+  ExerciseReplacement,
   PersonalRecordEntity,
   ProgramEntity,
   SyncQueueEntry,
@@ -20,6 +21,7 @@ export class FitFlowDB extends Dexie {
   personalRecords!: Table<PersonalRecordEntity, string>;
   syncQueue!: Table<SyncQueueEntry, string>;
   workoutDrafts!: Table<WorkoutDraft, string>;
+  exerciseReplacements!: Table<ExerciseReplacement, [string, string]>;
   meta!: Table<AppMeta, string>;
 
   constructor() {
@@ -34,6 +36,9 @@ export class FitFlowDB extends Dexie {
       syncQueue: "id, entityId, status, createdAt",
       workoutDrafts: "id",
       meta: "key",
+    });
+    this.version(2).stores({
+      exerciseReplacements: "[fromExerciseId+toExerciseId], fromExerciseId",
     });
   }
 }

@@ -1,5 +1,19 @@
 import { test, expect, waitForSeed } from "../fixtures/base";
 import { startWorkout } from "../fixtures/workout";
+import type { ProgramEntity } from "../../src/lib/db/types";
+
+async function readPrograms(page: import("@playwright/test").Page): Promise<ProgramEntity[]> {
+  return page.evaluate(() => new Promise((resolve, reject) => {
+    const request = indexedDB.open("fitflow_v2");
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const database = request.result;
+      const read = database.transaction("programs").objectStore("programs").getAll();
+      read.onsuccess = () => { database.close(); resolve(read.result); };
+      read.onerror = () => { database.close(); reject(read.error); };
+    };
+  }));
+}
 
 /**
  * Mid-session edits on the active workout screen. These mutate the
@@ -59,9 +73,16 @@ test("user can add an extra exercise mid-workout", async ({ page }) => {
 });
 
 test("user can swap an exercise for a different one", async ({ page }) => {
+  const programsBefore = await readPrograms(page);
   const firstCard = exerciseCards(page).first();
-  const original = (await firstCard.locator("button.underline").textContent())?.trim();
-  expect(original).toBeTruthy();
+  // Use a uniquely named source: the library contains multiple Hip Thrust
+  // variants with identical names but different exercise IDs.
+  const original = "Jefferson Curl";
+  await firstCard.getByRole("button", { name: /exercise options/i }).click();
+  await page.getByRole("menuitem", { name: /swap exercise/i }).click();
+  await page.getByPlaceholder(/search exercises/i).fill(original);
+  await page.getByRole("dialog").getByRole("button", { name: /Jefferson Curl/ }).click();
+  await page.getByRole("button", { name: "Only this workout", exact: true }).click();
 
   await firstCard.getByRole("button", { name: /exercise options/i }).click();
   await page.getByRole("menuitem", { name: /swap exercise/i }).click();
@@ -71,10 +92,52 @@ test("user can swap an exercise for a different one", async ({ page }) => {
   await page.getByRole("button", { name: "Anderson Squat" }).click();
   await expect(search).toBeHidden();
 
+  await page.getByRole("button", { name: "Only this workout", exact: true }).click();
   await expect(
     firstCard.getByRole("button", { name: "Anderson Squat", exact: true })
   ).toBeVisible();
   await expect(exerciseTitle(page, original!)).toHaveCount(0);
+  expect(await readPrograms(page)).toEqual(programsBefore);
+
+  // Return to the source exercise, reload, and check that its earlier
+  // replacement is suggested before exercises from general usage history.
+  await firstCard.getByRole("button", { name: /exercise options/i }).click();
+  await page.getByRole("menuitem", { name: /swap exercise/i }).click();
+  await page.getByPlaceholder(/search exercises/i).fill(original!);
+  await page.getByRole("dialog").getByRole("button").filter({
+    has: page.getByText(original!, { exact: true }),
+  }).click();
+  await page.getByRole("button", { name: "Only this workout", exact: true }).click();
+  await page.reload();
+  await exerciseCards(page).first().getByRole("button", { name: /exercise options/i }).click();
+  await page.getByRole("menuitem", { name: /swap exercise/i }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("Previous replacements", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: /Anderson Squat/ })).toBeVisible();
+  const buttons = await dialog.getByRole("button").allTextContents();
+  expect(buttons.find((name) => name.trim() && name !== "Close")).toContain("Anderson Squat");
+});
+
+test("confirmed replacement updates all future program sessions and survives reload", async ({ page }) => {
+  const before = (await readPrograms(page)).find((p) => p.isActive)!;
+  const sessionId = new URL(page.url()).searchParams.get("session");
+  const sourceId = before.sessions.find((s) => s.id === sessionId)!.exercises[0].exerciseId;
+  const firstCard = exerciseCards(page).first();
+  await firstCard.getByRole("button", { name: /exercise options/i }).click();
+  await page.getByRole("menuitem", { name: /swap exercise/i }).click();
+  await page.getByPlaceholder(/search exercises/i).fill("Anderson Squat");
+  await page.getByRole("dialog").getByRole("button", { name: /Anderson Squat/ }).click();
+  await page.getByRole("button", { name: "Update program", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await page.reload();
+  const after = (await readPrograms(page)).find((p) => p.id === before.id)!;
+  const targetId = after.sessions.find((s) => s.id === sessionId)!.exercises[0].exerciseId;
+  expect(targetId).not.toBe(sourceId);
+  expect(after.sessions).toEqual(before.sessions.map((s) => ({
+    ...s, exercises: s.exercises.map((e) => e.exerciseId === sourceId
+      ? { ...e, exerciseId: targetId, exercise: undefined } : e),
+  })));
+  await expect(exerciseCards(page).first().getByRole("button", { name: "Anderson Squat", exact: true })).toBeVisible();
 });
 
 test("completing a set starts the rest timer, which can be skipped", async ({ page }) => {

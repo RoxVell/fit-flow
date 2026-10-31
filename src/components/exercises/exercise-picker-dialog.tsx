@@ -22,6 +22,7 @@ interface ExercisePickerDialogProps {
   title: string;
   excludeIds?: Set<string>;
   onlyUsed?: boolean;
+  replacementSourceId?: string;
   onSelect: (exerciseId: string) => void;
   emptyMessage?: string;
   emptyMessageAllExcluded?: string;
@@ -40,6 +41,7 @@ function ExercisePickerDialogContent({
   title,
   excludeIds,
   onlyUsed = false,
+  replacementSourceId,
   onSelect,
   emptyMessage,
   emptyMessageAllExcluded,
@@ -54,7 +56,7 @@ function ExercisePickerDialogContent({
     () => ({ search: search.trim() || undefined }),
     [search]
   );
-  const { exercises, loading, usageCounts } = useSortedExerciseLibrary(filters);
+  const { exercises, loading, usageCounts, preferredIds } = useSortedExerciseLibrary(filters, replacementSourceId);
 
   useEffect(() => {
     if (!open) setSearch("");
@@ -84,13 +86,14 @@ function ExercisePickerDialogContent({
   }, [exercises, excludeIds, onlyUsed, usageCounts]);
 
   const recentItems = useMemo(
-    () => (onlyUsed ? [] : items.filter((e) => (usageCounts?.get(e.id) ?? 0) > 0)),
-    [items, usageCounts, onlyUsed]
+    () => (onlyUsed ? [] : items.filter((e) => !preferredIds?.includes(e.id) && (usageCounts?.get(e.id) ?? 0) > 0)),
+    [items, usageCounts, onlyUsed, preferredIds]
   );
   const otherItems = useMemo(
-    () => (onlyUsed ? items : items.filter((e) => (usageCounts?.get(e.id) ?? 0) === 0)),
-    [items, usageCounts, onlyUsed]
+    () => (onlyUsed ? items : items.filter((e) => !preferredIds?.includes(e.id) && (usageCounts?.get(e.id) ?? 0) === 0)),
+    [items, usageCounts, onlyUsed, preferredIds]
   );
+  const preferredItems = onlyUsed ? [] : items.filter((e) => preferredIds?.includes(e.id));
 
   const handleSelect = (exerciseId: string) => {
     onSelect(exerciseId);
@@ -164,18 +167,26 @@ function ExercisePickerDialogContent({
             </p>
           ) : (
             <div className="space-y-0.5">
+              {!onlyUsed && !search.trim() && preferredItems.length > 0 && (
+                <>
+                  <p className="px-2 pt-1 pb-1 text-xs font-medium text-muted-foreground">
+                    {ui.previousReplacements}
+                  </p>
+                  {preferredItems.map(renderItem)}
+                </>
+              )}
               {!onlyUsed && recentItems.length > 0 && !search.trim() ? (
                 <>
                   <p className="px-2 pt-1 pb-1 text-xs font-medium text-muted-foreground">
                     {ui.recentExercises}
                   </p>
                   {recentItems.map(renderItem)}
-                  {otherItems.length > 0 ? (
-                    <p className="px-2 pt-3 pb-1 text-xs font-medium text-muted-foreground">
-                      {ui.allExercises}
-                    </p>
-                  ) : null}
                 </>
+              ) : null}
+              {!onlyUsed && !search.trim() && otherItems.length > 0 && (recentItems.length > 0 || preferredItems.length > 0) ? (
+                <p className="px-2 pt-3 pb-1 text-xs font-medium text-muted-foreground">
+                  {ui.allExercises}
+                </p>
               ) : null}
               {(search.trim() || onlyUsed ? items : otherItems).map(renderItem)}
             </div>

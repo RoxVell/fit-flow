@@ -123,3 +123,30 @@ export async function setActiveProgram(id: string): Promise<ProgramEntity | unde
 export async function deleteProgram(id: string): Promise<void> {
   await softDeleteEntity(db.programs, "program", id, { isActive: false });
 }
+
+/** Update future session templates without rebuilding IDs or touching workout logs. */
+export async function replaceExerciseInProgram(
+  programId: string,
+  fromExerciseId: string,
+  toExerciseId: string
+): Promise<void> {
+  if (fromExerciseId === toExerciseId) return;
+  await db.transaction("rw", db.programs, db.syncQueue, async () => {
+    const program = await db.programs.get(programId);
+    if (!isActiveRecord(program)) throw new Error("Program no longer available");
+    if (!program.sessions.some((s) => s.exercises.some((e) => e.exerciseId === fromExerciseId))) return;
+    await putEntityWithSync(db.programs, "program", {
+      ...program,
+      sessions: program.sessions.map((session) => ({
+        ...session,
+        exercises: session.exercises.map((exercise) =>
+          exercise.exerciseId === fromExerciseId
+            ? { ...exercise, exerciseId: toExerciseId, exercise: undefined }
+            : exercise
+        ),
+      })),
+      revision: program.revision + 1,
+      updatedAt: new Date().toISOString(),
+    }, "update");
+  });
+}

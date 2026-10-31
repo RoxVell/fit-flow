@@ -9,9 +9,11 @@ import type { PersonalRecord } from "@/lib/db/types";
 import { useT } from "@/lib/i18n/use-t";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
 import { getPrTypeLabels } from "@/lib/workout/pr-labels";
+import { PrImprovement } from "@/components/workout/pr-improvement";
 
 interface TriumphScreenProps {
   records: PersonalRecord[];
+  previousRecords: PersonalRecord[];
   volume: number;
   duration: string;
   onClose: () => void;
@@ -60,7 +62,7 @@ const CONFETTI = [
   { x: 45, delay: 0.7, color: "var(--chart-5)", size: 6, shape: "circle" },
 ];
 
-export function TriumphScreen({ records, volume, duration, onClose }: TriumphScreenProps) {
+export function TriumphScreen({ records, previousRecords, volume, duration, onClose }: TriumphScreenProps) {
   const t = useT();
   const { getName } = useExerciseLookup();
   const reduceMotion = useReducedMotion();
@@ -238,9 +240,12 @@ export function TriumphScreen({ records, volume, duration, onClose }: TriumphScr
                           <span className="text-muted-foreground">
                             {prLabels[pr.type] ?? pr.type}
                           </span>
-                          <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 font-bold text-primary tabular-nums">
-                            {formatPrValue(pr)} {t.dashboard.kg}
-                          </span>
+                          <div className="shrink-0 text-right">
+                            <span className="inline-block rounded-full bg-primary/10 px-2.5 py-0.5 font-bold text-primary tabular-nums">
+                              {formatPrValue(pr)} {t.dashboard.kg}
+                            </span>
+                            <PrImprovement record={pr} history={previousRecords} unit={t.dashboard.kg} />
+                          </div>
                         </div>
                       ))}
                     </div>

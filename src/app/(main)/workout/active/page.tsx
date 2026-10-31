@@ -23,6 +23,7 @@ import { TriumphScreen } from "@/components/workout/triumph-screen";
 import { ExerciseHistorySheet } from "@/components/workout/exercise-history-sheet";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatDuration, formatElapsedClock } from "@/lib/utils/calculations";
+import { replaceExerciseInProgram } from "@/lib/repositories/programs";
 
 function CenteredMessage({ children }: { children: ReactNode }) {
   return (
@@ -58,6 +59,8 @@ function ActiveWorkoutContent() {
     showTriumph,
     isAbandoning,
     newRecords,
+    previousRecords,
+    programId,
     triumphData,
     handleCloseTriumph,
     toggleSetCompleted,
@@ -75,6 +78,13 @@ function ActiveWorkoutContent() {
     string | null
   >(null);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
+  const [programReplacement, setProgramReplacement] = useState<{
+    programId: string;
+    fromId: string;
+    toId: string;
+  } | null>(null);
+  const [replacementPending, setReplacementPending] = useState(false);
+  const [replacementError, setReplacementError] = useState(false);
   const [historyExercise, setHistoryExercise] = useState<{
     id: string;
     name: string;
@@ -97,6 +107,7 @@ function ActiveWorkoutContent() {
       <AnimatePresence>
         <TriumphScreen
           records={newRecords}
+          previousRecords={previousRecords}
           volume={triumphData?.volume ?? 0}
           duration={
             triumphData
@@ -154,6 +165,9 @@ function ActiveWorkoutContent() {
       </div>
 
       <div className="pt-[calc(env(safe-area-inset-top)+4rem)] pb-20 px-4">
+        {replacementError && !programReplacement && (
+          <p role="alert" className="mb-3 text-sm text-destructive">{t.workout.replacementFailed}</p>
+        )}
         <AnimatePresence>
           {exercises.map((ex, index) => {
             const exercise = exerciseMap.get(ex.exerciseId);
@@ -215,9 +229,14 @@ function ActiveWorkoutContent() {
             open={swapTargetLoggedExerciseId != null}
             onOpenChange={handleSwapDialogOpenChange}
             title={t.workout.swapExercise}
+            replacementSourceId={swapTargetExerciseId}
             excludeIds={new Set([swapTargetExerciseId])}
             onSelect={(newId) => {
-              swapExercise(swapTargetLoggedExerciseId, newId);
+              const fromId = swapTargetExerciseId;
+              setReplacementError(false);
+              void swapExercise(swapTargetLoggedExerciseId, newId).then(() => {
+                if (programId) setProgramReplacement({ programId, fromId, toId: newId });
+              }).catch(() => setReplacementError(true));
               setSwapTargetLoggedExerciseId(null);
             }}
           />
@@ -232,6 +251,39 @@ function ActiveWorkoutContent() {
           }}
         />
       </div>
+
+      {programReplacement && (
+        <ConfirmDialog
+          open
+          onOpenChange={(open) => {
+            if (!open && !replacementPending) {
+              setProgramReplacement(null);
+              setReplacementError(false);
+            }
+          }}
+          title={t.workout.replaceInProgramTitle}
+          description={t.workout.replaceInProgramDesc(
+            getName(programReplacement.fromId, t.workout.unknownExercise),
+            getName(programReplacement.toId, t.workout.unknownExercise)
+          )}
+          confirmLabel={t.workout.replaceInProgram}
+          cancelLabel={t.workout.onlyThisWorkout}
+          pending={replacementPending}
+          onConfirm={() => {
+            setReplacementPending(true);
+            setReplacementError(false);
+            void replaceExerciseInProgram(
+              programReplacement.programId,
+              programReplacement.fromId,
+              programReplacement.toId
+            ).then(() => setProgramReplacement(null))
+              .catch(() => setReplacementError(true))
+              .finally(() => setReplacementPending(false));
+          }}
+        >
+          {replacementError && <p role="alert" className="text-sm text-destructive">{t.workout.replacementFailed}</p>}
+        </ConfirmDialog>
+      )}
 
       <AnimatePresence>
         <RestTimer

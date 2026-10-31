@@ -11,8 +11,10 @@ import {
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
 import {
   createPersonalRecord,
-  detectNewPRsFromWorkout,
+  createPRsFromWorkout,
+  getPersonalRecords,
 } from "@/lib/repositories/records";
+import { db } from "@/lib/db/dexie";
 import { createWorkoutLog } from "@/lib/repositories/workouts";
 import { clearDraft, updateDraftExercises } from "@/lib/repositories/drafts";
 import { generateId } from "@/lib/utils/id";
@@ -49,6 +51,8 @@ export interface UseActiveWorkoutResult {
   showTriumph: boolean;
   isAbandoning: boolean;
   newRecords: PersonalRecord[];
+  previousRecords: PersonalRecord[];
+  programId: string | undefined;
   triumphData: { volume: number; minutes: number; seconds: number } | null;
   handleCloseTriumph: () => void;
   toggleSetCompleted: (exerciseId: string, setIndex: number) => void;
@@ -62,7 +66,7 @@ export interface UseActiveWorkoutResult {
     data: Partial<LoggedSet>,
     options?: { propagateWeight?: boolean; baselineWeight?: number }
   ) => void;
-  swapExercise: (loggedExerciseId: string, newExerciseId: string) => void;
+  swapExercise: (loggedExerciseId: string, newExerciseId: string) => Promise<void>;
   updateExercise: (
     loggedExerciseId: string,
     data: Partial<Pick<LoggedExercise, "notes" | "excludeFromStats">>
@@ -113,6 +117,7 @@ export function useActiveWorkout(
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
   const [showTriumph, setShowTriumph] = useState(false);
   const [newRecords, setNewRecords] = useState<PersonalRecord[]>([]);
+  const [previousRecords, setPreviousRecords] = useState<PersonalRecord[]>([]);
   const [triumphData, setTriumphData] = useState<{
     volume: number;
     minutes: number;
@@ -222,10 +227,13 @@ export function useActiveWorkout(
 
       let records: PersonalRecord[] = [];
       try {
-        records = await detectNewPRsFromWorkout(
+        const history = await getPersonalRecords();
+        setPreviousRecords(history);
+        records = createPRsFromWorkout(
           exercises,
           exerciseMap,
-          completedAt
+          completedAt,
+          history
         );
         for (const rec of records) {
           const { id: _id, ...payload } = rec;
@@ -404,13 +412,16 @@ export function useActiveWorkout(
     );
   };
 
-  const swapExercise = (loggedExerciseId: string, newExerciseId: string) => {
-    void updateDraftExercises((current) =>
+  const swapExercise = async (loggedExerciseId: string, newExerciseId: string) => {
+    const original = exercises.find((e) => e.id === loggedExerciseId);
+    if (!original || original.exerciseId === newExerciseId) return;
+    await updateDraftExercises((current) =>
       current.map((e) =>
         e.id === loggedExerciseId
           ? {
               ...e,
               exerciseId: newExerciseId,
+              exercise: undefined,
               notes: undefined,
               excludeFromStats: undefined,
               sets: e.sets.map((s) => ({
@@ -424,6 +435,11 @@ export function useActiveWorkout(
           : e
       )
     );
+    await db.exerciseReplacements.put({
+      fromExerciseId: original.exerciseId,
+      toExerciseId: newExerciseId,
+      lastUsedAt: new Date().toISOString(),
+    });
   };
 
   return {
@@ -448,6 +464,8 @@ export function useActiveWorkout(
     showTriumph,
     isAbandoning,
     newRecords,
+    previousRecords,
+    programId: program?.sessions.some((s) => s.id === sessionId) ? program.id : undefined,
     triumphData,
     handleCloseTriumph,
     toggleSetCompleted,

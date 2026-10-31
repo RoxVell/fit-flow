@@ -18,6 +18,7 @@ export const exerciseUi: Record<
     exercises: string;
     exerciseCount: (n: number) => string;
     recentExercises: string;
+    previousReplacements: string;
     allExercises: string;
     usageTimes: (n: number) => string;
   }
@@ -38,6 +39,7 @@ export const exerciseUi: Record<
     exercises: "Exercises",
     exerciseCount: (n) => `${n} exercises`,
     recentExercises: "Recent exercises",
+    previousReplacements: "Previous replacements",
     allExercises: "All exercises",
     usageTimes: (n) => `${n} times`,
   },
@@ -57,6 +59,7 @@ export const exerciseUi: Record<
     exercises: "Упражнения",
     exerciseCount: (n) => `${n} упражнений`,
     recentExercises: "Недавние упражнения",
+    previousReplacements: "Предыдущие замены",
     allExercises: "Все упражнения",
     usageTimes: (n) => `${n} раз`,
   },
