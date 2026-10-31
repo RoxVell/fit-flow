@@ -1,4 +1,5 @@
 import type { WorkoutLogEntity } from "@/lib/db/types";
+import { subMonths } from "date-fns";
 import { atEndOfDay, atStartOfDay, formatDateKey } from "@/lib/utils/date";
 
 export type WorkoutExportRange = {
@@ -29,8 +30,7 @@ export function createWorkoutExportRange(
   now = new Date()
 ): WorkoutExportRange {
   const months = preset === "1m" ? 1 : preset === "3m" ? 3 : 6;
-  const from = atStartOfDay(now);
-  from.setMonth(from.getMonth() - months);
+  const from = atStartOfDay(subMonths(now, months));
   return {
     from,
     to: atEndOfDay(now),

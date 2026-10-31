@@ -205,5 +205,6 @@ Stop `npm run dev` first — Next.js refuses to start a second dev server for th
 - [Offline architecture](./docs/offline-architecture.md) — storage, sync protocol, conflict resolution
 - [Exercise library & i18n](./docs/exercise-library-and-i18n.md) — catalog format and translations
 - [Progress charts](./docs/progress-charts.md) — e1RM, the progress index, body-part maths
+- [Workout analysis with WebMCP](./docs/webmcp.md) — browser agent tools and JSON export
 - [E2E testing](./docs/e2e-testing.md) — Playwright suite, fixtures, debugging, CI
 - [Design brief](./docs/design-brief.md) — visual language and interaction rules

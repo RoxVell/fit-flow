@@ -32,6 +32,7 @@ import {
   getWorkoutExportFilename,
   type WorkoutExportPreset,
 } from "@/lib/workout/export-csv";
+import { buildWorkoutReport } from "@/lib/workout/analysis";
 
 const PAGE_SIZE = 20;
 const PREVIEW_LIMIT = 5;
@@ -47,8 +48,10 @@ function getDurationMinutes(startedAt: string, endedAt?: string) {
   return Math.max(1, Math.round(ms / 60000));
 }
 
-function downloadCsv(filename: string, csv: string) {
-  const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+function downloadExport(filename: string, content: string, format: "csv" | "json") {
+  const blob = new Blob([format === "csv" ? "\uFEFF" : "", content], {
+    type: format === "csv" ? "text/csv;charset=utf-8" : "application/json;charset=utf-8",
+  });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -99,7 +102,7 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
     setExportTo(range.to);
   };
 
-  const handleExport = () => {
+  const handleExport = (format: "csv" | "json") => {
     if (exporting) return;
     const from = atStartOfDay(exportFrom);
     const to = atEndOfDay(exportTo);
@@ -116,7 +119,12 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
           return;
         }
         const range = { from, to };
-        downloadCsv(getWorkoutExportFilename(range), buildWorkoutLogsCsv(exportLogs));
+        const filename = getWorkoutExportFilename(range);
+        downloadExport(
+          format === "csv" ? filename : filename.replace(/\.csv$/, ".json"),
+          format === "csv" ? buildWorkoutLogsCsv(exportLogs) : JSON.stringify(buildWorkoutReport(exportLogs, range), null, 2),
+          format
+        );
       })
       .catch((err) => {
         console.warn("[workout-history] export failed", err);
@@ -179,7 +187,7 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
         <div className="space-y-3 px-4 pb-4">
           <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
             <p className="text-xs font-medium text-muted-foreground">
-              {t.workout.exportCsv}
+              {t.workout.exportTitle}
             </p>
             <SegmentedTabs
               variant="card"
@@ -232,12 +240,22 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
             <Button
               type="button"
               variant="outline"
-              onClick={handleExport}
+              onClick={() => handleExport("csv")}
               disabled={exporting}
               className="w-full gap-1.5"
             >
               <Download className="h-4 w-4" />
               {exporting ? t.workout.exporting : t.workout.exportCsv}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleExport("json")}
+              disabled={exporting}
+              className="w-full gap-1.5"
+            >
+              <Download className="h-4 w-4" />
+              {exporting ? t.workout.exporting : t.workout.exportJson}
             </Button>
           </div>
         </div>
