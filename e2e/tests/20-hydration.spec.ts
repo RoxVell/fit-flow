@@ -3,7 +3,26 @@ import { join } from "node:path";
 import { test, expect, waitForSeed } from "../fixtures/base";
 
 // Midnight has already passed in UTC, but it is still January 1 locally.
-test.use({ timezoneId: "Pacific/Honolulu" });
+test.use({ timezoneId: "Pacific/Honolulu", locale: "en-US" });
+
+test("settings formats the build date locally without hydration errors", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  const response = await page.goto("/settings");
+  expect(await response!.text()).toMatch(/<time[^>]*>—<\/time>/);
+
+  const date = page.locator("time");
+  const iso = await date.getAttribute("datetime");
+  expect(iso).toBeTruthy();
+  const expected = await page.evaluate((value) => new Date(value!).toLocaleDateString("en-US", {
+    year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+  }), iso);
+  await expect(date).toHaveText(expected);
+  expect(errors.filter((message) => /hydrat|#418|didn't match/i.test(message))).toEqual([]);
+});
 
 test("a cached form uses the client's local date without hydration errors", async ({ page }) => {
   const errors: string[] = [];

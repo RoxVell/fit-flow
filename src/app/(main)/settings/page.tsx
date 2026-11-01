@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { CalendarClock, Languages, Palette, Info, RefreshCw } from "lucide-react";
 import { ThemeToggle } from "@/components/settings/theme-toggle";
 import { LanguageToggle } from "@/components/settings/language-toggle";
@@ -9,12 +10,17 @@ import { useSyncState } from "@/lib/sync/sync-service";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "—";
 const BUILD_DATE = process.env.NEXT_PUBLIC_BUILD_DATE ?? null;
+const subscribeNoop = () => () => {};
 
 export default function SettingsPage() {
   const t = useT();
   const { formatDateTime } = useFormat();
   const { lastSyncAt } = useSyncState();
-  const buildDate = BUILD_DATE ? formatDateTime(BUILD_DATE) : "—";
+  const buildDate = useSyncExternalStore(
+    subscribeNoop,
+    () => BUILD_DATE ? formatDateTime(BUILD_DATE) : "—",
+    () => "—"
+  );
 
   return (
     <div className="space-y-10 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
@@ -61,7 +67,7 @@ export default function SettingsPage() {
               <CalendarClock className="h-5 w-5 text-foreground/70" />
               {t.settings.buildDate}
             </span>
-            <span className="text-sm text-muted-foreground">{buildDate}</span>
+            <time dateTime={BUILD_DATE ?? undefined} className="text-sm text-muted-foreground">{buildDate}</time>
           </div>
           <div className="flex items-center justify-between px-4 py-3.5">
             <span className="flex items-center gap-3 text-base font-medium">

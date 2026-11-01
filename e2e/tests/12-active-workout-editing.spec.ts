@@ -56,7 +56,7 @@ test("user can append a set to an exercise", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("swiping a set still removes it after motion features load", async ({ page }) => {
+test("swiping a set removes it as soon as the workout is interactive", async ({ page }) => {
   const firstCard = exerciseCards(page).first();
   const weights = firstCard.getByRole("textbox", { name: /weight/i });
   const count = await weights.count();
