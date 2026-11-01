@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import Link from "next/link";
 import { CalendarDays, ChevronDown, Download, Pencil, Trash2 } from "lucide-react";
 import {
@@ -62,7 +62,6 @@ function downloadExport(filename: string, content: string, format: "csv" | "json
 
 export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) {
   const t = useT();
-  const locale = useLocale();
   const { formatShortDate } = useFormat();
   const { getName } = useExerciseLookup();
   const [limit, setLimit] = useState(PAGE_SIZE);
@@ -151,28 +150,11 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
     return () => observer.disconnect();
   }, [hasMore, loadMore, preview]);
 
-  if (logs === undefined) {
-    if (preview) return null;
-    return (
-      <div className="space-y-2">
-        <Skeleton className="h-48 w-full rounded-xl" />
-      </div>
-    );
+  if (logs === undefined || logs.length === 0) {
+    return <WorkoutHistoryPlaceholder loading={logs === undefined} preview={preview} />;
   }
 
-  if (logs.length === 0) {
-    if (preview) return null;
-    return (
-      <div className="flex flex-col items-center justify-center gap-2 rounded-xl border bg-card px-4 py-12 text-center">
-        <CalendarDays className="h-10 w-10 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">{t.workout.noHistory}</p>
-      </div>
-    );
-  }
 
-  const deleteTarget = deleteId
-    ? logs.find((l) => l.id === deleteId)
-    : undefined;
 
   return (
     <>
@@ -184,81 +166,13 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
           </h2>
         </div>
         {!preview && (
-        <div className="space-y-3 px-4 pb-4">
-          <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-            <p className="text-xs font-medium text-muted-foreground">
-              {t.workout.exportTitle}
-            </p>
-            <SegmentedTabs
-              variant="card"
-              className="w-full"
-              ariaLabel={t.workout.exportPeriod}
-              truncate={false}
-              items={EXPORT_PRESETS.map((preset) => ({
-                value: preset,
-                label: t.workout.exportPresets[preset],
-              }))}
-              value={exportPreset}
-              onChange={handlePresetChange}
-              buttonClassName="px-2 py-1.5 text-xs"
-            />
-            {exportPreset === "custom" && (
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">
-                    {t.workout.exportFrom}
-                  </label>
-                  <DatePicker
-                    value={exportFrom}
-                    locale={locale}
-                    onChange={(date) => {
-                      setExportPreset("custom");
-                      setExportFrom(atStartOfDay(date));
-                      setExportError(null);
-                    }}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">
-                    {t.workout.exportTo}
-                  </label>
-                  <DatePicker
-                    value={exportTo}
-                    locale={locale}
-                    onChange={(date) => {
-                      setExportPreset("custom");
-                      setExportTo(atEndOfDay(date));
-                      setExportError(null);
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-            {exportError && (
-              <p className="text-xs text-destructive">{exportError}</p>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleExport("csv")}
-              disabled={exporting}
-              className="w-full gap-1.5"
-            >
-              <Download className="h-4 w-4" />
-              {exporting ? t.workout.exporting : t.workout.exportCsv}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleExport("json")}
-              disabled={exporting}
-              className="w-full gap-1.5"
-            >
-              <Download className="h-4 w-4" />
-              {exporting ? t.workout.exporting : t.workout.exportJson}
-            </Button>
-          </div>
-        </div>
+          <WorkoutExportControls
+            exportPreset={exportPreset} exportFrom={exportFrom} exportTo={exportTo}
+            exporting={exporting} exportError={exportError}
+            handlePresetChange={handlePresetChange} handleExport={handleExport}
+            setExportPreset={setExportPreset} setExportFrom={setExportFrom}
+            setExportTo={setExportTo} setExportError={setExportError}
+          />
         )}
         <div
           className={cn(
@@ -425,8 +339,186 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
         )}
       </div>
 
-      {!preview && (
-      <>
+      <WorkoutHistoryActions
+        preview={preview} logs={logs} editingLog={editingLog} setEditingLog={setEditingLog}
+        deleteId={deleteId} setDeleteId={setDeleteId} deleting={deleting}
+        onDelete={() => {
+          if (!deleteId || deleting) return;
+          setDeleting(true);
+          void removeWorkoutLog(deleteId)
+            .then(() => {
+              setDeleteId(null);
+              if (expandedId === deleteId) setExpandedId(null);
+            })
+            .catch((err) => {
+              console.warn("[workout-history] delete failed", err);
+            })
+            .finally(() => {
+              setDeleting(false);
+            });
+        }}
+      />
+    </>
+  );
+}
+
+function WorkoutHistoryPlaceholder({
+  loading,
+  preview,
+}: {
+  loading: boolean;
+  preview: boolean;
+}) {
+  const t = useT();
+  if (preview) return null;
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border bg-card px-4 py-12 text-center">
+      <CalendarDays className="h-10 w-10 text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">{t.workout.noHistory}</p>
+    </div>
+  );
+}
+
+function WorkoutExportControls({
+  exportPreset,
+  exportFrom,
+  exportTo,
+  exporting,
+  exportError,
+  handlePresetChange,
+  handleExport,
+  setExportPreset,
+  setExportFrom,
+  setExportTo,
+  setExportError,
+}: {
+  exportPreset: WorkoutExportPreset;
+  exportFrom: Date;
+  exportTo: Date;
+  exporting: boolean;
+  exportError: string | null;
+  handlePresetChange: (preset: WorkoutExportPreset) => void;
+  handleExport: (format: "csv" | "json") => void;
+  setExportPreset: Dispatch<SetStateAction<WorkoutExportPreset>>;
+  setExportFrom: Dispatch<SetStateAction<Date>>;
+  setExportTo: Dispatch<SetStateAction<Date>>;
+  setExportError: Dispatch<SetStateAction<string | null>>;
+}) {
+  const t = useT();
+  const locale = useLocale();
+  return (
+    <div className="space-y-3 px-4 pb-4">
+      <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+        <p className="text-xs font-medium text-muted-foreground">
+          {t.workout.exportTitle}
+        </p>
+        <SegmentedTabs
+          variant="card"
+          className="w-full"
+          ariaLabel={t.workout.exportPeriod}
+          truncate={false}
+          items={EXPORT_PRESETS.map((preset) => ({
+            value: preset,
+            label: t.workout.exportPresets[preset],
+          }))}
+          value={exportPreset}
+          onChange={handlePresetChange}
+          buttonClassName="px-2 py-1.5 text-xs"
+        />
+        {exportPreset === "custom" && (
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                {t.workout.exportFrom}
+              </label>
+              <DatePicker
+                value={exportFrom}
+                locale={locale}
+                onChange={(date) => {
+                  setExportPreset("custom");
+                  setExportFrom(atStartOfDay(date));
+                  setExportError(null);
+                }}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                {t.workout.exportTo}
+              </label>
+              <DatePicker
+                value={exportTo}
+                locale={locale}
+                onChange={(date) => {
+                  setExportPreset("custom");
+                  setExportTo(atEndOfDay(date));
+                  setExportError(null);
+                }}
+              />
+            </div>
+          </div>
+        )}
+        {exportError && (
+          <p className="text-xs text-destructive">{exportError}</p>
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => handleExport("csv")}
+          disabled={exporting}
+          className="w-full gap-1.5"
+        >
+          <Download className="h-4 w-4" />
+          {exporting ? t.workout.exporting : t.workout.exportCsv}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => handleExport("json")}
+          disabled={exporting}
+          className="w-full gap-1.5"
+        >
+          <Download className="h-4 w-4" />
+          {exporting ? t.workout.exporting : t.workout.exportJson}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function WorkoutHistoryActions({
+  preview,
+  logs,
+  editingLog,
+  setEditingLog,
+  deleteId,
+  setDeleteId,
+  deleting,
+  onDelete,
+}: {
+  preview: boolean;
+  logs: WorkoutLogEntity[];
+  editingLog: WorkoutLogEntity | null;
+  setEditingLog: Dispatch<SetStateAction<WorkoutLogEntity | null>>;
+  deleteId: string | null;
+  setDeleteId: Dispatch<SetStateAction<string | null>>;
+  deleting: boolean;
+  onDelete: () => void;
+}) {
+  const t = useT();
+  const { formatShortDate } = useFormat();
+  if (preview) return null;
+  const deleteTarget = deleteId
+    ? logs.find((log) => log.id === deleteId)
+    : undefined;
+  return (
+    <>
       <WorkoutEditSheet
         log={editingLog}
         open={editingLog !== null}
@@ -448,21 +540,7 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
         pendingLabel={t.workout.deleting}
         destructive
         pending={deleting}
-        onConfirm={() => {
-          if (!deleteId || deleting) return;
-          setDeleting(true);
-          void removeWorkoutLog(deleteId)
-            .then(() => {
-              setDeleteId(null);
-              if (expandedId === deleteId) setExpandedId(null);
-            })
-            .catch((err) => {
-              console.warn("[workout-history] delete failed", err);
-            })
-            .finally(() => {
-              setDeleting(false);
-            });
-        }}
+        onConfirm={onDelete}
       >
         {deleteTarget && (
           <p className="text-sm text-muted-foreground">
@@ -471,8 +549,6 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
           </p>
         )}
       </ConfirmDialog>
-      </>
-      )}
     </>
   );
 }

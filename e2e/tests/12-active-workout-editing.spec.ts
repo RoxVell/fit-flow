@@ -56,6 +56,23 @@ test("user can append a set to an exercise", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("swiping a set removes it as soon as the workout is interactive", async ({ page }) => {
+  const firstCard = exerciseCards(page).first();
+  const weights = firstCard.getByRole("textbox", { name: /weight/i });
+  const count = await weights.count();
+  const row = firstCard.getByText("1", { exact: true }).first().locator("..");
+  const box = await row.boundingBox();
+  expect(box).not.toBeNull();
+  // Start in the row's empty spacer so the gesture doesn't focus an input.
+  const x = box!.x + box!.width * 0.45;
+  const y = box!.y + box!.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x - 90, y, { steps: 12 });
+  await page.mouse.up();
+  await expect(weights).toHaveCount(count - 1);
+});
+
 test("user can add an extra exercise mid-workout", async ({ page }) => {
   const cardsBefore = await exerciseCards(page).count();
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui/circular-progress";
@@ -45,7 +45,7 @@ export function RestTimer({ endTime, duration, isRunning, onStop }: RestTimerPro
   const progress = duration > 0 ? remaining / duration : 0;
 
   return (
-    <motion.div
+    <m.div
       initial={{ y: 50, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 50, opacity: 0 }}
@@ -66,6 +66,6 @@ export function RestTimer({ endTime, duration, isRunning, onStop }: RestTimerPro
           <SkipForward className="h-4 w-4" />
         </Button>
       </div>
-    </motion.div>
+    </m.div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { CalendarIcon } from "lucide-react";
 import { enUS, ru } from "date-fns/locale";
 import type { Locale as DateFnsLocale } from "date-fns";
@@ -13,6 +13,8 @@ const DATE_FNS_LOCALE: Record<Locale, DateFnsLocale> = {
   en: enUS,
   ru,
 };
+
+const subscribeNoop = () => () => {};
 
 interface DatePickerProps {
   value: Date;
@@ -33,12 +35,18 @@ export function DatePicker({
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const dateFnsLocale = DATE_FNS_LOCALE[locale];
-  const label = value.toLocaleDateString(locale === "ru" ? "ru-RU" : "en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  // Cached PWA HTML can be older than the browser's local date. Keep the
+  // server and hydration text identical, then format the client's value.
+  const label = useSyncExternalStore(
+    subscribeNoop,
+    () => value.toLocaleDateString(locale === "ru" ? "ru-RU" : "en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
+    () => placeholder ?? "\u00a0"
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
 
 interface ExerciseVideoProps {
@@ -12,6 +12,8 @@ interface ExerciseVideoProps {
   className?: string;
 }
 
+const subscribeNoop = () => () => {};
+
 export function ExerciseVideo({
   videoDarkUrl,
   videoLightUrl,
@@ -20,16 +22,18 @@ export function ExerciseVideo({
   className,
 }: ExerciseVideoProps) {
   const { resolvedTheme } = useTheme();
+  // SSR has no resolved theme. A client-opened sheet can use it immediately
+  // without first requesting the light video on a dark device.
+  const theme = useSyncExternalStore(
+    subscribeNoop,
+    () => resolvedTheme,
+    () => undefined
+  );
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [mounted, setMounted] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const src =
-    mounted && resolvedTheme === "dark" ? videoDarkUrl : videoLightUrl;
+    theme === "dark" ? videoDarkUrl : theme === "light" ? videoLightUrl : undefined;
 
   useEffect(() => {
     setFailed(false);

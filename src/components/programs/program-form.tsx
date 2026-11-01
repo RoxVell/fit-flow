@@ -174,31 +174,10 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
       }
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3">
-        <button
-          type="button"
-          onClick={asPage ? onBack : () => onOpenChange?.(false)}
-          className="flex items-center gap-1 text-sm text-muted-foreground active:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {t.programs.back}
-        </button>
-        <h1 className="text-base font-semibold">
-          {isEditMode ? t.programs.editProgram : t.programs.newProgram}
-        </h1>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!canSave}
-          className={cn(
-            "flex items-center gap-1 text-sm font-semibold transition-colors",
-            canSave ? "text-primary" : "text-muted-foreground/30"
-          )}
-        >
-          <Check className="h-4 w-4" />
-          {isEditMode ? t.programs.update : t.programs.save}
-        </button>
-      </div>
+      <ProgramFormHeader
+        isEditMode={isEditMode} canSave={!!canSave} onSave={handleSave}
+        onBack={asPage ? onBack : () => onOpenChange?.(false)}
+      />
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
@@ -310,6 +289,47 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
           if (editingSessionIdx !== null) removeSession(editingSessionIdx);
         }}
       />
+    </div>
+  );
+}
+
+function ProgramFormHeader({
+  isEditMode,
+  canSave,
+  onSave,
+  onBack,
+}: {
+  isEditMode: boolean;
+  canSave: boolean;
+  onSave: () => void;
+  onBack?: () => void;
+}) {
+  const t = useT();
+  return (
+    <div className="flex items-center justify-between border-b bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex items-center gap-1 text-sm text-muted-foreground active:text-foreground transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {t.programs.back}
+      </button>
+      <h1 className="text-base font-semibold">
+        {isEditMode ? t.programs.editProgram : t.programs.newProgram}
+      </h1>
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={!canSave}
+        className={cn(
+          "flex items-center gap-1 text-sm font-semibold transition-colors",
+          canSave ? "text-primary" : "text-muted-foreground/30"
+        )}
+      >
+        <Check className="h-4 w-4" />
+        {isEditMode ? t.programs.update : t.programs.save}
+      </button>
     </div>
   );
 }

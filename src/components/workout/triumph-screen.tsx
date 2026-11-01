@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import { Trophy, TrendingUp, Dumbbell, Clock, Weight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { PersonalRecord } from "@/lib/db/types";
@@ -86,7 +86,7 @@ export function TriumphScreen({ records, previousRecords, volume, duration, onCl
   };
 
   const content = (
-    <motion.div
+    <m.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -97,7 +97,7 @@ export function TriumphScreen({ records, previousRecords, volume, duration, onCl
       {!reduceMotion && hasRecords && (
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           {CONFETTI.map((c, i) => (
-            <motion.div
+            <m.div
               key={i}
               initial={{ y: -40, opacity: 0, rotate: 0 }}
               animate={{ y: "110%", opacity: [0, 1, 1, 0], rotate: 360 }}
@@ -126,13 +126,13 @@ export function TriumphScreen({ records, previousRecords, volume, duration, onCl
           {/* Trophy with glow */}
           <div className="relative shrink-0">
             {/* Glow halo */}
-            <motion.div
+            <m.div
               initial={{ scale: 0.6, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
               className="absolute inset-0 -z-10 rounded-full bg-primary/30 blur-2xl"
             />
-            <motion.div
+            <m.div
               initial={reduceMotion ? false : { scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: "spring", stiffness: 200, damping: 14 }}
@@ -140,39 +140,39 @@ export function TriumphScreen({ records, previousRecords, volume, duration, onCl
             >
               <Trophy className="h-14 w-14 text-primary drop-shadow-sm" strokeWidth={1.75} />
               {/* Sparkles */}
-              <motion.div
+              <m.div
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5 }}
                 className="absolute -right-1 -top-1"
               >
                 <Sparkles className="h-5 w-5 text-chart-2" />
-              </motion.div>
-            </motion.div>
+              </m.div>
+            </m.div>
           </div>
 
           {/* Title */}
           <div className="w-full shrink-0 text-center">
-            <motion.h2
+            <m.h2
               initial={{ y: 10, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
               className="text-3xl font-bold tracking-tight"
             >
               {t.workout.triumphTitle}
-            </motion.h2>
-            <motion.p
+            </m.h2>
+            <m.p
               initial={{ y: 10, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
               className="mt-1.5 text-sm text-muted-foreground"
             >
               {t.workout.triumphSubtitle}
-            </motion.p>
+            </m.p>
           </div>
 
           {/* Stats chips */}
-          <motion.div
+          <m.div
             initial={{ y: 12, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.35 }}
@@ -202,11 +202,11 @@ export function TriumphScreen({ records, previousRecords, volume, duration, onCl
                 </div>
               </div>
             </div>
-          </motion.div>
+          </m.div>
 
           {/* PR section */}
           {hasRecords ? (
-            <motion.div
+            <m.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.45 }}
@@ -218,7 +218,7 @@ export function TriumphScreen({ records, previousRecords, volume, duration, onCl
               </p>
               <div className="space-y-2">
                 {groupedRecords.map((group, i) => (
-                  <motion.div
+                  <m.div
                     key={group.exerciseId}
                     initial={{ x: -16, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
@@ -249,26 +249,26 @@ export function TriumphScreen({ records, previousRecords, volume, duration, onCl
                         </div>
                       ))}
                     </div>
-                  </motion.div>
+                  </m.div>
                 ))}
               </div>
-            </motion.div>
+            </m.div>
           ) : (
-            <motion.p
+            <m.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
               className="shrink-0 text-center text-sm text-muted-foreground"
             >
               {t.workout.triumphNoPRs}
-            </motion.p>
+            </m.p>
           )}
 
         </div>
       </div>
 
       <div className="mx-auto w-full max-w-lg shrink-0 border-t bg-background/95 px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <motion.div
+        <m.div
           initial={{ y: 12, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.65 }}
@@ -277,10 +277,10 @@ export function TriumphScreen({ records, previousRecords, volume, duration, onCl
           <Button onClick={handleClose} size="lg" className="w-full shadow-md">
             {t.workout.triumphDone}
           </Button>
-        </motion.div>
+        </m.div>
       </div>
       </div>
-    </motion.div>
+    </m.div>
   );
 
   if (!mounted) return null;

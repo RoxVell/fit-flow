@@ -6,7 +6,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -135,7 +135,7 @@ export function SegmentedTabs<T extends string>({
             )}
           >
             {isActive && (
-              <motion.span
+              <m.span
                 layoutId={layoutId}
                 transition={{ type: "spring", stiffness: 500, damping: 40 }}
                 className={cn("absolute inset-0 rounded-lg", styles.pill)}
