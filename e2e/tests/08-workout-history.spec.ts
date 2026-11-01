@@ -1,4 +1,5 @@
 import { test, expect, waitForSeed } from "../fixtures/base";
+import { readFile } from "node:fs/promises";
 import { finishQuickWorkout, openWorkoutHistory, expandFirstHistoryRow } from "../fixtures/workout";
 
 test.beforeEach(async ({ page }) => {
@@ -76,4 +77,27 @@ test("user can delete a workout from history", async ({ page }) => {
   await expect(page.getByText(/no completed workouts yet/i)).toBeVisible({
     timeout: 5_000,
   });
+});
+
+test("history export controls download the completed workout in both formats", async ({ page }) => {
+  await finishQuickWorkout(page);
+  await openWorkoutHistory(page);
+
+  for (const format of ["CSV", "JSON"]) {
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: `Export ${format}`, exact: true }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(new RegExp(`\\.${format.toLowerCase()}$`));
+    const content = await readFile((await download.path())!, "utf8");
+    if (format === "CSV") {
+      expect(content).toContain("weight_kg,reps");
+      expect(content).toMatch(/,60,8,,yes,/);
+    } else {
+      const report = JSON.parse(content);
+      expect(report.summary).toMatchObject({ workoutCount: 1, sets: 1, volumeKgReps: 480 });
+      expect(report.workouts[0].exercises[0].sets).toEqual([
+        expect.objectContaining({ weight: 60, reps: 8, completed: true }),
+      ]);
+    }
+  }
 });

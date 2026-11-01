@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import {
   Plus,
   Shuffle,
@@ -98,7 +98,7 @@ export function ExerciseCard({
         {isActive && (
           <div className="absolute left-0 top-1 bottom-1 w-[2px] rounded-full bg-primary/80 shadow-[0_0_12px_2px] shadow-primary/25" />
         )}
-        <motion.div
+        <m.div
           drag="x"
           dragConstraints={{ left: -72, right: 0 }}
           dragElastic={0.1}
@@ -197,7 +197,7 @@ export function ExerciseCard({
                 </div>
                 <AnimatePresence mode="popLayout">
                   {exercise.sets.map((set, idx) => (
-                    <motion.div
+                    <m.div
                       key={set.id}
                       layout
                       initial={{ opacity: 0, x: -20, height: 0 }}
@@ -214,7 +214,7 @@ export function ExerciseCard({
                         onRemove={() => onRemoveSet(idx)}
                         onComplete={() => onCompleteSet(idx)}
                       />
-                    </motion.div>
+                    </m.div>
                   ))}
                 </AnimatePresence>
                 <Button
@@ -232,7 +232,7 @@ export function ExerciseCard({
           <div className="w-[72px] shrink-0 flex items-center justify-center bg-destructive">
             <Trash2 className="h-5 w-5 text-destructive-foreground" />
           </div>
-        </motion.div>
+        </m.div>
       </div>
 
       <Dialog open={noteOpen} onOpenChange={setNoteOpen}>

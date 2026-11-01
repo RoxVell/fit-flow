@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -54,7 +54,7 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
 
   return (
     <div className="relative overflow-hidden">
-      <motion.div
+      <m.div
         drag="x"
         dragConstraints={{ left: -72, right: 0 }}
         dragElastic={0.1}
@@ -153,7 +153,7 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
         <div className="w-[72px] shrink-0 flex items-center justify-center bg-destructive">
           <Trash2 className="h-5 w-5 text-destructive-foreground" />
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

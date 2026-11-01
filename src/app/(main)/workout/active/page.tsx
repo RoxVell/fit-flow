@@ -2,7 +2,7 @@
 
 import { Suspense, useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import {
   Plus,
   Timer,
@@ -132,37 +132,12 @@ function ActiveWorkoutContent() {
 
   return (
     <>
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Timer className="h-4 w-4 text-muted-foreground" />
-            <span className="text-lg font-bold tabular-nums">
-              {formatElapsedClock(minutes, seconds)}
-            </span>
-            <button
-              onClick={togglePause}
-              className="rounded-full p-1 text-muted-foreground hover:bg-muted"
-            >
-              {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-              <span className="tabular-nums text-foreground">{completedSetsCount}</span>
-              <span className="text-muted-foreground/60">/</span>
-              <span className="tabular-nums text-foreground">{totalSetsCount}</span>
-              <span className="text-muted-foreground/60">·</span>
-              <span className="tabular-nums">{totalVolume.toLocaleString()}</span>
-              <span>{t.dashboard.kg}</span>
-            </div>
-            <Button variant="default" size="sm" className="gap-1" onClick={handleFinish}>
-              <StopCircle className="h-4 w-4" />
-              {t.workout.finish}
-            </Button>
-          </div>
-        </div>
-      </div>
+      <WorkoutToolbar
+        minutes={minutes} seconds={seconds} isPaused={isPaused}
+        togglePause={togglePause} completedSetsCount={completedSetsCount}
+        totalSetsCount={totalSetsCount} totalVolume={totalVolume}
+        handleFinish={handleFinish}
+      />
 
       <div className="pt-[calc(env(safe-area-inset-top)+4rem)] pb-20 px-4">
         {replacementError && !programReplacement && (
@@ -174,7 +149,7 @@ function ActiveWorkoutContent() {
             const exerciseName =
               exercise?.name || getName(ex.exerciseId, t.workout.unknownExercise);
             return (
-              <motion.div
+              <m.div
                 key={ex.id}
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
@@ -200,7 +175,7 @@ function ActiveWorkoutContent() {
                   }
                   onUpdateExercise={(data) => updateExercise(ex.id, data)}
                 />
-              </motion.div>
+              </m.div>
             );
           })}
         </AnimatePresence>
@@ -252,38 +227,29 @@ function ActiveWorkoutContent() {
         />
       </div>
 
-      {programReplacement && (
-        <ConfirmDialog
-          open
-          onOpenChange={(open) => {
-            if (!open && !replacementPending) {
-              setProgramReplacement(null);
-              setReplacementError(false);
-            }
-          }}
-          title={t.workout.replaceInProgramTitle}
-          description={t.workout.replaceInProgramDesc(
-            getName(programReplacement.fromId, t.workout.unknownExercise),
-            getName(programReplacement.toId, t.workout.unknownExercise)
-          )}
-          confirmLabel={t.workout.replaceInProgram}
-          cancelLabel={t.workout.onlyThisWorkout}
-          pending={replacementPending}
-          onConfirm={() => {
-            setReplacementPending(true);
+      <ProgramReplacementDialog
+        getName={getName}
+        programReplacement={programReplacement}
+        replacementPending={replacementPending}
+        replacementError={replacementError}
+        onOpenChange={(open) => {
+          if (!open && !replacementPending) {
+            setProgramReplacement(null);
             setReplacementError(false);
-            void replaceExerciseInProgram(
-              programReplacement.programId,
-              programReplacement.fromId,
-              programReplacement.toId
-            ).then(() => setProgramReplacement(null))
-              .catch(() => setReplacementError(true))
-              .finally(() => setReplacementPending(false));
-          }}
-        >
-          {replacementError && <p role="alert" className="text-sm text-destructive">{t.workout.replacementFailed}</p>}
-        </ConfirmDialog>
-      )}
+          }
+        }}
+        onConfirm={(replacement) => {
+          setReplacementPending(true);
+          setReplacementError(false);
+          void replaceExerciseInProgram(
+            replacement.programId,
+            replacement.fromId,
+            replacement.toId
+          ).then(() => setProgramReplacement(null))
+            .catch(() => setReplacementError(true))
+            .finally(() => setReplacementPending(false));
+        }}
+      />
 
       <AnimatePresence>
         <RestTimer
@@ -294,43 +260,17 @@ function ActiveWorkoutContent() {
         />
       </AnimatePresence>
 
-      {showConfirmFinish && (
-        <ConfirmDialog
-          open={showConfirmFinish}
-          onOpenChange={setShowConfirmFinish}
-          title={
-            completedSetsCount === 0
-              ? t.workout.noCompletedSets
-              : t.workout.incompleteSets
-          }
-          description={
-            completedSetsCount === 0
-              ? t.workout.noCompletedSetsDesc
-              : t.workout.incompleteSetsDesc(completedSetsCount, totalSetsCount)
-          }
-          confirmLabel={t.workout.discard}
-          cancelLabel={t.workout.cancel}
-          destructive
-          onConfirm={() => {
-            setShowConfirmFinish(false);
-            setShowAbandonConfirm(true);
-          }}
-          extraButtons={
-            completedSetsCount > 0 ? (
-              <Button onClick={confirmFinish}>{t.workout.finishAnyway}</Button>
-            ) : undefined
-          }
-        >
-          <div className="w-full bg-muted rounded-full h-1.5">
-            <div
-              className="bg-primary h-1.5 rounded-full transition-all"
-              style={{
-                width: `${totalSetsCount > 0 ? (completedSetsCount / totalSetsCount) * 100 : 0}%`,
-              }}
-            />
-          </div>
-        </ConfirmDialog>
-      )}
+      <FinishWorkoutDialog
+        open={showConfirmFinish}
+        onOpenChange={setShowConfirmFinish}
+        completedSetsCount={completedSetsCount}
+        totalSetsCount={totalSetsCount}
+        confirmFinish={confirmFinish}
+        onDiscard={() => {
+          setShowConfirmFinish(false);
+          setShowAbandonConfirm(true);
+        }}
+      />
 
       {showAbandonConfirm && (
         <ConfirmDialog
@@ -345,6 +285,178 @@ function ActiveWorkoutContent() {
         />
       )}
     </>
+  );
+}
+
+type WorkoutToolbarProps = Pick<
+  ReturnType<typeof useActiveWorkout>,
+  | "minutes"
+  | "seconds"
+  | "isPaused"
+  | "togglePause"
+  | "completedSetsCount"
+  | "totalSetsCount"
+  | "totalVolume"
+  | "handleFinish"
+>;
+
+function WorkoutToolbar({
+  minutes,
+  seconds,
+  isPaused,
+  togglePause,
+  completedSetsCount,
+  totalSetsCount,
+  totalVolume,
+  handleFinish,
+}: WorkoutToolbarProps) {
+  const t = useT();
+  return (
+    <div className="fixed top-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Timer className="h-4 w-4 text-muted-foreground" />
+          <span className="text-lg font-bold tabular-nums">
+            {formatElapsedClock(minutes, seconds)}
+          </span>
+          <button
+            onClick={togglePause}
+            className="rounded-full p-1 text-muted-foreground hover:bg-muted"
+          >
+            {isPaused ? (
+              <Play className="h-4 w-4" />
+            ) : (
+              <Pause className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+            <span className="tabular-nums text-foreground">
+              {completedSetsCount}
+            </span>
+            <span className="text-muted-foreground/60">/</span>
+            <span className="tabular-nums text-foreground">
+              {totalSetsCount}
+            </span>
+            <span className="text-muted-foreground/60">·</span>
+            <span className="tabular-nums">{totalVolume.toLocaleString()}</span>
+            <span>{t.dashboard.kg}</span>
+          </div>
+          <Button
+            variant="default"
+            size="sm"
+            className="gap-1"
+            onClick={handleFinish}
+          >
+            <StopCircle className="h-4 w-4" />
+            {t.workout.finish}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FinishWorkoutDialog({
+  open,
+  onOpenChange,
+  completedSetsCount,
+  totalSetsCount,
+  confirmFinish,
+  onDiscard,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  completedSetsCount: number;
+  totalSetsCount: number;
+  confirmFinish: () => void;
+  onDiscard: () => void;
+}) {
+  const t = useT();
+  if (!open) return null;
+  return (
+    <ConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={
+        completedSetsCount === 0
+          ? t.workout.noCompletedSets
+          : t.workout.incompleteSets
+      }
+      description={
+        completedSetsCount === 0
+          ? t.workout.noCompletedSetsDesc
+          : t.workout.incompleteSetsDesc(completedSetsCount, totalSetsCount)
+      }
+      confirmLabel={t.workout.discard}
+      cancelLabel={t.workout.cancel}
+      destructive
+      onConfirm={onDiscard}
+      extraButtons={
+        completedSetsCount > 0 ? (
+          <Button onClick={confirmFinish}>{t.workout.finishAnyway}</Button>
+        ) : undefined
+      }
+    >
+      <div className="w-full bg-muted rounded-full h-1.5">
+        <div
+          className="bg-primary h-1.5 rounded-full transition-all"
+          style={{
+            width: `${totalSetsCount > 0 ? (completedSetsCount / totalSetsCount) * 100 : 0}%`,
+          }}
+        />
+      </div>
+    </ConfirmDialog>
+  );
+}
+
+function ProgramReplacementDialog({
+  getName,
+  programReplacement,
+  replacementPending,
+  replacementError,
+  onOpenChange,
+  onConfirm,
+}: {
+  getName: ReturnType<typeof useExerciseLookup>["getName"];
+  programReplacement: {
+    programId: string;
+    fromId: string;
+    toId: string;
+  } | null;
+  replacementPending: boolean;
+  replacementError: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (replacement: {
+    programId: string;
+    fromId: string;
+    toId: string;
+  }) => void;
+}) {
+  const t = useT();
+  if (!programReplacement) return null;
+  return (
+    <ConfirmDialog
+      open
+      onOpenChange={onOpenChange}
+      title={t.workout.replaceInProgramTitle}
+      description={t.workout.replaceInProgramDesc(
+        getName(programReplacement.fromId, t.workout.unknownExercise),
+        getName(programReplacement.toId, t.workout.unknownExercise)
+      )}
+      confirmLabel={t.workout.replaceInProgram}
+      cancelLabel={t.workout.onlyThisWorkout}
+      pending={replacementPending}
+      onConfirm={() => onConfirm(programReplacement)}
+    >
+      {replacementError && (
+        <p role="alert" className="text-sm text-destructive">
+          {t.workout.replacementFailed}
+        </p>
+      )}
+    </ConfirmDialog>
   );
 }
 
