@@ -924,7 +924,8 @@ function CsvTile() {
   const inView = useInView(ref, { margin: "-15% 0px" });
   const reduced = useReducedMotion();
   // 0..2 highlight rows, 3 = exported, then loop.
-  const [phase, setPhase] = useState(reduced ? 3 : 0);
+  // Keep SSR and the browser's first render identical for reduced motion.
+  const [phase, setPhase] = useState(0);
 
   useEffect(() => {
     if (!inView || reduced) return;

@@ -10,5 +10,7 @@ export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } =
   createSerwistRoute({
     swSrc: "src/app/sw.ts",
     useNativeEsbuild: true,
+    // Marketing media is loaded only when requested, never during PWA install.
+    globIgnores: ["**/node_modules/**/*", "public/videos/**"],
     additionalPrecacheEntries: APP_ROUTES.map((url) => ({ url, revision })),
   });

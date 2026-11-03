@@ -3,6 +3,7 @@ import { Instrument_Serif } from "next/font/google";
 import { LandingShell } from "@/components/landing/landing-shell";
 import { LandingHeader } from "@/components/landing/header";
 import { Hero } from "@/components/landing/hero";
+import { PromoVideo } from "@/components/landing/promo-video";
 import { Ticker } from "@/components/landing/ticker";
 import { Bento } from "@/components/landing/bento";
 import { HowItWorks } from "@/components/landing/how-it-works";
@@ -94,6 +95,7 @@ export default function LandingPage() {
 
         <main id="main">
           <Hero />
+          <PromoVideo />
           <Ticker />
           <Bento />
           <HowItWorks />

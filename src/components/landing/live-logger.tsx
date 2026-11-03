@@ -48,9 +48,9 @@ export function LiveLogger({ className }: { className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { margin: "-10% 0px" });
   const reduced = useReducedMotion();
-  const [sim, setSim] = useState<Sim>(() =>
-    reduced ? { done: 3, rest: 0, pr: false, hold: 0 } : { done: 0, rest: 0, pr: false, hold: 10 }
-  );
+  // Media preferences differ between SSR and the browser. Keep the first
+  // render identical; the effects below already stop motion when requested.
+  const [sim, setSim] = useState<Sim>({ done: 0, rest: 0, pr: false, hold: 10 });
   const [elapsed, setElapsed] = useState(BASE_ELAPSED);
 
   useEffect(() => {

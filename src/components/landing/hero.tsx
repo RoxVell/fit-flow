@@ -8,7 +8,7 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
-import { ArrowRight, Check, ChevronDown, Dumbbell, Trophy, WifiOff } from "lucide-react";
+import { ArrowRight, Check, Dumbbell, Play, Trophy, WifiOff } from "lucide-react";
 import { PhoneMockup } from "./phone-mockup";
 import { LiveLogger } from "./live-logger";
 import { cn } from "@/lib/utils";
@@ -100,11 +100,11 @@ export function Hero() {
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <a
-              href="#how"
+              href="#film"
               className="group inline-flex h-13 w-full items-center justify-center gap-1.5 rounded-2xl border border-border bg-background/60 px-6 text-base font-medium text-foreground backdrop-blur transition-colors hover:bg-muted sm:w-auto"
             >
-              See how it works
-              <ChevronDown className="size-4 transition-transform group-hover:translate-y-0.5" />
+              Watch the film
+              <Play aria-hidden className="size-4 transition-transform group-hover:scale-110" />
             </a>
           </motion.div>
 

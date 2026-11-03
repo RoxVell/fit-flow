@@ -19,7 +19,11 @@
     "test:e2e:offline": "playwright test --config=playwright.offline.config.ts",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "video:studio": "remotion studio remotion/index.ts",
+    "video:audio": "node scripts/promo/generate-audio.mjs",
+    "video:render": "remotion render remotion/index.ts FitFlowPromo public/videos/fitflow-promo.mp4",
+    "video:poster": "remotion still remotion/index.ts FitFlowPromo public/videos/fitflow-promo-poster.jpg --frame=780 --image-format=jpeg"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -51,6 +55,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "@remotion/cli": "4.0.540",
+    "@remotion/fonts": "4.0.540",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -60,6 +66,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "fake-indexeddb": "^6.2.5",
+    "remotion": "4.0.540",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.9"
