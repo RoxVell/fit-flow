@@ -203,6 +203,9 @@ migration (or a reviewed schema push) before using this version.
 | `npm run test:e2e:ui` | Playwright inspector |
 | `npm run build:exercises` | Rebuild the static exercise catalog in `public/exercises/` |
 | `npm run db:push` | Push the Drizzle schema to Postgres |
+| `npm run video:studio` | Preview and edit the 30-second landing promo in Remotion |
+| `npm run video:render` | Export the Full HD promo to `public/videos/fitflow-promo.mp4` |
+| `npm run video:poster` | Render the landing video's poster image |
 
 Before the first e2e run, install the browser once with `npx playwright install chromium`.
 Stop `npm run dev` first — Next.js refuses to start a second dev server for the same project.
@@ -215,3 +218,4 @@ Stop `npm run dev` first — Next.js refuses to start a second dev server for th
 - [Workout analysis with WebMCP](./docs/webmcp.md) — browser agent tools and JSON export
 - [E2E testing](./docs/e2e-testing.md) — Playwright suite, fixtures, debugging, CI
 - [Design brief](./docs/design-brief.md) — visual language and interaction rules
+- [Promo video](./remotion/README.md) — Remotion source, storyboard, exports, and embedding
