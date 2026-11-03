@@ -16,6 +16,10 @@ Neon PostgreSQL
 
 User data is **never** stored in Service Worker caches. SW caches static assets (JS, CSS, images, pages) and the **exercise catalog** (`/exercises/*.json`). See [exercise-library-and-i18n.md](./exercise-library-and-i18n.md).
 
+Settings → "Offline mode" (`src/lib/hooks/use-offline-status.ts`) shows the worker state, how many `APP_ROUTES` have their HTML in the precache and how many RSC payloads are warmed; "Ready" requires both. Use it to debug offline issues on devices without a web inspector.
+
+`public/offline.html` (the navigation fallback) reloads only after `GET /api/ping` returns 204 (`public/offline.js`): `navigator.onLine` is `true` on LTE without data and reloading on it alone loops forever. Offline must be verified against a stopped server; DevTools network emulation only affects page requests, the service worker's own fetches still reach the network.
+
 ## Dexie Schema (`fitflow_v2`)
 
 | Store | Purpose |
