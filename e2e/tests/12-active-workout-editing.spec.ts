@@ -56,11 +56,56 @@ test("user can append a set to an exercise", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("clearing suggested values keeps a set empty after other workout edits", async ({ page }) => {
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open("fitflow_v2");
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const database = request.result;
+      const tx = database.transaction(["workoutDrafts", "workoutLogs"], "readwrite");
+      const draft = tx.objectStore("workoutDrafts").get("active");
+      draft.onsuccess = () => tx.objectStore("workoutLogs").put({
+        id: "previous-workout", startedAt: "2026-01-01T00:00:00Z",
+        endedAt: "2026-01-01T01:00:00Z", revision: 1, updatedAt: "2026-01-01T01:00:00Z",
+        exercises: [{ id: "previous-entry", exerciseId: draft.result.exercises[0].exerciseId,
+          workoutLogId: "previous-workout", sortOrder: 0,
+          sets: [{ id: "previous-set", loggedExerciseId: "previous-entry", type: "working",
+            setOrder: 0, weight: 50, reps: 8, completed: true }] }],
+      });
+      tx.oncomplete = () => { database.close(); resolve(); };
+      tx.onerror = () => { database.close(); reject(tx.error); };
+    };
+  }));
+  await page.reload();
+
+  const firstCard = exerciseCards(page).first();
+  const weight = firstCard.getByRole("textbox", { name: /set 1 weight/i });
+  const reps = firstCard.getByRole("spinbutton", { name: /set 1 reps/i });
+  const complete = firstCard.getByRole("button", { name: /complete set 1,/i });
+  await expect(weight).toHaveValue("50");
+  await expect(reps).toHaveValue("8");
+  await weight.fill("");
+  await weight.blur();
+  await reps.fill("");
+  await reps.blur();
+
+  // Editing the draft rebuilds history suggestions. It must not restore
+  // values the user deliberately cleared or enable completing an empty set.
+  const setCount = await firstCard.getByRole("textbox", { name: /weight/i }).count();
+  await firstCard.getByRole("button", { name: /add set/i }).click();
+  await expect(firstCard.getByRole("textbox", { name: /weight/i })).toHaveCount(setCount + 1);
+  await expect(weight).toHaveValue("");
+  await expect(reps).toHaveValue("");
+  await expect(complete).toBeDisabled();
+  await expect(complete).toHaveAttribute("aria-pressed", "false");
+});
+
 test("swiping a set removes it as soon as the workout is interactive", async ({ page }) => {
   const firstCard = exerciseCards(page).first();
   const weights = firstCard.getByRole("textbox", { name: /weight/i });
   const count = await weights.count();
   const row = firstCard.getByText("1", { exact: true }).first().locator("..");
+  await row.hover({ trial: true }); // Wait for the expanding card to receive pointer events.
   const box = await row.boundingBox();
   expect(box).not.toBeNull();
   // Start in the row's empty spacer so the gesture doesn't focus an input.

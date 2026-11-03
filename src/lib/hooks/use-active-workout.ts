@@ -9,13 +9,9 @@ import {
   useWorkoutLogs,
 } from "@/lib/hooks/use-data";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
-import {
-  createPersonalRecord,
-  createPRsFromWorkout,
-  getPersonalRecords,
-} from "@/lib/repositories/records";
+import { derivePersonalRecords } from "@/lib/workout/personal-records";
 import { db } from "@/lib/db/dexie";
-import { createWorkoutLog } from "@/lib/repositories/workouts";
+import { finishWorkout } from "@/lib/repositories/workouts";
 import { clearDraft, updateDraftExercises } from "@/lib/repositories/drafts";
 import { generateId } from "@/lib/utils/id";
 import { volume } from "@/lib/training-metrics";
@@ -26,7 +22,6 @@ import type {
   LoggedExercise,
   LoggedSet,
   PersonalRecord,
-  WorkoutLog,
 } from "@/lib/db/types";
 
 export interface UseActiveWorkoutResult {
@@ -98,6 +93,8 @@ export function updateLoggedSet(
   };
 }
 
+const EMPTY_EXERCISES: LoggedExercise[] = [];
+
 export function useActiveWorkout(
   sessionId: string | undefined
 ): UseActiveWorkoutResult {
@@ -109,7 +106,7 @@ export function useActiveWorkout(
   const workoutLogs = useWorkoutLogs(50);
   const restDurationSeconds = resolveRestDuration(program?.restDurationSeconds);
 
-  const exercises = draft?.exercises ?? [];
+  const exercises = draft?.exercises ?? EMPTY_EXERCISES;
   const startedAt = draft?.startedAt ?? null;
   const activeWorkoutId = draft?.activeWorkoutId ?? null;
 
@@ -201,65 +198,32 @@ export function useActiveWorkout(
     const session = program?.sessions.find((s) => s.id === sessionId);
     const completedAt = new Date().toISOString();
 
-    const log: Omit<WorkoutLog, "id" | "revision" | "updatedAt"> = {
-      startedAt: startedAt ?? completedAt,
-      endedAt: completedAt,
-      programId: program?.id,
-      sessionId,
-      programName: program?.name,
-      sessionName: session?.name,
-      exercises,
-    };
-
-    const capturedVolume = totalVolume;
     const capturedMinutes = minutes;
     const capturedSeconds = seconds;
 
     void (async () => {
-      let createdLog;
       try {
-        createdLog = await createWorkoutLog(log);
+        if (!activeWorkoutId) throw new Error("Workout draft no longer available");
+        const history = await db.workoutLogs.toArray();
+        const createdLog = await finishWorkout(activeWorkoutId, {
+          endedAt: completedAt,
+          programId: program?.id,
+          programName: program?.name,
+          sessionName: session?.name,
+        });
+        const previousLogs = history.filter((log) => log.id !== createdLog.id);
+        setPreviousRecords(derivePersonalRecords(previousLogs, exerciseMap));
+        setNewRecords(derivePersonalRecords([...previousLogs, createdLog], exerciseMap)
+          .filter((record) => record.workoutLogId === createdLog.id));
+        setTriumphData({
+          volume: volume(createdLog.exercises.flatMap((exercise) => exercise.sets.filter((set) => set.completed))),
+          minutes: capturedMinutes,
+          seconds: capturedSeconds,
+        });
+        setShowTriumph(true);
       } catch (err) {
-        console.warn("[finishWorkout] createWorkoutLog failed", err);
+        console.warn("[finishWorkout] save failed", err);
         hasFinishedRef.current = false;
-        return;
-      }
-
-      let records: PersonalRecord[] = [];
-      try {
-        const history = await getPersonalRecords();
-        setPreviousRecords(history);
-        records = createPRsFromWorkout(
-          exercises,
-          exerciseMap,
-          completedAt,
-          history
-        );
-        for (const rec of records) {
-          const { id: _id, ...payload } = rec;
-          void createPersonalRecord({
-            ...payload,
-            workoutLogId: createdLog.id,
-          }).catch((err) => {
-            console.warn("[finishWorkout] createPersonalRecord failed", err);
-          });
-        }
-      } catch (err) {
-        console.warn("[finishWorkout] detectNewPRsFromWorkout failed", err);
-      }
-
-      setNewRecords(records);
-      setTriumphData({
-        volume: capturedVolume,
-        minutes: capturedMinutes,
-        seconds: capturedSeconds,
-      });
-      setShowTriumph(true);
-
-      try {
-        await clearDraft();
-      } catch (err) {
-        console.warn("[finishWorkout] clearDraft failed", err);
       }
     })();
   };
@@ -280,7 +244,6 @@ export function useActiveWorkout(
 
   const handleCloseTriumph = () => {
     setShowTriumph(false);
-    void clearDraft();
     router.replace("/dashboard");
   };
 

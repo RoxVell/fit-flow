@@ -20,6 +20,32 @@ test("settings page shows theme and language controls", async ({ page }) => {
   await expect(controls.getByRole("button")).toHaveCount(5);
 });
 
+test("configured sync runs automatically and manually without a key", async ({ page }) => {
+  const requests: Record<string, string>[] = [];
+  await page.route("**/api/sync", async (route) => {
+    const request = route.request();
+    if (request.method() === "GET") {
+      await route.fulfill({ json: { enabled: true } });
+      return;
+    }
+    requests.push(request.headers());
+    await route.fulfill({ json: {
+      accepted: request.postDataJSON().changes.map((change: { id: string }) => change.id),
+      superseded: [], rejected: [], serverChanges: [], serverTime: new Date().toISOString(),
+    } });
+  });
+  await page.reload();
+  await expect.poll(() => requests.length).toBeGreaterThan(0);
+  const syncButton = page.getByRole("button", { name: /^Sync now$/i });
+  await expect(syncButton).toBeEnabled();
+  await expect(page.locator('input[type="password"]')).toHaveCount(0);
+  const automaticRequests = requests.length;
+  await syncButton.click();
+  await expect.poll(() => requests.length).toBeGreaterThan(automaticRequests);
+  await expect(syncButton).toBeEnabled();
+  expect(requests.every((headers) => headers.authorization === undefined)).toBe(true);
+});
+
 test("switching to Russian updates visible labels and persists across reload", async ({
   page,
 }) => {

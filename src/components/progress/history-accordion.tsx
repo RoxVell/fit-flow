@@ -12,6 +12,7 @@ interface HistorySet {
   reps: number;
   type: string;
   setOrder: number;
+  excludeFromStats?: boolean;
 }
 
 interface HistorySession {
@@ -206,9 +207,9 @@ export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
                             <span className="tabular-nums">
                               {s.weight} {t.dashboard.kg} × {s.reps}
                             </span>
-                            {setTypeLabel[s.type as keyof typeof setTypeLabel] && (
+                            {(s.excludeFromStats || setTypeLabel[s.type as keyof typeof setTypeLabel]) && (
                               <span className="text-[10px] text-muted-foreground/40 italic">
-                                {setTypeLabel[s.type as keyof typeof setTypeLabel]}
+                                {s.excludeFromStats ? t.workout.excludedFromStats : setTypeLabel[s.type as keyof typeof setTypeLabel]}
                               </span>
                             )}
                           </div>

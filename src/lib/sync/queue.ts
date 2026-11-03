@@ -26,9 +26,9 @@ export async function enqueueSync(input: {
 
 async function coalescePending(entityType: EntityType, entityId: string): Promise<void> {
   const pending = await db.syncQueue
-    .where("status")
-    .equals("pending")
-    .filter((e) => e.entityType === entityType && e.entityId === entityId)
+    .where("entityId")
+    .equals(entityId)
+    .filter((e) => e.entityType === entityType)
     .toArray();
   if (pending.length > 0) {
     await db.syncQueue.bulkDelete(pending.map((e) => e.id));
@@ -45,6 +45,10 @@ export async function getPending(): Promise<SyncQueueEntry[]> {
 export async function markSynced(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   await db.syncQueue.bulkDelete(ids);
+}
+
+export async function markFailed(ids: string[]): Promise<void> {
+  for (const id of ids) await db.syncQueue.update(id, { status: "failed" });
 }
 
 export async function pendingCount(): Promise<number> {

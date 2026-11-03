@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Dumbbell } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,13 +25,14 @@ function ThumbnailPlaceholder({ className }: { className?: string }) {
 
 /** Native img — avoids Next image cache; SW skips CDN persistence (see sw.ts). */
 export function ExerciseThumbnail({ src, alt, className }: ExerciseThumbnailProps) {
+  return src
+    ? <ThumbnailImage key={src} src={src} alt={alt} className={className} />
+    : <ThumbnailPlaceholder className={className} />;
+}
+
+function ThumbnailImage({ src, alt, className }: ExerciseThumbnailProps & { src: string }) {
   const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    setFailed(false);
-  }, [src]);
-
-  if (!src || failed) {
+  if (failed) {
     return <ThumbnailPlaceholder className={className} />;
   }
 

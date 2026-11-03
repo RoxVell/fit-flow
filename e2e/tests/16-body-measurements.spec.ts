@@ -68,3 +68,27 @@ test("back leaves the log form without saving", async ({ page }) => {
   await expect(page).toHaveURL(/\/progress/);
   await expect(page.getByText(/no measurements yet/i).first()).toBeVisible();
 });
+
+test("swiping a measurement reveals its delete action", async ({ page }) => {
+  await page.getByRole("button", { name: /log measurement/i }).click();
+  await page.getByRole("spinbutton", { name: /^Weight \(kg\)$/i }).fill("81.4");
+  await page.getByRole("button", { name: /^Save$/i }).click();
+  const summary = page.getByText("81.4 kg", { exact: true });
+  await expect(summary).toBeVisible();
+  await summary.scrollIntoViewIfNeeded();
+  const box = await summary.boundingBox();
+  if (!box) throw new Error("Measurement row is missing");
+  const startX = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(startX, y);
+  await page.mouse.down();
+  await page.mouse.move(startX - 80, y, { steps: 12 });
+  await page.mouse.up();
+
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: /^Delete$/i }).click();
+  await expect(summary).toHaveCount(0);
+  await expect(page.getByText(/no measurements yet/i).first()).toBeVisible();
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { m, useReducedMotion } from "framer-motion";
 import { Trophy, TrendingUp, Dumbbell, Clock, Weight, Sparkles } from "lucide-react";
@@ -10,6 +10,7 @@ import { useT } from "@/lib/i18n/use-t";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
 import { getPrTypeLabels } from "@/lib/workout/pr-labels";
 import { PrImprovement } from "@/components/workout/pr-improvement";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 
 interface TriumphScreenProps {
   records: PersonalRecord[];
@@ -73,11 +74,7 @@ export function TriumphScreen({ records, previousRecords, volume, duration, onCl
   const groupedRecords = useMemo(() => groupRecordsByExercise(records), [records]);
   const hasRecords = groupedRecords.length > 0;
 
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useHydrated();
 
   const handleClose = () => {
     if (closedRef.current) return;

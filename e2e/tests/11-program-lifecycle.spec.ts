@@ -57,7 +57,7 @@ test("user can create a program, activate it and train from it", async ({ page }
   await page.getByRole("button", { name: /^Add$/i }).click();
   await pickExercise(page, "Jefferson Curl");
 
-  // Close the session editor — SessionEditorDialog commits on close.
+  // Close the session editor and inspect the updated draft.
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeHidden();
 
@@ -105,6 +105,34 @@ test("editing a program renames it in the library", async ({ page }) => {
   await expect(page).toHaveURL(/\/programs\/library$/);
   await expect(page.getByText("PPL Reloaded")).toBeVisible();
   await expect(page.getByText(/^PPL$/)).toHaveCount(0);
+});
+
+test("failed program save preserves the draft and can be retried", async ({ page }) => {
+  await page.goto("/programs/library");
+  await programCard(page, "PPL").getByRole("link", { name: /^Edit$/i }).click();
+  const nameInput = page.getByPlaceholder(/push\/pull\/legs/i);
+  await expect(nameInput).toHaveValue("PPL");
+  await nameInput.fill("PPL Retry");
+
+  await page.evaluate(() => {
+    const originalPut = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (this: IDBObjectStore, ...args: Parameters<IDBObjectStore["put"]>) {
+      if (this.name === "programs") {
+        IDBObjectStore.prototype.put = originalPut;
+        throw new DOMException("Storage is full", "QuotaExceededError");
+      }
+      return originalPut.apply(this, args);
+    };
+  });
+
+  await page.getByRole("button", { name: /^Update$/i }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(/could not save the program/i);
+  await expect(nameInput).toHaveValue("PPL Retry");
+  await expect(page.getByText("Push A", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: /^Update$/i }).click();
+  await expect(page).toHaveURL(/\/programs\/library$/);
+  await expect(page.getByText("PPL Retry")).toBeVisible();
 });
 
 test("user can delete a program from the library", async ({ page }) => {

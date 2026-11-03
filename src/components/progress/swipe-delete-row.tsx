@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useDrag } from "@use-gesture/react";
+import { useRef } from "react";
+import { m, useAnimationControls } from "framer-motion";
 import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,37 +14,12 @@ interface SwipeDeleteRowProps {
 }
 
 export function SwipeDeleteRow({ children, onDelete, className }: SwipeDeleteRowProps) {
-  const [offset, setOffset] = useState(0);
-  const openRef = useRef(false);
-
-  const bind = useDrag(
-    ({ movement: [mx], last, tap }) => {
-      if (tap && openRef.current) {
-        setOffset(0);
-        openRef.current = false;
-        return;
-      }
-
-      if (mx > 0) {
-        setOffset(0);
-        return;
-      }
-
-      const next = Math.max(-DELETE_WIDTH, mx);
-      setOffset(next);
-
-      if (last) {
-        if (next <= -DELETE_WIDTH / 2) {
-          setOffset(-DELETE_WIDTH);
-          openRef.current = true;
-        } else {
-          setOffset(0);
-          openRef.current = false;
-        }
-      }
-    },
-    { axis: "x", filterTaps: true, pointer: { touch: true } }
-  );
+  const open = useRef(false);
+  const controls = useAnimationControls();
+  const settle = (nextOpen: boolean) => {
+    open.current = nextOpen;
+    void controls.start({ x: nextOpen ? -DELETE_WIDTH : 0 });
+  };
 
   return (
     <div className={cn("relative overflow-hidden", className)}>
@@ -56,13 +31,20 @@ export function SwipeDeleteRow({ children, onDelete, className }: SwipeDeleteRow
       >
         <Trash2 className="h-4 w-4" />
       </button>
-      <div
-        {...bind()}
+      <m.div
+        drag="x"
+        dragConstraints={{ left: -DELETE_WIDTH, right: 0 }}
+        dragElastic={0}
+        dragMomentum={false}
+        animate={controls}
+        onDragEnd={(_, { offset }) => {
+          settle(open.current ? offset.x < DELETE_WIDTH / 2 : offset.x < -DELETE_WIDTH / 2);
+        }}
+        onTap={() => settle(false)}
         className="relative bg-card touch-pan-y"
-        style={{ transform: `translateX(${offset}px)` }}
       >
         {children}
-      </div>
+      </m.div>
     </div>
   );
 }

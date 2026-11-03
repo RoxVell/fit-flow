@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useWorkoutLogs } from "@/lib/hooks/use-data";
+import { chartAxisProps, chartGridProps, chartTooltipProps } from "@/components/charts/chart-style";
 import { ChartPeriodSelector } from "@/components/charts/chart-period-selector";
 import { PeriodChangeIndicator } from "@/components/charts/period-change-indicator";
 import { computeFocusDomain, computePeriodChange } from "@/lib/charts/domain";
@@ -84,29 +85,19 @@ export function ProgressChart() {
                 <stop offset="95%" stopColor={strokeColor} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-muted)" vertical={false} />
+            <CartesianGrid {...chartGridProps} vertical={false} />
             <XAxis
               dataKey="week"
-              tick={{ fontSize: 10 }}
-              stroke="var(--color-muted-foreground)"
+              {...chartAxisProps}
             />
             <YAxis
-              tick={{ fontSize: 10 }}
-              stroke="var(--color-muted-foreground)"
+              {...chartAxisProps}
               domain={yDomain}
               tickFormatter={(v) => `${v}%`}
             />
             <Tooltip
-              wrapperStyle={{ outline: "none" }}
-              contentStyle={{
-                backgroundColor: "var(--color-popover)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "8px",
-                fontSize: "12px",
-                color: "var(--color-popover-foreground)",
-              }}
+              {...chartTooltipProps}
               formatter={(value) => [`${value}%`, t.progress.title]}
-              cursor={{ stroke: "var(--color-border)", strokeWidth: 1 }}
             />
             <Area
               type="monotone"

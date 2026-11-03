@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
 
 interface ExerciseVideoProps {
@@ -29,36 +29,13 @@ export function ExerciseVideo({
     () => resolvedTheme,
     () => undefined
   );
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [failed, setFailed] = useState(false);
-
   const src =
     theme === "dark" ? videoDarkUrl : theme === "light" ? videoLightUrl : undefined;
+  return <VideoContent key={src} src={src} poster={poster} alt={alt} className={className} />;
+}
 
-  useEffect(() => {
-    setFailed(false);
-    const video = videoRef.current;
-    if (!video || !src) return;
-    video.load();
-    void video.play().catch(() => {
-      // Autoplay may be blocked until user interaction; loop still works after manual play.
-    });
-  }, [src]);
-
-  if (failed && poster) {
-    return (
-      <div
-        className={cn(
-          "relative aspect-video overflow-hidden rounded-xl bg-muted",
-          className
-        )}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={poster} alt={alt} className="h-full w-full object-cover" />
-      </div>
-    );
-  }
-
+function VideoContent({ src, poster, alt, className }: Pick<ExerciseVideoProps, "poster" | "alt" | "className"> & { src?: string }) {
+  const [failed, setFailed] = useState(false);
   return (
     <div
       className={cn(
@@ -66,20 +43,23 @@ export function ExerciseVideo({
         className
       )}
     >
-      <video
-        ref={videoRef}
-        key={src}
-        src={src}
-        poster={poster ?? undefined}
-        autoPlay
-        loop
-        muted
-        playsInline
-        controls={false}
-        preload="metadata"
-        className="h-full w-full object-cover"
-        onError={() => setFailed(true)}
-      />
+      {failed && poster ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={poster} alt={alt} className="h-full w-full object-cover" />
+      ) : (
+        <video
+          src={src}
+          poster={poster ?? undefined}
+          autoPlay
+          loop
+          muted
+          playsInline
+          controls={false}
+          preload="metadata"
+          className="h-full w-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      )}
     </div>
   );
 }

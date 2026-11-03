@@ -2,6 +2,7 @@ import type { Table, UpdateSpec } from "dexie";
 import type { EntityType, SyncableEntity } from "@/lib/db/types";
 import { enqueueSync } from "@/lib/sync/queue";
 import { generateId } from "@/lib/utils/id";
+import { db } from "@/lib/db/dexie";
 
 type Entity = SyncableEntity & { id: string };
 
@@ -12,15 +13,17 @@ export async function putEntityWithSync<T extends Entity>(
   entity: T,
   operation: "create" | "update"
 ): Promise<T> {
-  await table.put(entity);
-  await enqueueSync({
-    entityType,
-    entityId: entity.id,
-    operation,
-    payload: entity,
-    revision: entity.revision,
+  return db.transaction("rw", table, db.syncQueue, async () => {
+    await table.put(entity);
+    await enqueueSync({
+      entityType,
+      entityId: entity.id,
+      operation,
+      payload: entity,
+      revision: entity.revision,
+    });
+    return entity;
   });
-  return entity;
 }
 
 export async function createEntity<T extends Entity>(
@@ -43,16 +46,18 @@ export async function updateEntity<T extends Entity>(
   id: string,
   data: Partial<NoInfer<T>>
 ): Promise<T | undefined> {
-  const existing = await table.get(id);
-  if (!existing || existing.deletedAt) return undefined;
-  const entity: T = {
-    ...existing,
-    ...data,
-    id,
-    revision: existing.revision + 1,
-    updatedAt: new Date().toISOString(),
-  };
-  return putEntityWithSync(table, entityType, entity, "update");
+  return db.transaction("rw", table, db.syncQueue, async () => {
+    const existing = await table.get(id);
+    if (!existing || existing.deletedAt) return undefined;
+    const entity: T = {
+      ...existing,
+      ...data,
+      id,
+      revision: existing.revision + 1,
+      updatedAt: new Date().toISOString(),
+    };
+    return putEntityWithSync(table, entityType, entity, "update");
+  });
 }
 
 /** Returns the next revision after enqueueing, or null when there is nothing to delete. */
@@ -74,8 +79,10 @@ export async function hardDeleteEntity<T extends Entity>(
   entityType: EntityType,
   id: string
 ): Promise<void> {
-  if ((await enqueueDelete(table, entityType, id)) === null) return;
-  await table.delete(id);
+  await db.transaction("rw", table, db.syncQueue, async () => {
+    if ((await enqueueDelete(table, entityType, id)) === null) return;
+    await table.delete(id);
+  });
 }
 
 /** Tombstone the row locally so later conflict resolution can see the delete. */
@@ -85,13 +92,15 @@ export async function softDeleteEntity<T extends Entity>(
   id: string,
   extraPatch?: UpdateSpec<T>
 ): Promise<void> {
-  const revision = await enqueueDelete(table, entityType, id);
-  if (revision === null) return;
-  const now = new Date().toISOString();
-  await table.update(id, {
-    deletedAt: now,
-    revision,
-    updatedAt: now,
-    ...extraPatch,
-  } as unknown as UpdateSpec<T>);
+  await db.transaction("rw", table, db.syncQueue, async () => {
+    const revision = await enqueueDelete(table, entityType, id);
+    if (revision === null) return;
+    const now = new Date().toISOString();
+    await table.update(id, {
+      deletedAt: now,
+      revision,
+      updatedAt: now,
+      ...extraPatch,
+    } as unknown as UpdateSpec<T>);
+  });
 }

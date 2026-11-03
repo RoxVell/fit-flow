@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import {
-  LineChart,
+  ComposedChart,
   Line,
-  BarChart,
   Bar,
   XAxis,
   YAxis,
@@ -15,6 +14,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { chartAxisProps, chartGridProps, chartTooltipProps } from "@/components/charts/chart-style";
 import { ChartPeriodSelector } from "@/components/charts/chart-period-selector";
 import { PeriodChangeIndicator } from "@/components/charts/period-change-indicator";
 import { ExercisePickerDialog } from "@/components/exercises/exercise-picker-dialog";
@@ -35,7 +35,7 @@ import { useChartPeriods } from "@/lib/charts/use-chart-periods";
 export function ExercisesTab() {
   const t = useT();
   const usageCounts = useExerciseUsageCounts();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [requestedId, setRequestedId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [chartType, setChartType] = useState<"1rm" | "volume">("1rm");
   const [period, setPeriod] = useState<ChartPeriod>(DEFAULT_CHART_PERIOD);
@@ -48,16 +48,9 @@ export function ExercisesTab() {
       .map(([id]) => id);
   }, [usageCounts]);
 
-  useEffect(() => {
-    if (!usedExerciseIds) return;
-    if (usedExerciseIds.length === 0) {
-      setSelectedId(null);
-      return;
-    }
-    if (!selectedId || !usedExerciseIds.includes(selectedId)) {
-      setSelectedId(usedExerciseIds[0]);
-    }
-  }, [usedExerciseIds, selectedId]);
+  const selectedId = requestedId && usedExerciseIds?.includes(requestedId)
+    ? requestedId
+    : usedExerciseIds?.[0] ?? null;
 
   const history = useExerciseHistory(selectedId ?? "");
   const detailedHistory = useExerciseDetailedHistory(selectedId ?? "");
@@ -99,7 +92,7 @@ export function ExercisesTab() {
           onOpenChange={setPickerOpen}
           title={t.progress.exerciseProgress}
           onlyUsed
-          onSelect={setSelectedId}
+          onSelect={setRequestedId}
           emptyMessage={t.progress.noData}
         />
       ) : null}
@@ -137,7 +130,7 @@ function ExerciseProgressChart({
     if (!history) return undefined;
 
     const filtered = filterByPeriod(
-      history.map((h) => ({ ...h, date: h.date })),
+      history,
       period
     );
 
@@ -200,37 +193,15 @@ function ExerciseProgressChart({
         <div className="h-48 outline-none">
           {chartData && chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              {chartType === "1rm" ? (
-                <LineChart
-                  data={chartData}
-                  margin={{ top: 5, right: 0, left: -15, bottom: 5 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="var(--color-muted)"
-                  />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 10 }}
-                    stroke="var(--color-muted-foreground)"
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10 }}
-                    stroke="var(--color-muted-foreground)"
-                    domain={yDomain}
-                    tickFormatter={(v) => `${v}`}
-                  />
-                  <Tooltip
-                    wrapperStyle={{ outline: "none" }}
-                    contentStyle={{
-                      backgroundColor: "#1f1f1f",
-                      border: "1px solid #333",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                      color: "#eee",
-                    }}
-                    cursor={{ stroke: "#444", strokeWidth: 1 }}
-                  />
+              <ComposedChart data={chartData} margin={{ top: 5, right: 0, left: -15, bottom: 5 }}>
+                <CartesianGrid {...chartGridProps} />
+                <XAxis dataKey="date" {...chartAxisProps} />
+                <YAxis {...chartAxisProps} domain={yDomain} />
+                <Tooltip
+                  {...chartTooltipProps}
+                  cursor={chartType === "volume" ? { fill: "var(--color-muted)" } : chartTooltipProps.cursor}
+                />
+                {chartType === "1rm" ? (
                   <Line
                     type="monotone"
                     dataKey="estimated1RM"
@@ -238,45 +209,10 @@ function ExerciseProgressChart({
                     strokeWidth={2}
                     dot={{ fill: "var(--color-primary)", r: 3 }}
                   />
-                </LineChart>
-              ) : (
-                <BarChart
-                  data={chartData}
-                  margin={{ top: 5, right: 0, left: -15, bottom: 5 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="var(--color-muted)"
-                  />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 10 }}
-                    stroke="var(--color-muted-foreground)"
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10 }}
-                    stroke="var(--color-muted-foreground)"
-                    domain={yDomain}
-                    tickFormatter={(v) => `${v}`}
-                  />
-                  <Tooltip
-                    wrapperStyle={{ outline: "none" }}
-                    contentStyle={{
-                      backgroundColor: "#1f1f1f",
-                      border: "1px solid #333",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                      color: "#eee",
-                    }}
-                    cursor={{ fill: "#333" }}
-                  />
-                  <Bar
-                    dataKey="volume"
-                    fill="var(--color-primary)"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              )}
+                ) : (
+                  <Bar dataKey="volume" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
+                )}
+              </ComposedChart>
             </ResponsiveContainer>
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">

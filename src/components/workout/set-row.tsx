@@ -32,22 +32,17 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
   const t = useT();
 
   const hasPrefilled = useRef(false);
-  const [weightText, setWeightText] = useState(() => formatDecimalForInput(set.weight));
-  const isWeightFocused = useRef(false);
+  const [weightDraft, setWeightDraft] = useState<string | null>(null);
+  const weightText = weightDraft ?? formatDecimalForInput(set.weight);
   const weightBeforeFocus = useRef(set.weight);
 
   useEffect(() => {
-    if (!isWeightFocused.current) {
-      setWeightText(formatDecimalForInput(set.weight));
-    }
-  }, [set.weight]);
-
-  useEffect(() => {
-    if (!hasPrefilled.current && set.weight === 0 && set.reps === 0 && previousSet) {
+    if (hasPrefilled.current || !previousSet) return;
+    hasPrefilled.current = true;
+    if (!set.completed && set.weight === 0 && set.reps === 0) {
       onUpdate({ weight: previousSet.weight, reps: previousSet.reps });
-      hasPrefilled.current = true;
     }
-  }, [previousSet]);
+  }, [previousSet, onUpdate, set.completed, set.reps, set.weight]);
 
   const hasRequired = set.weight > 0 && set.reps > 0;
   const canToggleComplete = set.completed || hasRequired;
@@ -85,26 +80,26 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
             aria-label={t.workout.setWeightLabel(exerciseName, setNumber)}
             value={weightText}
             onFocus={() => {
-              isWeightFocused.current = true;
+              hasPrefilled.current = true;
               weightBeforeFocus.current = set.weight;
+              setWeightDraft(set.completed ? formatDecimalForInput(set.weight) : "");
               if (!set.completed) {
-                setWeightText("");
                 onUpdate({ weight: 0 });
               }
             }}
             onBlur={() => {
-              isWeightFocused.current = false;
               const parsed = parseLocalizedDecimal(weightText);
               onUpdate(
                 { weight: parsed },
                 { propagateWeight: true, baselineWeight: weightBeforeFocus.current }
               );
-              setWeightText(formatDecimalForInput(parsed));
+              setWeightDraft(null);
             }}
             onChange={(e) => {
               const value = e.target.value;
               if (!isPartialDecimalInput(value)) return;
-              setWeightText(value);
+              hasPrefilled.current = true;
+              setWeightDraft(value);
               if (value !== "" && !value.endsWith(",") && !value.endsWith(".")) {
                 onUpdate({ weight: parseLocalizedDecimal(value) });
               }
@@ -121,6 +116,7 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
             aria-label={t.workout.setRepsLabel(exerciseName, setNumber)}
             value={set.reps || ""}
             onFocus={() => {
+              hasPrefilled.current = true;
               if (!set.completed) {
                 onUpdate({ reps: 0 });
               }

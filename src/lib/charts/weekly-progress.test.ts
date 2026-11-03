@@ -5,9 +5,7 @@ import {
   buildWeeklyExerciseBest1RM,
   computeBodyPartChartChanges,
   computeBodyPartProgressSeries,
-  computeBodyPartSummariesFromExercises,
   computeOverallProgressSeries,
-  computeOverallProgressSummary,
   getSortedWeeks,
 } from "./weekly-progress";
 import type { BodyPart } from "@/lib/exercises/types";
@@ -59,20 +57,18 @@ describe("computeOverallProgressSeries", () => {
   });
 });
 
-describe("computeOverallProgressSummary", () => {
-  it("averages per-exercise changes instead of comparing mixed weekly snapshots", () => {
+describe("overall progress change", () => {
+  it("compares the first and last chart values", () => {
     const filteredWeeks = [
       week("2026-05-05T00:00:00.000Z", { strong: 150, weak: 90 }),
       week("2026-05-19T00:00:00.000Z", { strong: 100, weak: 110 }),
     ];
     const baseline = buildPerExerciseBaseline(filteredWeeks);
 
-    const summary = computeOverallProgressSummary(filteredWeeks, baseline);
     const series = computeOverallProgressSeries(filteredWeeks, baseline, (iso) => iso);
     const headline = computePeriodChange(series.map((point) => point.progress));
 
     // strong: 100%→66.7% = -33.3%, weak: 100%→122.2% = +22.2% → avg -5.5%
-    expect(summary.change?.percent).toBe(-5.5);
     expect(headline?.percent).toBe(-5.5);
   });
 });
@@ -106,17 +102,9 @@ describe("computeBodyPartProgressSeries", () => {
     expect(backSeries[0]).toBe(100);
     expect(backSeries.at(-1)).toBeGreaterThan(100);
 
-    const summaries = computeBodyPartSummariesFromExercises(
-      filteredWeeks,
-      baseline,
-      exerciseBodyPart,
-      bodyParts
-    );
-    const summary = summaries.get("BACK")!;
     const chartChanges = computeBodyPartChartChanges(chartData, bodyParts);
     const chartChange = chartChanges.get("BACK")!;
 
-    expect(summary.change?.percent).toBeGreaterThan(0);
     expect(chartChange?.percent).toBeGreaterThan(0);
     expect(chartChange?.percent).toBe(
       computePeriodChange(backSeries)?.percent
@@ -158,17 +146,10 @@ describe("computeBodyPartProgressSeries", () => {
     );
     const backSeries = chartData.map((row) => row.BACK as number);
     const chartChanges = computeBodyPartChartChanges(chartData, bodyParts);
-    const exerciseSummary = computeBodyPartSummariesFromExercises(
-      filteredWeeks,
-      baseline,
-      exerciseBodyPart,
-      bodyParts
-    ).get("BACK")!;
 
     expect(backSeries[0]).toBe(100);
     expect(backSeries.at(-1)).toBe(104.1);
     expect(chartChanges.get("BACK")?.percent).toBe(4.1);
-    expect(exerciseSummary.change?.percent).toBe(4.1);
   });
 
   it("does not fall when a new exercise joins mid-period", () => {
@@ -205,6 +186,26 @@ describe("getSortedWeeks", () => {
 });
 
 describe("buildWeeklyExerciseBest1RM", () => {
+  it("uses the workout start week and excludes deleted and unfinished logs", () => {
+    const startedAt = new Date(2026, 5, 21, 23, 30).toISOString();
+    const log: WorkoutLogEntity = {
+      id: "cross-midnight", startedAt, endedAt: new Date(2026, 5, 22, 0, 30).toISOString(),
+      revision: 1, updatedAt: startedAt,
+      exercises: [{
+        id: "exercise", exerciseId: "bench", workoutLogId: "cross-midnight", sortOrder: 0,
+        sets: [{ id: "set", loggedExerciseId: "exercise", type: "working", setOrder: 0, weight: 70, reps: 5, completed: true }],
+      }],
+    };
+    const weeks = buildWeeklyExerciseBest1RM([
+      log,
+      { ...log, id: "deleted", deletedAt: startedAt },
+      { ...log, id: "unfinished", endedAt: undefined },
+    ]);
+    expect([...weeks.keys()]).toEqual([new Date(2026, 5, 15).toISOString()]);
+    expect(weeks.values().next().value?.get("bench")).toBeCloseTo(70 * (1 + 5 / 30));
+    expect(buildWeeklyExerciseBest1RM([{ ...log, deletedAt: startedAt }, { ...log, endedAt: undefined }]).size).toBe(0);
+  });
+
   it("omits exercises marked excludeFromStats", () => {
     const counted: WorkoutLogEntity = {
       id: "log-1",

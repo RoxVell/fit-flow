@@ -8,7 +8,6 @@ export default function BodyMeasurementLogPage() {
 
   return (
     <BodyMeasurementForm
-      asPage
       onBack={() => router.back()}
       onSuccess={() => router.push("/progress?tab=body")}
     />

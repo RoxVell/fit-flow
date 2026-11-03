@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
@@ -55,18 +55,9 @@ function ProgramsView() {
   const handleSetActive = async (id: string) => {
     if (activatingId) return;
     setActivatingId(id);
-    try {
-      await setActiveProgram(id);
-    } catch {
-      setActivatingId(null);
-    }
+    await setActiveProgram(id).catch(() => undefined);
+    setActivatingId(null);
   };
-
-  useEffect(() => {
-    if (!activatingId || !programs) return;
-    const activated = programs.some((p) => p.id === activatingId && p.isActive);
-    if (activated) setActivatingId(null);
-  }, [programs, activatingId]);
 
   const confirmDelete = async () => {
     if (!pendingDelete || deleting) return;

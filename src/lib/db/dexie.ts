@@ -3,29 +3,27 @@ import type {
   AppMeta,
   BodyMeasurementEntity,
   CardioSessionEntity,
-  ExerciseEntity,
+  Exercise,
   ExerciseReplacement,
-  PersonalRecordEntity,
   ProgramEntity,
   SyncQueueEntry,
   WorkoutDraft,
   WorkoutLogEntity,
 } from "./types";
+import { generateId } from "@/lib/utils/id";
 
 export class FitFlowDB extends Dexie {
-  exercises!: Table<ExerciseEntity, string>;
   programs!: Table<ProgramEntity, string>;
   workoutLogs!: Table<WorkoutLogEntity, string>;
   bodyMeasurements!: Table<BodyMeasurementEntity, string>;
   cardioSessions!: Table<CardioSessionEntity, string>;
-  personalRecords!: Table<PersonalRecordEntity, string>;
   syncQueue!: Table<SyncQueueEntry, string>;
   workoutDrafts!: Table<WorkoutDraft, string>;
   exerciseReplacements!: Table<ExerciseReplacement, [string, string]>;
   meta!: Table<AppMeta, string>;
 
-  constructor() {
-    super("fitflow_v2");
+  constructor(name = "fitflow_v2") {
+    super(name);
     this.version(1).stores({
       exercises: "id",
       programs: "id, isActive, updatedAt",
@@ -40,6 +38,44 @@ export class FitFlowDB extends Dexie {
     this.version(2).stores({
       exerciseReplacements: "[fromExerciseId+toExerciseId], fromExerciseId",
     });
+    // Preserve descriptions of legacy/custom exercises before retiring their store.
+    // Existing PR rows stay archived in personalRecords; the UI derives PRs from logs.
+    this.version(3).stores({}).upgrade(async (tx) => {
+      const catalog = new Map<string, Exercise>(
+        (await tx.table("exercises").toArray()).map((exercise) => [exercise.id, exercise])
+      );
+      const attach = <T extends { exerciseId: string; exercise?: Exercise }>(entries: T[]): T[] =>
+        entries.map((entry) => ({ ...entry, exercise: entry.exercise ?? catalog.get(entry.exerciseId) }));
+      const updatedAt = new Date().toISOString();
+      for (const [tableName, entityType] of [["programs", "program"], ["workoutLogs", "workoutLog"]] as const) {
+        const table = tx.table(tableName);
+        for (const row of await table.toArray()) {
+          const entries = tableName === "programs" ? row.sessions.flatMap((session: { exercises: { exerciseId: string; exercise?: Exercise }[] }) => session.exercises) : row.exercises;
+          if (!entries.some((entry: { exerciseId: string; exercise?: Exercise }) => !entry.exercise && catalog.has(entry.exerciseId))) continue;
+          const entity = {
+            ...row,
+            ...(tableName === "programs"
+              ? { sessions: row.sessions.map((session: { exercises: { exerciseId: string; exercise?: Exercise }[] }) => ({ ...session, exercises: attach(session.exercises) })) }
+              : { exercises: attach(row.exercises) }),
+            revision: row.revision + 1,
+            updatedAt,
+          };
+          await table.put(entity);
+          if (!row.deletedAt) await tx.table("syncQueue").put({
+            id: generateId(), entityType, entityId: row.id, operation: "update",
+            payload: entity, revision: entity.revision, createdAt: updatedAt, status: "pending",
+          });
+        }
+      }
+      await tx.table("workoutDrafts").toCollection().modify((draft) => {
+        draft.exercises = attach(draft.exercises);
+        if (draft.activeWorkoutId && draft.activeWorkoutId === draft.sessionId) draft.activeWorkoutId = generateId();
+      });
+      await tx.table("syncQueue").filter((entry) =>
+        entry.entityType === "exercise" || entry.entityType === "personalRecord"
+      ).delete();
+    });
+    this.version(4).stores({ exercises: null });
   }
 }
 
@@ -50,7 +86,6 @@ const DEFAULT_META: AppMeta = {
   initialized: false,
   lastPullAt: null,
   lastSyncAt: null,
-  schemaVersion: 1,
 };
 
 export async function getAppMeta(): Promise<AppMeta> {

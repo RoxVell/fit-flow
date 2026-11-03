@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { ExercisePickerRow } from "@/components/exercises/exercise-picker-row";
 import {
@@ -12,7 +12,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { pickLocalized } from "@/lib/exercises/locale";
 import { BODY_PART_LABELS, labelFor } from "@/lib/exercises/labels";
-import type { ExerciseManifestItem } from "@/lib/exercises/types";
 import { exerciseUi } from "@/lib/exercises/ui";
 import { useSortedExerciseLibrary } from "@/lib/hooks/use-sorted-exercise-library";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -37,7 +36,6 @@ export function ExercisePickerDialog(props: ExercisePickerDialogProps) {
 }
 
 function ExercisePickerDialogContent({
-  open,
   onOpenChange,
   title,
   excludeIds,
@@ -60,11 +58,6 @@ function ExercisePickerDialogContent({
   const { exercises, loading, usageCounts, preferredIds } = useSortedExerciseLibrary(filters, replacementSourceId);
 
   useEffect(() => {
-    if (!open) setSearch("");
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
     if (!window.matchMedia("(pointer: coarse)").matches) return;
 
     const frame = requestAnimationFrame(() => {
@@ -76,7 +69,7 @@ function ExercisePickerDialogContent({
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [open]);
+  }, []);
 
   const items = useMemo(() => {
     let result = exercises?.filter((e) => !excludeIds?.has(e.id)) ?? [];
@@ -86,15 +79,18 @@ function ExercisePickerDialogContent({
     return result;
   }, [exercises, excludeIds, onlyUsed, usageCounts]);
 
-  const recentItems = useMemo(
-    () => (onlyUsed ? [] : items.filter((e) => !preferredIds?.includes(e.id) && (usageCounts?.get(e.id) ?? 0) > 0)),
-    [items, usageCounts, onlyUsed, preferredIds]
-  );
-  const otherItems = useMemo(
-    () => (onlyUsed ? items : items.filter((e) => !preferredIds?.includes(e.id) && (usageCounts?.get(e.id) ?? 0) === 0)),
-    [items, usageCounts, onlyUsed, preferredIds]
-  );
-  const preferredItems = onlyUsed ? [] : items.filter((e) => preferredIds?.includes(e.id));
+  const groups = useMemo(() => {
+    if (onlyUsed || search.trim()) return [{ label: null, items }];
+    const preferred = new Set(preferredIds);
+    const preferredItems = items.filter((item) => preferred.has(item.id));
+    const recentItems = items.filter((item) => !preferred.has(item.id) && (usageCounts?.get(item.id) ?? 0) > 0);
+    const otherItems = items.filter((item) => !preferred.has(item.id) && (usageCounts?.get(item.id) ?? 0) === 0);
+    return [
+      { label: ui.previousReplacements, items: preferredItems },
+      { label: ui.recentExercises, items: recentItems },
+      { label: preferredItems.length || recentItems.length ? ui.allExercises : null, items: otherItems },
+    ].filter((group) => group.items.length > 0);
+  }, [items, onlyUsed, search, preferredIds, usageCounts, ui]);
 
   const handleSelect = (exerciseId: string) => {
     onSelect(exerciseId);
@@ -125,7 +121,7 @@ function ExercisePickerDialogContent({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open onOpenChange={onOpenChange}>
       <DialogContent
         className="flex h-[85dvh] max-h-[85dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md"
         initialFocus={(openType) => {
@@ -154,107 +150,32 @@ function ExercisePickerDialogContent({
           tabIndex={-1}
           className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-2 pb-4 outline-none [-webkit-overflow-scrolling:touch]"
         >
-          <ExercisePickerResults
-            loading={loading} items={items} recentItems={recentItems}
-            otherItems={otherItems} preferredItems={preferredItems}
-            onlyUsed={onlyUsed} search={search} renderItem={renderItem}
-            emptyMessage={emptyMessage} emptyMessageAllExcluded={emptyMessageAllExcluded}
-          />
+          {loading ? (
+            <div className="space-y-1 px-2">
+              {Array.from({ length: 8 }, (_, i) => (
+                <div key={i} className="h-14 animate-pulse rounded-lg bg-muted" />
+              ))}
+            </div>
+          ) : items.length === 0 ? (
+            <p className="px-2 py-8 text-center text-sm text-muted-foreground">
+              {search.trim() ? (emptyMessage ?? ui.noResults) : (emptyMessageAllExcluded ?? emptyMessage ?? ui.noResults)}
+            </p>
+          ) : (
+            <div className="space-y-0.5">
+              {groups.map((group, index) => (
+                <div key={group.label ?? "results"} className="space-y-0.5">
+                  {group.label && (
+                    <p className={`px-2 pb-1 text-xs font-medium text-muted-foreground ${index ? "pt-3" : "pt-1"}`}>
+                      {group.label}
+                    </p>
+                  )}
+                  {group.items.map(renderItem)}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-interface ExercisePickerGroupsProps {
-  items: ExerciseManifestItem[];
-  recentItems: ExerciseManifestItem[];
-  otherItems: ExerciseManifestItem[];
-  preferredItems: ExerciseManifestItem[];
-  onlyUsed: boolean;
-  search: string;
-  renderItem: (exercise: ExerciseManifestItem) => ReactNode;
-}
-
-function ExercisePickerResults({
-  loading,
-  items,
-  recentItems,
-  otherItems,
-  preferredItems,
-  onlyUsed,
-  search,
-  renderItem,
-  emptyMessage,
-  emptyMessageAllExcluded,
-}: ExercisePickerGroupsProps &
-  Pick<
-    ExercisePickerDialogProps,
-    "emptyMessage" | "emptyMessageAllExcluded"
-  > & { loading: boolean }) {
-  const ui = exerciseUi[useLocale()];
-  return loading ? (
-    <div className="space-y-1 px-2">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="h-14 animate-pulse rounded-lg bg-muted" />
-      ))}
-    </div>
-  ) : items.length === 0 ? (
-    <p className="px-2 py-8 text-center text-sm text-muted-foreground">
-      {search.trim()
-        ? (emptyMessage ?? ui.noResults)
-        : (emptyMessageAllExcluded ?? emptyMessage ?? ui.noResults)}
-    </p>
-  ) : (
-    <ExercisePickerGroups
-      items={items}
-      recentItems={recentItems}
-      otherItems={otherItems}
-      preferredItems={preferredItems}
-      onlyUsed={onlyUsed}
-      search={search}
-      renderItem={renderItem}
-    />
-  );
-}
-
-function ExercisePickerGroups({
-  items,
-  recentItems,
-  otherItems,
-  preferredItems,
-  onlyUsed,
-  search,
-  renderItem,
-}: ExercisePickerGroupsProps) {
-  const ui = exerciseUi[useLocale()];
-  const showGroups = !onlyUsed && !search.trim();
-  return (
-    <div className="space-y-0.5">
-      {showGroups && preferredItems.length > 0 && (
-        <>
-          <p className="px-2 pt-1 pb-1 text-xs font-medium text-muted-foreground">
-            {ui.previousReplacements}
-          </p>
-          {preferredItems.map(renderItem)}
-        </>
-      )}
-      {showGroups && recentItems.length > 0 ? (
-        <>
-          <p className="px-2 pt-1 pb-1 text-xs font-medium text-muted-foreground">
-            {ui.recentExercises}
-          </p>
-          {recentItems.map(renderItem)}
-        </>
-      ) : null}
-      {showGroups &&
-      otherItems.length > 0 &&
-      (recentItems.length > 0 || preferredItems.length > 0) ? (
-        <p className="px-2 pt-3 pb-1 text-xs font-medium text-muted-foreground">
-          {ui.allExercises}
-        </p>
-      ) : null}
-      {(search.trim() || onlyUsed ? items : otherItems).map(renderItem)}
-    </div>
   );
 }

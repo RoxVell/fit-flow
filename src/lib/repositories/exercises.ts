@@ -1,19 +1,12 @@
 import { buildExerciseMapFromManifest } from "@/lib/exercises/adapter";
-import { ensureManifestLoaded } from "@/lib/hooks/use-exercise-library";
+import { ensureManifestLoaded } from "@/lib/exercises/library-client";
 import { getActiveLocale } from "@/lib/i18n/locale-context";
-import type { Exercise, ExerciseEntity } from "@/lib/db/types";
+import type { Exercise } from "@/lib/db/types";
 
-export async function getExerciseMap(): Promise<Map<string, ExerciseEntity>> {
+export async function getExerciseMap(): Promise<Map<string, Exercise>> {
   const manifest = await ensureManifestLoaded();
   const locale = getActiveLocale();
-  const map = buildExerciseMapFromManifest(manifest, locale);
-  const now = new Date().toISOString();
-  return new Map(
-    [...map.entries()].map(([id, exercise]) => [
-      id,
-      { ...exercise, revision: 1, updatedAt: now },
-    ])
-  );
+  return buildExerciseMapFromManifest(manifest, locale);
 }
 
 /** Resolve `exercise` on every nested exercise ref (program sessions, workout logs, …). */
@@ -24,7 +17,7 @@ export function attachExercises<
     ...item,
     exercises: item.exercises.map((e) => ({
       ...e,
-      exercise: exerciseMap.get(e.exerciseId),
+      exercise: exerciseMap.get(e.exerciseId) ?? e.exercise,
     })),
   }));
 }
