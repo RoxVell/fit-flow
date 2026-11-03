@@ -15,6 +15,7 @@ interface SwipeDeleteRowProps {
 
 export function SwipeDeleteRow({ children, onDelete, className }: SwipeDeleteRowProps) {
   const open = useRef(false);
+  const didDrag = useRef(false);
   const controls = useAnimationControls();
   const settle = (nextOpen: boolean) => {
     open.current = nextOpen;
@@ -37,10 +38,13 @@ export function SwipeDeleteRow({ children, onDelete, className }: SwipeDeleteRow
         dragElastic={0}
         dragMomentum={false}
         animate={controls}
+        onPointerDownCapture={() => { didDrag.current = false; }}
+        onDragStart={() => { didDrag.current = true; }}
         onDragEnd={(_, { offset }) => {
           settle(open.current ? offset.x < DELETE_WIDTH / 2 : offset.x < -DELETE_WIDTH / 2);
         }}
-        onTap={() => settle(false)}
+        // Motion can also emit onTap for the pointerup that ends a drag.
+        onTap={() => { if (!didDrag.current) settle(false); }}
         className="relative bg-card touch-pan-y"
       >
         {children}

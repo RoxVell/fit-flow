@@ -24,9 +24,10 @@ The `fitflow_v2` database contains:
 | `meta` | Sync status, key `app` |
 
 Exercises come from `public/exercises/`; personal records are derived from workout
-history. The old local `personalRecords` store remains an unused archive. Dexie upgrades
-preserve user history and copy legacy exercise descriptions into referenced records
-before removing the old exercise store. Seeding only populates an empty database.
+history. The old local `personalRecords` and `exercises` stores remain unused archives.
+Dexie upgrades preserve user history and copy legacy exercise descriptions into referenced
+records. The source catalog remains available even if a newer server record replaces an
+embedded description; it is not used for rendering or sync. Seeding only populates an empty database.
 
 Synced entities carry `revision`, `updatedAt`, and optional `deletedAt`. Database schema
 versions are managed by Dexie. `meta.initialized` records whether a server sync completed;

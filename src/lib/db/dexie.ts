@@ -38,7 +38,7 @@ export class FitFlowDB extends Dexie {
     this.version(2).stores({
       exerciseReplacements: "[fromExerciseId+toExerciseId], fromExerciseId",
     });
-    // Preserve descriptions of legacy/custom exercises before retiring their store.
+    // Embed legacy descriptions; keep their source archived if a server conflict replaces a snapshot.
     // Existing PR rows stay archived in personalRecords; the UI derives PRs from logs.
     this.version(3).stores({}).upgrade(async (tx) => {
       const catalog = new Map<string, Exercise>(
@@ -75,7 +75,7 @@ export class FitFlowDB extends Dexie {
         entry.entityType === "exercise" || entry.entityType === "personalRecord"
       ).delete();
     });
-    this.version(4).stores({ exercises: null });
+    this.version(4).stores({ exercises: "id" });
   }
 }
 

@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { FitFlowDB } from "./dexie";
 import { buildLoggedExercisesFromSession } from "@/lib/workout/start-session-draft";
 
-it("upgrades a legacy database without clearing history, drafts, programs or archived PRs", async () => {
+it("upgrades a legacy database without clearing history, drafts, programs or legacy archives", async () => {
   const name = "fitflow-migration-test";
   await Dexie.delete(name);
   const legacy = new Dexie(name);
@@ -39,7 +39,7 @@ it("upgrades a legacy database without clearing history, drafts, programs or arc
     const session = (await upgraded.programs.get("program"))!.sessions[0];
     expect(buildLoggedExercisesFromSession(session)[0].exercise).toMatchObject(exercise);
     expect(await upgraded.table("personalRecords").get("standalone-pr")).toMatchObject({ value: 90 });
-    expect(upgraded.tables.some((table) => table.name === "exercises")).toBe(false);
+    expect(await upgraded.table("exercises").get(exercise.id)).toMatchObject(exercise);
     expect(await upgraded.syncQueue.get("obsolete")).toBeUndefined();
     expect(await upgraded.syncQueue.get("kept")).toBeDefined();
     expect(await upgraded.syncQueue.filter((entry) => entry.entityType === "workoutLog").count()).toBe(1);

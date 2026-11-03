@@ -109,7 +109,7 @@ Program hooks (`usePrograms`, `useActiveProgram`, `useProgram`) wait for manifes
 
 Seed programs reference fixed UUIDs in `src/lib/db/seed-exercise-ids.ts` (derived from manifest).
 
-**Dexie schema upgrades** (`src/lib/db/dexie.ts`): version 3 preserves legacy exercise descriptions inside referencing programs, logs and drafts; version 4 removes the obsolete exercise store. User history is never cleared. Old PR rows remain archived; current record events are derived from completed workouts.
+**Dexie schema upgrades** (`src/lib/db/dexie.ts`): version 3 preserves legacy exercise descriptions inside referencing programs, logs and drafts; version 4 retains the obsolete exercise store as an unused archive in case sync later replaces an embedded description. User history is never cleared. Old PR rows also remain archived; current record events are derived from completed workouts.
 
 Exercises are resolved from the static manifest, with embedded legacy descriptions as a fallback. `seed-loader.ts` only inserts default programs into an empty, uninitialized local database.
 
