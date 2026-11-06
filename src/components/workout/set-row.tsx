@@ -12,6 +12,7 @@ import {
   isPartialDecimalInput,
   parseLocalizedDecimal,
 } from "@/lib/utils/decimal-input";
+import { decideSetPrefill, shouldClearOnFocus } from "@/lib/workout/set-prefill";
 
 interface SetUpdateOptions {
   propagateWeight?: boolean;
@@ -37,10 +38,16 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
   const weightBeforeFocus = useRef(set.weight);
 
   useEffect(() => {
-    if (hasPrefilled.current || !previousSet) return;
-    hasPrefilled.current = true;
-    if (!set.completed && set.weight === 0 && set.reps === 0) {
-      onUpdate({ weight: previousSet.weight, reps: previousSet.reps });
+    const decision = decideSetPrefill({
+      completed: set.completed,
+      weight: set.weight,
+      reps: set.reps,
+      previousSet,
+      settled: hasPrefilled.current,
+    });
+    hasPrefilled.current = decision.settled;
+    if (decision.apply) {
+      onUpdate({ weight: decision.apply.weight, reps: decision.apply.reps });
     }
   }, [previousSet, onUpdate, set.completed, set.reps, set.weight]);
 
@@ -80,14 +87,22 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
             aria-label={t.workout.setWeightLabel(exerciseName, setNumber)}
             value={weightText}
             onFocus={() => {
-              hasPrefilled.current = true;
               weightBeforeFocus.current = set.weight;
-              setWeightDraft(set.completed ? formatDecimalForInput(set.weight) : "");
-              if (!set.completed) {
-                onUpdate({ weight: 0 });
+              if (set.completed) {
+                setWeightDraft(formatDecimalForInput(set.weight));
+                return;
               }
+              // History may still be loading. Clearing a zero here queues a
+              // weight of 0 that lands after the previous-set copy.
+              if (!shouldClearOnFocus(set.completed, set.weight)) return;
+              hasPrefilled.current = true;
+              setWeightDraft("");
+              onUpdate({ weight: 0 });
             }}
             onBlur={() => {
+              // No local draft means the user never edited this field.
+              // Committing would write 0 over a prefill that arrived while focused.
+              if (weightDraft === null) return;
               const parsed = parseLocalizedDecimal(weightText);
               onUpdate(
                 { weight: parsed },
@@ -116,12 +131,14 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
             aria-label={t.workout.setRepsLabel(exerciseName, setNumber)}
             value={set.reps || ""}
             onFocus={() => {
+              if (!shouldClearOnFocus(set.completed, set.reps)) return;
               hasPrefilled.current = true;
-              if (!set.completed) {
-                onUpdate({ reps: 0 });
-              }
+              onUpdate({ reps: 0 });
             }}
-            onChange={(e) => onUpdate({ reps: parseInt(e.target.value) || 0 })}
+            onChange={(e) => {
+              hasPrefilled.current = true;
+              onUpdate({ reps: parseInt(e.target.value) || 0 });
+            }}
             className="h-8 w-10 shrink-0 text-center text-sm tabular-nums px-1"
             placeholder="0"
           />
