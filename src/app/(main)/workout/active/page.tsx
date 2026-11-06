@@ -145,7 +145,7 @@ function ActiveWorkoutContent() {
         )}
         <AnimatePresence>
           {exercises.map((ex, index) => {
-            const exercise = exerciseMap.get(ex.exerciseId);
+            const exercise = exerciseMap.get(ex.exerciseId) ?? ex.exercise;
             const exerciseName =
               exercise?.name || getName(ex.exerciseId, t.workout.unknownExercise);
             return (

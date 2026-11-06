@@ -1,6 +1,6 @@
 "use client";
 
-import { useDashboardStats, useActiveProgram } from "@/lib/hooks/use-data";
+import { useWeightSummary } from "@/lib/hooks/use-data";
 import { Greeting } from "@/components/dashboard/greeting";
 import { SmartStats } from "@/components/dashboard/smart-stats";
 import { RecentPRs } from "@/components/dashboard/recent-prs";
@@ -9,10 +9,9 @@ import { ProgressChart } from "@/components/dashboard/progress-chart";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
-  const stats = useDashboardStats();
-  const program = useActiveProgram();
+  const stats = useWeightSummary();
 
-  if (stats === undefined || program === undefined) {
+  if (stats === undefined) {
     return (
       <div className="space-y-4 p-4">
         <Skeleton className="h-16 w-full rounded-2xl" />

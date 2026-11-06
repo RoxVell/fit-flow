@@ -13,9 +13,8 @@ import { test as base, expect, type Page } from "@playwright/test";
  *    verify persistence). Clearing in `beforeEach` keeps the cookie
  *    intact for the duration of a single test, including across
  *    reloads.
- *  - Routes `/api/sync` to a 200 no-op. The real handler requires a Neon DB
- *    connection, and the resulting 500 fires the Next.js dev error overlay
- *    (`<nextjs-portal>`) which intercepts pointer events and breaks clicks.
+ *  - Disables sync through its configuration endpoint and stubs POSTs so
+ *    local environment credentials cannot make UI tests contact a database.
  *
  * The service-worker stub returns a minimal `ServiceWorkerRegistration`
  * shape so Serwist's `register()` can call `.addEventListener`,
@@ -32,12 +31,14 @@ const SYNC_STUB_BODY = JSON.stringify({
 });
 
 export const test = base.extend({
-  context: async ({ context }, use) => {
+  context: async ({ context }, provideContext) => {
     await context.route("**/api/sync", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: SYNC_STUB_BODY,
+        body: route.request().method() === "GET"
+          ? JSON.stringify({ enabled: false })
+          : SYNC_STUB_BODY,
       });
     });
 
@@ -89,7 +90,7 @@ export const test = base.extend({
         stub.register = () => Promise.resolve(stubRegistration);
       }
     });
-    await use(context);
+    await provideContext(context);
   },
 });
 

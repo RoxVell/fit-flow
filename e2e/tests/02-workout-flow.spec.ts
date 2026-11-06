@@ -53,20 +53,22 @@ test("user can start a workout, log a set, and finish the session", async ({ pag
   // We should now be on the active workout screen.
   await expect(page).toHaveURL(/\/workout\/active/);
 
-  // A prior weight record lets Triumph show growth even while this workout's
-  // records are being saved under their persistent IDs.
+  // PRs are derived from completed workouts, including the previous weight.
   await page.evaluate(() => new Promise<void>((resolve, reject) => {
     const request = indexedDB.open("fitflow_v2");
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       const database = request.result;
-      const tx = database.transaction(["workoutDrafts", "personalRecords"], "readwrite");
+      const tx = database.transaction(["workoutDrafts", "workoutLogs"], "readwrite");
       const draft = tx.objectStore("workoutDrafts").get("active");
       draft.onsuccess = () => {
-        tx.objectStore("personalRecords").put({
-          id: "previous-weight", exerciseId: draft.result.exercises[0].exerciseId,
-          exerciseName: "Previous record", type: "weight", value: 50,
-          date: "2026-01-01T00:00:00Z", revision: 1, updatedAt: "2026-01-01T00:00:00Z",
+        tx.objectStore("workoutLogs").put({
+          id: "previous-workout", startedAt: "2026-01-01T00:00:00Z",
+          endedAt: "2026-01-01T01:00:00Z", revision: 1, updatedAt: "2026-01-01T01:00:00Z",
+          exercises: [{ id: "previous-entry", exerciseId: draft.result.exercises[0].exerciseId,
+            workoutLogId: "previous-workout", sortOrder: 0,
+            sets: [{ id: "previous-set", loggedExerciseId: "previous-entry", type: "working",
+              setOrder: 0, weight: 50, reps: 8, completed: true }] }],
         });
       };
       tx.oncomplete = () => { database.close(); resolve(); };
@@ -100,5 +102,5 @@ test("user can start a workout, log a set, and finish the session", async ({ pag
     page.getByText(/workout (complete|completed|finished)/i).first(),
   ).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText(/\+10\.00 kg/i)).toBeVisible();
-  await expect(page.getByText("(+20.0%)", { exact: true })).toBeVisible();
+  await expect(page.getByText(/\+10\.00 kg/i).getByText("(+20.0%)", { exact: true })).toBeVisible();
 });

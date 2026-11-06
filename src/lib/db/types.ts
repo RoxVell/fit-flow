@@ -45,12 +45,10 @@ export interface SyncableEntity {
 }
 
 export type EntityType =
-  | "exercise"
   | "program"
   | "workoutLog"
   | "bodyMeasurement"
-  | "cardioSession"
-  | "personalRecord";
+  | "cardioSession";
 
 export interface Exercise {
   id: string;
@@ -169,31 +167,10 @@ export interface PersonalRecord {
   workoutLogId?: string;
 }
 
-export interface DashboardStats {
-  weeklyWorkouts: number;
-  weeklyVolume: number;
-  currentWeight: number | null;
-  weightTrend: "up" | "down" | "stable";
-  hasWeightHistory: boolean;
-  activeDays: number;
-  nextSession?: WorkoutSession;
-  heatmapData: Record<MuscleGroup, number>;
-}
-
-export interface ExerciseFilters {
-  muscleGroup?: MuscleGroup;
-  equipment?: Equipment;
-  search?: string;
-  unilateral?: boolean;
-  category?: "compound" | "isolation" | "cardio";
-}
-
-export type ExerciseEntity = Exercise & SyncableEntity;
 export type ProgramEntity = WorkoutProgram & SyncableEntity;
 export type WorkoutLogEntity = WorkoutLog & SyncableEntity;
 export type BodyMeasurementEntity = BodyMeasurement & SyncableEntity;
 export type CardioSessionEntity = CardioSession & SyncableEntity;
-export type PersonalRecordEntity = PersonalRecord & SyncableEntity;
 
 export interface SyncQueueEntry {
   id: string;
@@ -211,7 +188,6 @@ export interface AppMeta {
   initialized: boolean;
   lastPullAt: string | null;
   lastSyncAt: string | null;
-  schemaVersion: number;
 }
 
 export interface WorkoutDraft {

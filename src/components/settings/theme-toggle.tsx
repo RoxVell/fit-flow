@@ -2,18 +2,14 @@
 
 import { useTheme } from "next-themes";
 import { Monitor, Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useT } from "@/lib/i18n/use-t";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const t = useT();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useHydrated();
 
   const themes = [
     { value: "system", label: t.settings.themeSystem, icon: Monitor },

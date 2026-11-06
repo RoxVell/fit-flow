@@ -22,6 +22,10 @@ export const messages = {
       version: "Version",
       buildDate: "Last update",
       lastSync: "Last sync",
+      sync: "Sync across devices",
+      syncNow: "Sync now",
+      syncUnavailable: "Sync is unavailable. Your data is saved on this device.",
+      syncRejected: "Some changes could not be synced. They remain saved on this device; edit them to retry.",
       never: "Never",
     },
     dashboard: {
@@ -238,6 +242,7 @@ export const messages = {
       newProgram: "New Program",
       editProgram: "Edit Program",
       save: "Save",
+      saveFailed: "Could not save the program. Please try again.",
       update: "Update",
       back: "Back",
       programInfo: "Program Info",
@@ -300,17 +305,10 @@ export const messages = {
       shareHintSuffix: "Share button, then “Add to Home Screen”.",
       dismiss: "Dismiss",
       installCta: "Install",
-      backOnline: "Back online",
-      backOnlineSyncing: (n: number) =>
-        n === 1
-          ? `Back online — syncing ${n} change…`
-          : `Back online — syncing ${n} changes…`,
       offlineTitle: "You're offline —",
-      offlineNoPending: "changes will sync when connected",
+      offlineNoPending: "changes are saved on this device",
       pendingChanges: (n: number) =>
         n === 1 ? `${n} pending change` : `${n} pending changes`,
-      syncNow: "Sync now",
-      syncing: "Syncing",
     },
     common: {
       loading: "Loading...",
@@ -339,6 +337,10 @@ export const messages = {
       version: "Версия",
       buildDate: "Последнее обновление",
       lastSync: "Последняя синхронизация",
+      sync: "Синхронизация устройств",
+      syncNow: "Синхронизировать",
+      syncUnavailable: "Синхронизация недоступна. Данные сохранены на этом устройстве.",
+      syncRejected: "Некоторые изменения не синхронизированы. Они сохранены на устройстве; отредактируйте их для повторной попытки.",
       never: "Никогда",
     },
     dashboard: {
@@ -556,6 +558,7 @@ export const messages = {
       newProgram: "Новая программа",
       editProgram: "Редактировать программу",
       save: "Сохранить",
+      saveFailed: "Не удалось сохранить программу. Попробуйте ещё раз.",
       update: "Обновить",
       back: "Назад",
       programInfo: "О программе",
@@ -624,18 +627,8 @@ export const messages = {
       shareHintSuffix: "«Поделиться», затем «На экран “Домой”».",
       dismiss: "Скрыть",
       installCta: "Установить",
-      backOnline: "Сеть доступна",
-      backOnlineSyncing: (n: number) => {
-        const mod10 = n % 10;
-        const mod100 = n % 100;
-        if (mod10 === 1 && mod100 !== 11)
-          return `Сеть доступна — синхронизируется ${n} изменение…`;
-        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20))
-          return `Сеть доступна — синхронизируются ${n} изменения…`;
-        return `Сеть доступна — синхронизируются ${n} изменений…`;
-      },
       offlineTitle: "Вы офлайн —",
-      offlineNoPending: "изменения синхронизируются при подключении",
+      offlineNoPending: "изменения сохраняются на устройстве",
       pendingChanges: (n: number) => {
         const mod10 = n % 10;
         const mod100 = n % 100;
@@ -644,8 +637,6 @@ export const messages = {
           return `${n} несинхронизированных изменения`;
         return `${n} несинхронизированных изменений`;
       },
-      syncNow: "Синхронизировать",
-      syncing: "Синхронизация...",
     },
     common: {
       loading: "Загрузка...",

@@ -12,6 +12,7 @@ export function buildLoggedExercisesFromSession(
       return {
         id: leId,
         exerciseId: se.exerciseId,
+        exercise: se.exercise,
         workoutLogId: session.id,
         sortOrder: se.sortOrder,
         sets: Array.from({ length: se.targetSets }, (_, si) => ({
@@ -31,7 +32,7 @@ export async function startWorkoutDraft(session: WorkoutSession) {
   const exercises = buildLoggedExercisesFromSession(session);
   return initDraft(
     session.id,
-    session.id,
+    generateId(),
     exercises,
     new Date().toISOString()
   );

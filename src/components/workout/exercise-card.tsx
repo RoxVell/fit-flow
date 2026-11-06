@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { m, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -75,21 +75,16 @@ export function ExerciseCard({
   onUpdateExercise,
 }: ExerciseCardProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [noteOpen, setNoteOpen] = useState(false);
-  const [noteDraft, setNoteDraft] = useState(exercise.notes ?? "");
+  const [noteDraft, setNoteDraft] = useState<string | null>(null);
   const t = useT();
   const { muscleGroupLabel } = useFormat();
   const noteText = exercise.notes?.trim() ?? "";
   const excluded = Boolean(exercise.excludeFromStats);
 
-  useEffect(() => {
-    if (noteOpen) setNoteDraft(exercise.notes ?? "");
-  }, [exercise.notes, noteOpen]);
-
   const saveNote = () => {
-    const trimmed = noteDraft.trim();
+    const trimmed = (noteDraft ?? "").trim();
     onUpdateExercise({ notes: trimmed ? trimmed : undefined });
-    setNoteOpen(false);
+    setNoteDraft(null);
   };
 
   return (
@@ -151,7 +146,8 @@ export function ExerciseCard({
                   <DropdownMenuContent align="end" className="min-w-52 w-auto">
                     <DropdownMenuItem
                       onClick={() => {
-                        window.setTimeout(() => setNoteOpen(true), 0);
+                        // Let the menu release focus before opening the dialog.
+                        window.setTimeout(() => setNoteDraft(exercise.notes ?? ""), 0);
                       }}
                     >
                       <StickyNote />
@@ -235,21 +231,21 @@ export function ExerciseCard({
         </m.div>
       </div>
 
-      <Dialog open={noteOpen} onOpenChange={setNoteOpen}>
+      <Dialog open={noteDraft !== null} onOpenChange={(open) => { if (!open) setNoteDraft(null); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t.workout.exerciseNote}</DialogTitle>
             <DialogDescription>{exerciseName}</DialogDescription>
           </DialogHeader>
           <Textarea
-            value={noteDraft}
+            value={noteDraft ?? ""}
             onChange={(event) => setNoteDraft(event.target.value)}
             placeholder={t.workout.exerciseNotePlaceholder}
             rows={4}
             aria-label={t.workout.exerciseNote}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNoteOpen(false)}>
+            <Button variant="outline" onClick={() => setNoteDraft(null)}>
               {t.workout.cancel}
             </Button>
             <Button onClick={saveNote}>{t.workout.saveNote}</Button>

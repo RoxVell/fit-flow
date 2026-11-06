@@ -257,7 +257,7 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
                               <div key={exercise.id}>
                                 <div className="mb-1 flex flex-wrap items-center gap-1.5">
                                   <p className="text-xs font-medium">
-                                    {getName(exercise.exerciseId)}
+                                    {getName(exercise.exerciseId, exercise.exercise?.name ?? t.workout.unknownExercise)}
                                   </p>
                                   {exercise.excludeFromStats ? (
                                     <span className="rounded-full border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">

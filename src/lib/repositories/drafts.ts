@@ -17,7 +17,7 @@ type DraftPatcher = DraftPatch | ((current: WorkoutDraft) => DraftPatch);
 
 let draftWriteChain: Promise<unknown> = Promise.resolve();
 
-function enqueueDraftWrite<T>(fn: () => Promise<T>): Promise<T> {
+export function enqueueDraftWrite<T>(fn: () => Promise<T>): Promise<T> {
   const result = draftWriteChain.then(fn);
   draftWriteChain = result.catch(() => {});
   return result;

@@ -24,7 +24,6 @@ function CreateProgramInner() {
 
   return (
     <ProgramForm
-      asPage
       key={editId || "create"}
       initialData={
         existingProgram

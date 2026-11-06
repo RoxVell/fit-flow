@@ -31,6 +31,7 @@ const BODY_PARTS: BodyPart[] = [
 ];
 
 export function ExerciseLibraryList() {
+  "use no memo"; // TanStack Virtual exposes mutable measurements through its instance.
   const locale = useLocale();
   const ui = exerciseUi[locale];
   const [search, setSearch] = useState("");
@@ -50,6 +51,8 @@ export function ExerciseLibraryList() {
   const parentRef = useRef<HTMLDivElement>(null);
   const items = exercises ?? [];
 
+  // This component opts out above; the installed lint still reports this API.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => parentRef.current,

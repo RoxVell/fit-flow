@@ -68,3 +68,52 @@ test("back leaves the log form without saving", async ({ page }) => {
   await expect(page).toHaveURL(/\/progress/);
   await expect(page.getByText(/no measurements yet/i).first()).toBeVisible();
 });
+
+for (const pointer of ["mouse", "touch"] as const) {
+  test(`swiping a measurement keeps delete available after release (${pointer})`, async ({ page, context }) => {
+    await page.getByRole("button", { name: /log measurement/i }).click();
+    await page.getByRole("spinbutton", { name: /^Weight \(kg\)$/i }).fill("81.4");
+    await page.getByRole("button", { name: /^Save$/i }).click();
+    const summary = page.getByText("81.4 kg", { exact: true });
+    await expect(summary).toBeVisible();
+    const row = summary.locator("xpath=ancestor::div[contains(@class,'touch-pan-y')][1]");
+    await row.scrollIntoViewIfNeeded();
+    const box = await row.boundingBox();
+    if (!box) throw new Error("Measurement row is missing");
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    if (pointer === "touch") {
+      const cdp = await context.newCDPSession(page);
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y, id: 1 }] });
+      for (let step = 1; step <= 12; step++) {
+        await cdp.send("Input.dispatchTouchEvent", {
+          type: "touchMove", touchPoints: [{ x: x - step * 80 / 12, y, id: 1 }],
+        });
+        await page.evaluate(() => new Promise(requestAnimationFrame));
+      }
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+      await cdp.detach();
+    } else {
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x - 80, y, { steps: 12 });
+      await page.mouse.up();
+    }
+
+    // An immediate click can race an erroneous tap-to-close animation. Require
+    // the revealed state to persist across rendering frames before deleting.
+    await expect.poll(() => row.evaluate(async (element) => {
+      for (let frame = 0; frame < 12; frame++) {
+        await new Promise(requestAnimationFrame);
+        if (Math.abs(new DOMMatrixReadOnly(getComputedStyle(element).transform).m41 + 72) > 0.5) return false;
+      }
+      return true;
+    })).toBe(true);
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: /^Delete$/i }).click();
+    await expect(summary).toHaveCount(0);
+    await expect(page.getByText(/no measurements yet/i).first()).toBeVisible();
+  });
+}

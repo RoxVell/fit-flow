@@ -1,18 +1,14 @@
 import { db } from "@/lib/db/dexie";
 import { ensureSeeded } from "@/lib/db/seed-loader";
 import type {
-  Exercise,
   LoggedExercise,
   WorkoutLog,
   WorkoutLogEntity,
 } from "@/lib/db/types";
 import { compareByDate } from "@/lib/utils/date";
-import { createEntity, hardDeleteEntity, updateEntity } from "./entity-crud";
+import { hardDeleteEntity, putEntityWithSync, updateEntity } from "./entity-crud";
 import { attachExercises, getExerciseMap } from "./exercises";
-import {
-  deletePersonalRecordsForWorkout,
-  reconcilePRsAfterWorkoutUpdate,
-} from "./records";
+import { enqueueDraftWrite } from "./drafts";
 
 export async function getCompletedWorkoutLogsInRange(
   from: Date,
@@ -31,40 +27,45 @@ export async function getCompletedWorkoutLogsInRange(
   return attachExercises(sorted, exerciseMap);
 }
 
-export async function createWorkoutLog(
-  data: Omit<WorkoutLog, "id" | "revision" | "updatedAt">
-): Promise<WorkoutLogEntity> {
-  return createEntity(db.workoutLogs, "workoutLog", data);
-}
-
-export async function updateWorkoutLog(
-  id: string,
-  data: Partial<WorkoutLog>
-): Promise<WorkoutLogEntity | undefined> {
-  return updateEntity(db.workoutLogs, "workoutLog", id, data);
-}
-
-export async function deleteWorkoutLog(id: string): Promise<void> {
-  await hardDeleteEntity(db.workoutLogs, "workoutLog", id);
-}
-
 export async function saveWorkoutEdits(
   id: string,
-  exercises: LoggedExercise[],
-  exerciseMap: Map<string, Exercise>
+  exercises: LoggedExercise[]
 ): Promise<WorkoutLogEntity | undefined> {
-  const updated = await updateWorkoutLog(id, { exercises });
-  if (!updated) return undefined;
-  await reconcilePRsAfterWorkoutUpdate(updated, exerciseMap);
-  return updated;
+  return updateEntity(db.workoutLogs, "workoutLog", id, { exercises });
 }
 
 export async function removeWorkoutLog(id: string): Promise<void> {
-  const [existing, exerciseMap] = await Promise.all([
-    db.workoutLogs.get(id),
-    getExerciseMap(),
-  ]);
-  if (!existing || existing.deletedAt) return;
-  await deletePersonalRecordsForWorkout(id, existing, exerciseMap);
-  await deleteWorkoutLog(id);
+  await hardDeleteEntity(db.workoutLogs, "workoutLog", id);
+}
+
+/** Await pending set edits, then commit the log, outbox and draft removal together. */
+export function finishWorkout(
+  activeWorkoutId: string,
+  details: Pick<WorkoutLog, "endedAt" | "programId" | "programName" | "sessionName">
+): Promise<WorkoutLogEntity> {
+  return enqueueDraftWrite(() => db.transaction(
+    "rw", db.workoutDrafts, db.workoutLogs, db.syncQueue, async () => {
+      const draft = await db.workoutDrafts.get("active");
+      const existing = await db.workoutLogs.get(activeWorkoutId);
+      if (existing) {
+        if (draft?.activeWorkoutId === activeWorkoutId) await db.workoutDrafts.delete("active");
+        return existing;
+      }
+      if (!draft?.startedAt || draft.activeWorkoutId !== activeWorkoutId) {
+        throw new Error("Workout draft no longer available");
+      }
+      const log: WorkoutLogEntity = {
+        ...details,
+        id: activeWorkoutId,
+        startedAt: draft.startedAt,
+        sessionId: draft.sessionId ?? undefined,
+        exercises: draft.exercises.map((exercise) => ({ ...exercise, workoutLogId: activeWorkoutId })),
+        revision: 1,
+        updatedAt: new Date().toISOString(),
+      };
+      await putEntityWithSync(db.workoutLogs, "workoutLog", log, "create");
+      await db.workoutDrafts.delete("active");
+      return log;
+    }
+  ));
 }

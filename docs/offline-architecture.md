@@ -1,143 +1,122 @@
-# FitFlow Offline-First Architecture
+# FitFlow offline-first architecture
 
-## Overview
+The UI reads IndexedDB through Dexie live queries. Repository writes update local data
+and enqueue changes together. Network access is optional; the service worker caches the
+application and static exercise catalog, never user data or `/api/` responses.
 
-```
-React Components
-    ↓ useLiveQuery (dexie-react-hooks)
-Dexie (IndexedDB) — single source of truth for UI
-    ↓ repositories (write + enqueue)
-syncQueue
-    ↓ SyncService
-POST /api/sync
-    ↓ Drizzle ORM
-Neon PostgreSQL
+```text
+React → Dexie (source of truth) → syncQueue → /api/sync → Neon Postgres
 ```
 
-User data is **never** stored in Service Worker caches. SW caches static assets (JS, CSS, images, pages) and the **exercise catalog** (`/exercises/*.json`). See [exercise-library-and-i18n.md](./exercise-library-and-i18n.md).
+## Local storage
 
-## Dexie Schema (`fitflow_v2`)
+The `fitflow_v2` database contains:
 
 | Store | Purpose |
-|-------|---------|
-| `exercises` | Unused for catalog (exercises come from static JSON; see [exercise-library-and-i18n.md](./exercise-library-and-i18n.md)) |
-| `programs` | Programs with nested `sessions` |
-| `workoutLogs` | Logs with nested `exercises` / `sets` |
+|---|---|
+| `programs` | Programs, nested sessions and rest duration |
+| `workoutLogs` | Completed workouts with nested exercises and sets |
 | `bodyMeasurements` | Body metrics |
 | `cardioSessions` | Cardio history |
-| `personalRecords` | PRs |
-| `syncQueue` | Pending server sync operations |
-| `workoutDrafts` | In-progress workout (singleton `active`) |
-| `meta` | Sync state singleton (`key: app`) |
+| `workoutDrafts` | The current workout, key `active` |
+| `exerciseReplacements` | Local replacement preferences |
+| `syncQueue` | Pending changes and permanently rejected entries |
+| `meta` | Sync status, key `app` |
 
-### Syncable entity fields
+Exercises come from `public/exercises/`; personal records are derived from workout
+history. The old local `personalRecords` and `exercises` stores remain unused archives.
+Dexie upgrades preserve user history and copy legacy exercise descriptions into referenced
+records. The source catalog remains available even if a newer server record replaces an
+embedded description; it is not used for rendering or sync. Seeding only populates an empty database.
 
-- `revision` — incremented on each write
-- `updatedAt` — ISO timestamp
-- `deletedAt` — soft delete marker
+Synced entities carry `revision`, `updatedAt`, and optional `deletedAt`. Database schema
+versions are managed by Dexie. `meta.initialized` records whether a server sync completed;
+`lastSyncAt` and the legacy `lastPullAt` are informational timestamps.
 
-### Meta singleton
+## Enabling sync
 
-```ts
-{
-  key: 'app',
-  initialized: boolean,
-  lastPullAt: string | null,
-  lastSyncAt: string | null,
-  schemaVersion: number,
-}
+Development, production builds and local-only use do not require a database. The server
+constructs its Neon client lazily, only when configured sync or an import needs it.
+
+For cross-device use, configure the server environment variable:
+
+```dotenv
+DATABASE_URL=postgresql://user:password@host/db
 ```
 
-## Sync Protocol
+`GET /api/sync` returns `{ enabled: boolean }`. Sync is enabled whenever `DATABASE_URL`
+is set, in both development and production. The endpoint has no authentication; all
+clients using this server share one database. Without `DATABASE_URL`, the client checks
+this configuration but sends no sync POSTs.
 
-Single endpoint: `POST /api/sync`
+One `SyncProvider` runs the background process. `useSyncState` only subscribes to state;
+adding a status display does not start another timer or network listener. Sync runs on
+launch, reconnect, visible-tab focus, manual request and every 60 seconds while visible
+and enabled. Offline writes remain local until a later successful sync.
 
-### Request
+## Protocol and conflict resolution
+
+`POST /api/sync` accepts:
 
 ```json
 {
   "lastPullAt": null,
-  "changes": []
+  "changes": [{
+    "id": "queue-entry-id",
+    "entityType": "workoutLog",
+    "entityId": "workout-id",
+    "operation": "update",
+    "payload": {},
+    "revision": 3
+  }]
 }
 ```
 
-- `lastPullAt: null` — first sync / full pull (server returns all records)
-- `lastPullAt: "<ISO>"` — incremental pull (records with `updated_at > lastPullAt`)
+The payload must match its entity type; the example above omits the workout fields for
+brevity. Allowed types are `program`, `workoutLog`, `bodyMeasurement`, `cardioSession`.
+The API validates IDs, revisions, dates, numeric values and nested sessions/sets. Bodies
+are limited to 10 MiB and 1,000 changes; the client drains the queue in batches of at most
+100 changes per request. It stops on rejection, loss of connectivity or lack of progress
+instead of immediately retrying a failed batch. Deletions need no payload.
 
-Each change in `changes`:
+The response contains `accepted`, `superseded`, `rejected`, `serverChanges` and
+`serverTime`. Accepted and superseded changes leave the queue. Invalid changes have
+`permanent: true` and become `failed` locally; a new edit replaces that failed entry.
+Transient write failures remain pending. Legacy exercise/PR changes are acknowledged
+as superseded so old queues cannot block current data.
 
-```json
-{
-  "id": "queue-entry-uuid",
-  "entityType": "workoutLog",
-  "entityId": "entity-uuid",
-  "operation": "create|update|delete",
-  "payload": {},
-  "revision": 3
-}
-```
+Writes use a conditional SQL upsert: the incoming revision must be greater than the
+stored revision. The comparison and write execute in one statement, so concurrent
+requests cannot bypass the revision check. Equal revisions keep the server copy.
+Deletions create tombstones even when an ID has not previously reached the server.
+This is a revision policy, not wall-clock last-write-wins or automatic field merging.
 
-### Response
+Every response pulls **all four tables, including tombstones**. `lastPullAt` is accepted
+for compatibility but does not filter records. A write concurrent with a pull therefore
+arrives on that pull or the next one; it cannot be permanently skipped behind a timestamp
+checkpoint. The tradeoff is response size proportional to personal history. For much
+larger datasets a durable change feed would be a separate design, rather than restoring
+the unsafe timestamp cutoff.
 
-```json
-{
-  "accepted": ["queue-entry-uuid"],
-  "rejected": [],
-  "serverChanges": [{ "entityType": "...", "entity": {}, "revision": 1 }],
-  "serverTime": "2026-06-05T20:00:00.000Z"
-}
-```
+The client keeps newer local revisions, protects pending deletes, and skips identical
+revision/timestamp pairs to avoid unnecessary live-query updates. Queue acknowledgments,
+pulled data and metadata are applied in one IndexedDB transaction. PostgreSQL timestamps
+are serialized as ISO strings so local sorting and date ranges remain consistent.
 
-## Conflict Resolution
+## PostgreSQL schema and upgrades
 
-Last Write Wins by `revision`:
+Runtime tables are `programs`, `workout_logs`, `body_measurements`, and `cardio_sessions`.
+Programs and workouts store their nested structures as JSONB. Existing `exercises` and
+`personal_records` tables are retained as archives; `archive-schema.ts` remains in the
+Drizzle configuration so schema management does not propose dropping them.
 
-- Server applies client change if `client.revision > server.revision`
-- Client applies server change if `server.revision >= local.revision`
-- Tie → server wins (equal revision: server keeps its copy; client accepts server on pull)
+New databases can use `npm run db:push` after configuring the environment. Existing
+databases need the additive `drizzle/migrations/0002_program_rest_duration.sql` migration
+before this version syncs; it adds the rest duration with a 90-second default. Review
+schema operations before applying them. Application startup and builds never apply
+migrations automatically.
 
-Single user, single device — no CRDT/OT.
-
-## Sync Triggers
-
-1. App start (`SyncProvider`)
-2. `window.online`
-3. `document.visibilitychange` (visible + online)
-4. 60s interval when `syncQueue` has pending items
-
-## Offline Behavior
-
-1. **First launch offline**: exercise catalog from SW cache (`/exercises/`); programs seeded locally; `meta.initialized = false`
-2. **Reads**: always from Dexie via `useLiveQuery`
-3. **Writes**: Dexie first → `syncQueue` → background sync when online
-4. **First launch online**: `POST /api/sync` with `lastPullAt: null` loads server data
-
-## PostgreSQL (Neon)
-
-Tables: `exercises`, `programs` (sessions JSONB), `workout_logs` (exercises JSONB), `body_measurements`, `cardio_sessions`, `personal_records`.
-
-Migrations applied via Neon MCP (`prepare_database_migration` / `complete_database_migration`).
-
-## Development
-
-```bash
-# .env.local
-DATABASE_URL=postgresql://...
-
-npm run dev
-npm run db:push      # optional schema push
-```
-
-Test offline: DevTools → Network → Offline, or disable network on device after first sync.
-
-## Key Files
-
-| Path | Role |
-|------|------|
-| `src/lib/db/dexie.ts` | Dexie database |
-| `src/lib/repositories/*.ts` | Data access + enqueue |
-| `src/lib/sync/sync-service.ts` | Sync engine |
-| `src/lib/hooks/use-data.ts` | `useLiveQuery` hooks |
-| `src/app/api/sync/route.ts` | Sync API |
-| `src/server/sync.ts` | Server sync logic |
-| `src/server/db/schema.ts` | Drizzle schema |
+Tests cover the request boundary, disabled/enabled modes, SQL revision guard,
+serialization, delayed writes, tombstones and queue handling without a live database.
+These checks do not replace integration verification against a configured PostgreSQL instance.
+Production offline behavior is covered separately by the Playwright offline smoke test.

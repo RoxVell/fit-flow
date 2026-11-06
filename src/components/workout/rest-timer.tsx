@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { m } from "framer-motion";
 import { SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,29 +16,20 @@ interface RestTimerProps {
 }
 
 export function RestTimer({ endTime, duration, isRunning, onStop }: RestTimerProps) {
-  const [remaining, setRemaining] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const t = useT();
-
-  useEffect(() => {
-    if (!isRunning || !endTime) {
-      setRemaining(0);
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      return;
-    }
-
-    intervalRef.current = setInterval(() => {
-      const diff = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
-      setRemaining(diff);
-      if (diff <= 0 && intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+  const subscribe = useCallback((notify: () => void) => {
+    if (!isRunning || endTime === null) return () => {};
+    const interval = setInterval(() => {
+      notify();
+      if (endTime - Date.now() < 1000) clearInterval(interval);
     }, 100);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    return () => clearInterval(interval);
   }, [endTime, isRunning]);
+  const remaining = useSyncExternalStore(
+    subscribe,
+    () => isRunning && endTime !== null ? Math.max(0, Math.floor((endTime - Date.now()) / 1000)) : 0,
+    () => 0
+  );
 
   if (!isRunning || remaining <= 0) return null;
 

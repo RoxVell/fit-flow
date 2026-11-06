@@ -17,7 +17,8 @@ async function checkExistingImport(
   force: boolean
 ): Promise<void> {
   const { and, gte, isNull, like, lte } = await import("drizzle-orm");
-  const { db } = await import("../../src/server/db/index");
+  const { getDb } = await import("../../src/server/db/index");
+  const db = getDb();
   const { workoutLogs } = await import("../../src/server/db/schema");
 
   const imported = await db
@@ -37,8 +38,8 @@ async function checkExistingImport(
     .from(workoutLogs)
     .where(
       and(
-        gte(workoutLogs.startedAt, startedAtMin),
-        lte(workoutLogs.startedAt, startedAtMax),
+        gte(workoutLogs.startedAt, startedAtMin.toISOString()),
+        lte(workoutLogs.startedAt, startedAtMax.toISOString()),
         isNull(workoutLogs.deletedAt)
       )
     );
@@ -51,15 +52,16 @@ async function checkExistingImport(
 }
 
 async function insertWorkoutLogs(logs: BoostcampWorkoutLog[]): Promise<void> {
-  const { db } = await import("../../src/server/db/index");
+  const { getDb } = await import("../../src/server/db/index");
+  const db = getDb();
   const { workoutLogs } = await import("../../src/server/db/schema");
-  const now = new Date();
+  const now = new Date().toISOString();
 
   await db.insert(workoutLogs).values(
     logs.map((log) => ({
       id: log.id,
-      startedAt: new Date(log.startedAt),
-      endedAt: new Date(log.endedAt),
+      startedAt: log.startedAt,
+      endedAt: log.endedAt,
       programId: null,
       sessionId: null,
       programName: log.programName,

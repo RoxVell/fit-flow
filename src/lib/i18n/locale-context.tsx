@@ -2,11 +2,10 @@
 
 import {
   createContext,
-  useCallback,
   useContext,
-  useLayoutEffect,
+  useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
 } from "react";
 import type { Locale } from "@/lib/exercises/types";
 import {
@@ -22,43 +21,44 @@ type LocaleContextValue = {
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
-/** For non-React code paths (repositories). Updated on every render. */
-let activeLocale: Locale = "en";
+const DEFAULT_LOCALE: Locale = "en";
+const LOCALE_CHANGE_EVENT = "fitflow-locale-change";
+const serverSnapshot = () => DEFAULT_LOCALE;
 
+/** Repositories read the same persisted value as the React subscription. */
 export function getActiveLocale(): Locale {
-  return activeLocale;
+  return typeof window === "undefined" ? DEFAULT_LOCALE : resolveClientLocale();
 }
 
-const DEFAULT_LOCALE: Locale = "en";
+function subscribeLocale(listener: () => void) {
+  window.addEventListener(LOCALE_CHANGE_EVENT, listener);
+  window.addEventListener("storage", listener);
+  return () => {
+    window.removeEventListener(LOCALE_CHANGE_EVENT, listener);
+    window.removeEventListener("storage", listener);
+  };
+}
+
+function setLocale(next: Locale) {
+  setLocaleCookie(next);
+  writePersistedLocale(next);
+  window.dispatchEvent(new Event(LOCALE_CHANGE_EVENT));
+}
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   // Server HTML is static and always rendered in the default locale.
-  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
-  activeLocale = locale;
+  const locale = useSyncExternalStore(subscribeLocale, getActiveLocale, serverSnapshot);
 
-  // The bootstrap script in the root layout syncs the cookie from
-  // localStorage before hydration; pick up the result (or the browser
-  // language on a fresh install) in the same frame to avoid a flash.
-  useLayoutEffect(() => {
+  // Persist the browser/bootstrap choice without copying it into React state.
+  useEffect(() => {
     const resolved = resolveClientLocale();
-    if (resolved !== locale) {
-      setLocaleCookie(resolved);
-      writePersistedLocale(resolved);
-      activeLocale = resolved;
-      setLocaleState(resolved);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const setLocale = useCallback((next: Locale) => {
-    setLocaleCookie(next);
-    writePersistedLocale(next);
-    activeLocale = next;
-    setLocaleState(next);
-  }, []);
+    setLocaleCookie(resolved);
+    writePersistedLocale(resolved);
+  }, [locale]);
 
   const value = useMemo(
     () => ({ locale, setLocale }),
-    [locale, setLocale]
+    [locale]
   );
 
   return (
@@ -69,7 +69,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 export function useLocale(): Locale {
   const ctx = useContext(LocaleContext);
   if (!ctx) {
-    return activeLocale;
+    return getActiveLocale();
   }
   return ctx.locale;
 }

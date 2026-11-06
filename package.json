@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:offline": "playwright test --config=playwright.offline.config.ts",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report"
@@ -28,7 +29,6 @@
     "@neondatabase/serverless": "^1.1.0",
     "@serwist/turbopack": "^9.5.11",
     "@tanstack/react-virtual": "^3.13.12",
-    "@use-gesture/react": "^10.3.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
@@ -60,6 +60,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "fake-indexeddb": "^6.2.5",
+    "happy-dom": "^21.0.4",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.9"

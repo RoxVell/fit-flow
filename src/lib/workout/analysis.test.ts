@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { WorkoutLogEntity } from "@/lib/db/types";
 import { buildWorkoutReport } from "./analysis";
+import { toExerciseHistoryPoint } from "./exercise-stats";
 
 const range = { from: new Date(2026, 0, 1), to: new Date(2026, 0, 31, 23, 59, 59, 999) };
 function log(id: string, day: number, weight: number): WorkoutLogEntity {
@@ -71,5 +72,23 @@ describe("workout analysis", () => {
     expect(report.summary.exercises[0].history[0].sets).toBe(2);
     expect(report.summary.volumeKgReps).toBe(420);
     expect(report.summary.exercises[0].estimated1RMChangePercent).toBeNull();
+  });
+
+  it("agrees with exercise history when repeated entries mix excluded and incomplete sets", () => {
+    const workout = log("mixed", 1, 50);
+    workout.exercises.push(
+      { ...workout.exercises[0], id: "excluded", excludeFromStats: true, sets: [{ ...workout.exercises[0].sets[0], weight: 999 }] },
+      { ...workout.exercises[0], id: "second", sets: [{ ...workout.exercises[0].sets[0], weight: 70 }] },
+    );
+    const report = buildWorkoutReport([workout], range);
+    const point = report.summary.exercises[0].history[0];
+    const history = toExerciseHistoryPoint(workout, "bench")!;
+
+    expect(point).toMatchObject({ sets: 2, volumeKgReps: 720, maxWeightKg: 70 });
+    expect(point.volumeKgReps).toBe(history.volume);
+    expect(point.maxWeightKg).toBe(history.maxWeight);
+    expect(point.estimated1RMKg).toBe(history.estimated1RM);
+    expect(report.summary.excludedExerciseEntries).toBe(1);
+    expect(report.workouts[0].exercises).toHaveLength(3);
   });
 });
