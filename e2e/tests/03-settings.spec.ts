@@ -20,6 +20,42 @@ test("settings page shows theme and language controls", async ({ page }) => {
   await expect(controls.getByRole("button")).toHaveCount(5);
 });
 
+test("configured sync recovers automatically without a manual control or key", async ({ page }) => {
+  const requests: Record<string, string>[] = [];
+  let configRequests = 0;
+  // Finish requests from the shared setup before simulating a fresh launch.
+  await page.goto("about:blank");
+  await page.clock.install();
+  await page.route("**/api/sync", async (route) => {
+    const request = route.request();
+    if (request.method() === "GET") {
+      if (++configRequests === 1) {
+        await route.fulfill({ status: 503, json: { error: "Temporarily unavailable" } });
+        return;
+      }
+      await route.fulfill({ json: { enabled: true } });
+      return;
+    }
+    requests.push(request.headers());
+    await route.fulfill({ json: {
+      accepted: request.postDataJSON().changes.map((change: { id: string }) => change.id),
+      superseded: [], rejected: [], serverChanges: [], serverTime: new Date().toISOString(),
+    } });
+  });
+  await page.goto("/settings");
+  const unavailable = page.getByRole("status").filter({ hasText: "Sync is unavailable" });
+  await expect(unavailable).toBeVisible();
+  expect(requests).toHaveLength(0);
+  await expect(page.getByRole("button", { name: /^Sync now$/i })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Sync across devices" })).toHaveCount(0);
+  await page.clock.fastForward(60_000);
+  await expect.poll(() => requests.length).toBeGreaterThan(0);
+  expect(configRequests).toBe(2);
+  await expect(unavailable).toHaveCount(0);
+  await expect(page.locator('input[type="password"]')).toHaveCount(0);
+  expect(requests.every((headers) => headers.authorization === undefined)).toBe(true);
+});
+
 test("switching to Russian updates visible labels and persists across reload", async ({
   page,
 }) => {

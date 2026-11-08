@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,7 +45,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { RestDurationStepper } from "@/components/programs/rest-duration-stepper";
-import { DEFAULT_REST_DURATION_SECONDS, resolveRestDuration } from "@/lib/workout/rest-duration";
+import { resolveRestDuration } from "@/lib/workout/rest-duration";
 
 interface ExerciseEntry {
   exerciseId: string;
@@ -60,9 +60,6 @@ interface SessionEntry {
 }
 
 interface ProgramFormProps {
-  asPage?: boolean;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
   onSave: (data: {
     name: string;
     description: string;
@@ -74,7 +71,7 @@ interface ProgramFormProps {
       sortOrder: number;
       exercises: { exerciseId: string; targetSets: number; targetReps: string; sortOrder: number }[];
     }[];
-  }) => void;
+  }) => Promise<void>;
   onBack?: () => void;
   initialData?: {
     name: string;
@@ -88,7 +85,7 @@ interface ProgramFormProps {
   };
 }
 
-export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initialData }: ProgramFormProps) {
+export function ProgramForm({ onSave, onBack, initialData }: ProgramFormProps) {
   const t = useT();
   const { dayOptions } = useFormat();
   const [name, setName] = useState(initialData?.name ?? "");
@@ -108,34 +105,40 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
     })) ?? []
   );
   const [editingSessionIdx, setEditingSessionIdx] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   const isEditMode = !!initialData;
 
   const canSave = name.trim() && sessions.length > 0 && sessions.every((s) => s.name.trim() && s.exercises.length > 0);
 
-  const handleSave = () => {
-    if (!canSave) return;
-    onSave({
-      name: name.trim(),
-      description: description.trim(),
-      daysPerWeek: sessions.length,
-      restDurationSeconds,
-      sessions: sessions.map((s, i) => ({
-        name: s.name.trim(),
-        dayOfWeek: s.dayOfWeek,
-        sortOrder: i,
-        exercises: s.exercises.map((e, j) => ({
-          exerciseId: e.exerciseId,
-          targetSets: e.targetSets,
-          targetReps: e.targetReps,
-          sortOrder: j,
+  const handleSave = async () => {
+    if (!canSave || saving) return;
+    setSaving(true);
+    setSaveFailed(false);
+    try {
+      await onSave({
+        name: name.trim(),
+        description: description.trim(),
+        daysPerWeek: sessions.length,
+        restDurationSeconds,
+        sessions: sessions.map((s, i) => ({
+          name: s.name.trim(),
+          dayOfWeek: s.dayOfWeek,
+          sortOrder: i,
+          exercises: s.exercises.map((e, j) => ({
+            exerciseId: e.exerciseId,
+            targetSets: e.targetSets,
+            targetReps: e.targetReps,
+            sortOrder: j,
+          })),
         })),
-      })),
-    });
-    setName("");
-    setDescription("");
-    setRestDurationSeconds(DEFAULT_REST_DURATION_SECONDS);
-    setSessions([]);
+      });
+    } catch {
+      setSaveFailed(true);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const addSession = () => {
@@ -163,25 +166,18 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
     setSessions(sessions.map((s, i) => (i === idx ? updated : s)));
   };
 
-  if (!asPage && !open) return null;
-
   return (
-    <div
-      className={
-        asPage
-          ? "flex h-full flex-col overflow-hidden"
-          : "fixed inset-0 z-50 flex flex-col bg-background"
-      }
-    >
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
       <ProgramFormHeader
-        isEditMode={isEditMode} canSave={!!canSave} onSave={handleSave}
-        onBack={asPage ? onBack : () => onOpenChange?.(false)}
+        isEditMode={isEditMode} canSave={!!canSave && !saving} saving={saving}
+        onSave={() => void handleSave()} onBack={onBack}
       />
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
-        <div className={cn("mx-auto max-w-lg space-y-8 px-4 py-6", asPage && "pb-24")}>
+        <div className="mx-auto max-w-lg space-y-8 px-4 py-6 pb-24">
+          {saveFailed && <p role="alert" className="text-sm text-destructive">{t.programs.saveFailed}</p>}
           {/* Info section */}
           <section>
             <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -296,11 +292,13 @@ export function ProgramForm({ asPage, open, onOpenChange, onSave, onBack, initia
 function ProgramFormHeader({
   isEditMode,
   canSave,
+  saving,
   onSave,
   onBack,
 }: {
   isEditMode: boolean;
   canSave: boolean;
+  saving: boolean;
   onSave: () => void;
   onBack?: () => void;
 }) {
@@ -328,7 +326,7 @@ function ProgramFormHeader({
         )}
       >
         <Check className="h-4 w-4" />
-        {isEditMode ? t.programs.update : t.programs.save}
+        {saving ? t.workout.saving : isEditMode ? t.programs.update : t.programs.save}
       </button>
     </div>
   );
@@ -347,30 +345,13 @@ function SessionEditorDialog({
   onSave: (session: SessionEntry) => void;
   onDelete: () => void;
 }) {
-  const [local, setLocal] = useState<SessionEntry | null>(null);
-  const wasOpen = useRef(false);
-
-  useEffect(() => {
-    if (open && !wasOpen.current && session) {
-      setLocal({ ...session });
-    }
-    wasOpen.current = open;
-  }, [open, session]);
-
-  const handleClose = () => {
-    if (local && session && (local.name !== session.name || local.dayOfWeek !== session.dayOfWeek || JSON.stringify(local.exercises) !== JSON.stringify(session.exercises))) {
-      onSave(local);
-    }
-    onOpenChange(false);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={(open) => { if (!open) handleClose(); }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] p-0 gap-0">
-        {local && (
+        {session && (
           <SessionEditorContent
-            session={local}
-            onUpdate={(data) => setLocal((prev) => prev ? { ...prev, ...data } : prev)}
+            session={session}
+            onUpdate={(data) => onSave({ ...session, ...data })}
             onDelete={onDelete}
           />
         )}

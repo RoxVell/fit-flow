@@ -1,6 +1,6 @@
 import type { WorkoutLogEntity } from "@/lib/db/types";
 import type { BodyPart } from "@/lib/exercises/types";
-import { e1RM } from "@/lib/training-metrics";
+import { aggregateExerciseStats } from "@/lib/workout/exercise-stats";
 import { CHART_PERIOD_DAYS, type ChartPeriod } from "./periods";
 import { computePeriodChange, type PeriodChange } from "./domain";
 
@@ -27,29 +27,18 @@ export function buildWeeklyExerciseBest1RM(
   const weeksMap = new Map<string, Map<string, number>>();
 
   for (const log of logs) {
-    if (!log.endedAt) continue;
-    const weekStart = getMonday(new Date(log.endedAt)).toISOString();
+    if (!log.endedAt || log.deletedAt) continue;
+    const weekStart = getMonday(new Date(log.startedAt)).toISOString();
 
     if (!weeksMap.has(weekStart)) {
       weeksMap.set(weekStart, new Map());
     }
     const weekExercises = weeksMap.get(weekStart)!;
 
-    for (const ex of log.exercises) {
-      if (ex.excludeFromStats) continue;
-      const completed = ex.sets.filter((s) => s.completed && s.weight > 0 && s.reps > 0);
-      if (completed.length === 0) continue;
-
-      let best1RM = 0;
-      for (const set of completed) {
-        const estimate = e1RM(set.weight, set.reps);
-        if (estimate > best1RM) best1RM = estimate;
-      }
-
-      const current = weekExercises.get(ex.exerciseId) || 0;
-      if (best1RM > current) {
-        weekExercises.set(ex.exerciseId, best1RM);
-      }
+    for (const exerciseId of new Set(log.exercises.map((exercise) => exercise.exerciseId))) {
+      const { estimated1RM } = aggregateExerciseStats(log.exercises, exerciseId);
+      if (estimated1RM === null) continue;
+      weekExercises.set(exerciseId, Math.max(weekExercises.get(exerciseId) ?? 0, estimated1RM));
     }
   }
 
@@ -209,15 +198,6 @@ export function computeOverallProgressSeries(
   });
 }
 
-export function computeOverallProgressSummary(
-  filteredWeeks: WeekEntry[],
-  baseline: Map<string, number>
-): { current: number | null; change: PeriodChange | null } {
-  return computeBodyPartSummaryFromExercises(
-    summarizeExercises(filteredWeeks, baseline, baseline.keys())
-  );
-}
-
 const BODY_PART_ORDER: BodyPart[] = [
   "ABS",
   "BACK",
@@ -356,65 +336,6 @@ export function computeBodyPartProgressSeries(
   );
 
   return { chartData, bodyParts: activeBodyParts };
-}
-
-function computeBodyPartSummaryFromExercises(
-  summaries: ExerciseProgressSummary[]
-): { current: number | null; change: PeriodChange | null } {
-  if (summaries.length === 0) {
-    return { current: null, change: null };
-  }
-
-  const currents = summaries
-    .map((summary) => summary.current)
-    .filter((value): value is number => value !== null);
-  const current =
-    currents.length > 0
-      ? Math.round((currents.reduce((sum, value) => sum + value, 0) / currents.length) * 10) /
-        10
-      : null;
-
-  const relativeChanges = summaries
-    .map((summary) => summary.change?.percent)
-    .filter((value): value is number => value !== undefined);
-
-  if (relativeChanges.length === 0) {
-    return { current, change: null };
-  }
-
-  const avgRelative =
-    Math.round(
-      (relativeChanges.reduce((sum, value) => sum + value, 0) / relativeChanges.length) * 10
-    ) / 10;
-
-  return {
-    current,
-    change: { absolute: avgRelative, percent: avgRelative },
-  };
-}
-
-export function computeBodyPartSummariesFromExercises(
-  filteredWeeks: WeekEntry[],
-  baseline: Map<string, number>,
-  exerciseBodyPart: Map<string, BodyPart>,
-  bodyParts: BodyPart[]
-): Map<BodyPart, { current: number | null; change: PeriodChange | null }> {
-  const summaries = new Map<
-    BodyPart,
-    { current: number | null; change: PeriodChange | null }
-  >();
-
-  for (const bodyPart of bodyParts) {
-    const exercises = computeExerciseProgressSummaries(
-      filteredWeeks,
-      baseline,
-      exerciseBodyPart,
-      bodyPart
-    );
-    summaries.set(bodyPart, computeBodyPartSummaryFromExercises(exercises));
-  }
-
-  return summaries;
 }
 
 /** Period change per body-part line (first vs last chart point), like General progress. */

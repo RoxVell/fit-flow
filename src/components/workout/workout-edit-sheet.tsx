@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,39 +28,38 @@ interface WorkoutEditSheetProps {
   onSaved: () => void;
 }
 
-function cloneExercises(exercises: LoggedExercise[]): LoggedExercise[] {
-  return exercises.map((ex) => ({
-    ...ex,
-    sets: ex.sets.map((s) => ({ ...s })),
-  }));
-}
-
 export function WorkoutEditSheet({
   log,
   open,
   onOpenChange,
   onSaved,
 }: WorkoutEditSheetProps) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+        {log && (
+          <WorkoutEditForm
+            key={`${log.id}:${log.revision}:${open}`}
+            log={log}
+            onOpenChange={onOpenChange}
+            onSaved={onSaved}
+          />
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function WorkoutEditForm({
+  log,
+  onOpenChange,
+  onSaved,
+}: Omit<WorkoutEditSheetProps, "log" | "open"> & { log: WorkoutLogEntity }) {
   const t = useT();
-  const { exerciseMap, getName } = useExerciseLookup();
-  const [exercises, setExercises] = useState<LoggedExercise[]>([]);
+  const { getName } = useExerciseLookup();
+  const [exercises, setExercises] = useState<LoggedExercise[]>(log.exercises);
   const [saving, setSaving] = useState(false);
   const [weightTexts, setWeightTexts] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (!log || !open) return;
-    const cloned = cloneExercises(log.exercises);
-    setExercises(cloned);
-    const texts: Record<string, string> = {};
-    for (const ex of cloned) {
-      for (const set of ex.sets) {
-        if (set.completed) {
-          texts[set.id] = formatDecimalForInput(set.weight);
-        }
-      }
-    }
-    setWeightTexts(texts);
-  }, [log, open]);
 
   const updateExercise = (
     exerciseId: string,
@@ -91,7 +90,7 @@ export function WorkoutEditSheet({
   };
 
   const handleSave = async () => {
-    if (!log || saving) return;
+    if (saving) return;
     setSaving(true);
     try {
       const normalized = exercises.map((exercise) => {
@@ -101,7 +100,7 @@ export function WorkoutEditSheet({
           notes: notes ? notes : undefined,
         };
       });
-      await saveWorkoutEdits(log.id, normalized, exerciseMap);
+      await saveWorkoutEdits(log.id, normalized);
       onSaved();
       onOpenChange(false);
     } catch (err) {
@@ -112,11 +111,10 @@ export function WorkoutEditSheet({
   };
 
   const sessionLabel =
-    log?.sessionName || t.dashboard.workoutFallback;
+    log.sessionName || t.dashboard.workoutFallback;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+    <>
         <SheetHeader>
           <SheetTitle>{sessionLabel}</SheetTitle>
         </SheetHeader>
@@ -132,7 +130,7 @@ export function WorkoutEditSheet({
               return (
                 <div key={exercise.id} className="space-y-2">
                   <p className="text-sm font-medium">
-                    {getName(exercise.exerciseId, t.workout.unknownExercise)}
+                    {getName(exercise.exerciseId, exercise.exercise?.name ?? t.workout.unknownExercise)}
                   </p>
                   <label className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                     <span>{t.workout.excludeFromStats}</span>
@@ -174,7 +172,7 @@ export function WorkoutEditSheet({
                             getName(exercise.exerciseId),
                             index + 1
                           )}
-                          value={weightTexts[set.id] ?? ""}
+                          value={weightTexts[set.id] ?? formatDecimalForInput(set.weight)}
                           onChange={(e) => {
                             const text = e.target.value;
                             setWeightTexts((prev) => ({
@@ -231,7 +229,6 @@ export function WorkoutEditSheet({
             {saving ? t.workout.saving : t.workout.saveChanges}
           </Button>
         </SheetFooter>
-      </SheetContent>
-    </Sheet>
+    </>
   );
 }

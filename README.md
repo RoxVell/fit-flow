@@ -151,9 +151,17 @@ npm run db:push   # create the tables
 npm run dev
 ```
 
-The app then pushes local changes and pulls remote ones in the background — on launch, when
-you come back online, and whenever you refocus the tab. Conflicts resolve last-write-wins.
-Leave `DATABASE_URL` unset and none of this runs.
+Setting `DATABASE_URL` enables sync in both development and production. The endpoint
+has no authentication; all devices using this server share one database.
+
+The app pushes local changes and pulls the four user-data tables on launch, when you come
+back online, when you refocus the tab, and every minute while the app is visible. Higher
+revisions win conflicts; equal revisions keep the server copy. Personal records are
+calculated from workout history, and the exercise catalog stays bundled with the app.
+
+Leave `DATABASE_URL` unset to disable sync. Existing databases need the additive
+[`0002_program_rest_duration.sql`](./drizzle/migrations/0002_program_rest_duration.sql)
+migration (or a reviewed schema push) before using this version.
 
 ---
 
@@ -163,9 +171,8 @@ Leave `DATABASE_URL` unset and none of this runs.
   dashboard greeting currently uses a hard-coded name.
 - **Workout history is editable, body measurements are not** — to correct a measurement,
   delete the entry and log a new one.
-- `npm run build` requires `DATABASE_URL` to be *present*, though it does not need to point
-  at a live database. A placeholder is enough:
-  `DATABASE_URL="postgresql://user:pass@localhost:5432/db" npm run build`
+- `npm run build` works without `DATABASE_URL`; the database client is created only when
+  configured sync is used.
 
 ---
 
@@ -179,7 +186,7 @@ Leave `DATABASE_URL` unset and none of this runs.
 | Optional server | Neon Postgres via Drizzle ORM, behind one `/api/sync` route |
 | UI | Tailwind CSS v4, Base UI, Framer Motion, Lucide icons |
 | Charts | Recharts, plus `react-body-highlighter` for the muscle heatmap |
-| Session state | Zustand for the in-progress workout |
+| Session state | IndexedDB draft; Zustand for the rest timer |
 | Testing | Vitest (unit) and Playwright (end-to-end) |
 
 ---
@@ -189,7 +196,7 @@ Leave `DATABASE_URL` unset and none of this runs.
 | Command | What it does |
 |---|---|
 | `npm run dev` | Start the dev server on port 3000 |
-| `npm run build` | Production build (needs `DATABASE_URL` set, see above) |
+| `npm run build` | Production build; no database configuration required |
 | `npm run lint` | ESLint |
 | `npm run test:unit` | Vitest unit tests |
 | `npm run test:e2e` | Playwright suite (starts its own server on port 3100) |

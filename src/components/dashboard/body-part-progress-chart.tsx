@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { useWorkoutLogs } from "@/lib/hooks/use-data";
 import { useExerciseManifest } from "@/lib/hooks/use-exercise-library";
+import { chartAxisProps, chartGridProps, chartTooltipProps } from "@/components/charts/chart-style";
 import { ChartPeriodSelector } from "@/components/charts/chart-period-selector";
 import { BODY_PART_CHART_COLORS } from "@/lib/charts/body-part-colors";
 import { computeFocusDomain, type PeriodChange } from "@/lib/charts/domain";
@@ -173,32 +174,22 @@ export function BodyPartProgressChart() {
       <div className="h-52 outline-none">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-muted)" vertical={false} />
+            <CartesianGrid {...chartGridProps} vertical={false} />
             <XAxis
               dataKey="week"
-              tick={{ fontSize: 10 }}
-              stroke="var(--color-muted-foreground)"
+              {...chartAxisProps}
             />
             <YAxis
-              tick={{ fontSize: 10 }}
-              stroke="var(--color-muted-foreground)"
+              {...chartAxisProps}
               domain={yDomain}
               tickFormatter={(v) => `${v}%`}
             />
             <Tooltip
-              wrapperStyle={{ outline: "none" }}
-              contentStyle={{
-                backgroundColor: "var(--color-popover)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "8px",
-                fontSize: "12px",
-                color: "var(--color-popover-foreground)",
-              }}
+              {...chartTooltipProps}
               formatter={(value, name) => [
                 `${value}%`,
                 labelFor(BODY_PART_LABELS, String(name), locale),
               ]}
-              cursor={{ stroke: "var(--color-border)", strokeWidth: 1 }}
             />
             {bodyParts.map((bodyPart) => (
               <Line

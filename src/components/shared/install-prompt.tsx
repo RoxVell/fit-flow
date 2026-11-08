@@ -5,6 +5,7 @@ import { Download, Share, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/use-t";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -37,31 +38,24 @@ function isStandalone(): boolean {
 }
 
 export function InstallPrompt() {
+  return useHydrated() ? <InstallPromptClient /> : null;
+}
+
+function wasDismissed(): boolean {
+  const value = window.localStorage.getItem(STORAGE_KEY);
+  const timestamp = Number(value);
+  return value !== null && Number.isFinite(timestamp) && Date.now() - timestamp < DISMISS_DURATION_MS;
+}
+
+function InstallPromptClient() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
-  const [visible, setVisible] = useState(false);
-  const [installed, setInstalled] = useState(false);
-  const [ios, setIos] = useState(false);
+  const [visible, setVisible] = useState(() => isIOS() && !isStandalone() && !wasDismissed());
+  const [installed, setInstalled] = useState(isStandalone);
+  const ios = isIOS();
   const t = useT();
 
   useEffect(() => {
-    if (isStandalone()) {
-      setInstalled(true);
-      return;
-    }
-
-    const isDeviceIOS = isIOS();
-    setIos(isDeviceIOS);
-
-    const dismissed = window.localStorage.getItem(STORAGE_KEY);
-    if (dismissed) {
-      const ts = Number(dismissed);
-      if (Number.isFinite(ts) && Date.now() - ts < DISMISS_DURATION_MS) return;
-    }
-
-    if (isDeviceIOS) {
-      setVisible(true);
-      return;
-    }
+    if (installed || ios || wasDismissed()) return;
 
     const onBeforeInstall = (e: Event) => {
       e.preventDefault();
@@ -83,7 +77,7 @@ export function InstallPrompt() {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
       window.removeEventListener("appinstalled", onInstalled);
     };
-  }, []);
+  }, [installed, ios]);
 
   if (installed || !visible) return null;
 

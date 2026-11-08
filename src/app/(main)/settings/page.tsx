@@ -16,7 +16,7 @@ const subscribeNoop = () => () => {};
 export default function SettingsPage() {
   const t = useT();
   const { formatDateTime } = useFormat();
-  const { lastSyncAt } = useSyncState();
+  const { lastSyncAt, error } = useSyncState();
   const buildDate = useSyncExternalStore(
     subscribeNoop,
     () => BUILD_DATE ? formatDateTime(BUILD_DATE) : "—",
@@ -28,6 +28,12 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-2xl font-bold">{t.settings.title}</h1>
       </div>
+
+      {error && (
+        <p role="status" className="text-sm text-destructive">
+          {error === "rejected" ? t.settings.syncRejected : t.settings.syncUnavailable}
+        </p>
+      )}
 
       <section>
         <h2 className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">

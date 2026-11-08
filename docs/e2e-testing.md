@@ -1,10 +1,9 @@
 # E2E testing
 
-FitFlow's e2e suite is built on [Playwright](https://playwright.dev/) and
-runs against the live Next.js dev server. The goal is to verify the
-critical user flows (navigation, workout logging, settings, programs,
-progress) end-to-end — including the IndexedDB-backed data layer, the
-PWA service worker, and the i18n toggle.
+FitFlow uses [Playwright](https://playwright.dev/) for two suites. The fast
+development suite verifies navigation, logging, settings, programs, progress,
+IndexedDB persistence, and localization with sync and Service Worker stubs.
+The production offline suite uses the real worker and API with no database.
 
 ## Quick start
 
@@ -45,14 +44,18 @@ e2e/
     04-programs.spec.ts     # library tabs, create form, seeded PPL program
     05-progress.spec.ts     # general / exercises / body tabs
 playwright.config.ts        # dev-server config, mobile viewport, SW block
+playwright.offline.config.ts # production server, real SW, local-only mode
+e2e/offline/offline.spec.ts # installation, offline navigation and persistence
 ```
 
 Each spec uses the shared `test` from `e2e/fixtures/base.ts`, which:
 
-- Strips the `fitflow-locale` cookie on every page load so the suite
-  always boots in English (the default).
+- Clears cookies before each test, preserving locale changes across reloads
+  within a test.
 - Stubs `navigator.serviceWorker.register` so the Serwist SW can never
   cache a stale build into a test run.
+- Returns `{ enabled: false }` from the sync configuration
+  endpoint and a no-op response for POST requests.
 
 Each test calls `waitForSeed(page)` after the first navigation. The
 helper blocks until `fitflow_v2.programs` in IndexedDB is non-empty,
@@ -77,12 +80,46 @@ Tests target **user-visible behavior**, not implementation details:
 | Env var | Default | Purpose |
 | --- | --- | --- |
 | `PORT` | `3100` | Port the dev server binds to. |
+| `OFFLINE_PORT` | `3200` | Port the production offline server binds to. |
+| `PW_CHANNEL` | bundled Chromium | Optional locally installed browser channel. |
 | `CI` | unset | When set, the reporter switches to `github`, retries twice, and serializes workers. |
 
 The dev server is started automatically by Playwright
 (`webServer.command`). To run tests against an already-running dev
 server, start it yourself on the same port and Playwright will reuse
 the connection.
+
+## Production offline checks
+
+Stop any development server before building, then run:
+
+```bash
+npm run build
+npm run test:e2e:offline
+```
+
+No database is needed. The offline config starts `next start` and explicitly
+clears `DATABASE_URL` for that server, even when `.env.local`
+contains it. It never reuses another server. Each test starts with a fresh
+browser context, visits only the dashboard online, and waits until the actual
+worker controls the page. The worker claims clients after precaching the shell
+and warming the navigation payloads.
+
+The three checks then turn the browser context offline and verify:
+
+- Reloading the dashboard and opening `/` are served by the worker.
+- Previously unvisited main screens and the nested measurement form open;
+  the nested form also survives a hard reload.
+- A workout can start offline, retain its logged values after reload and
+  navigation, finish, and export the same completed sets after another reload.
+
+A fourth check installs the production worker under a new script URL, applies
+the real update prompt, and verifies that the active draft survives activation,
+reload and another offline reload. This covers the waiting/activation handoff;
+it does not simulate changed JavaScript chunks between two different builds.
+
+These tests import Playwright directly, without `fixtures/base.ts`. They do
+not mock service workers, sync, or application storage.
 
 ## Common patterns
 
@@ -138,7 +175,7 @@ npm run test:e2e:headed -- e2e/tests/02-workout-flow.spec.ts
 ## CI
 
 The repo ships a GitHub Actions workflow at
-[`.github/workflows/playwright.yml`](../.github/workflows/playwright.yml)
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
 that runs the suite on every push to `main` and on every pull request
 targeting `main`. It uses `ubuntu-latest`, Node 22, and `npm install`
 to fetch dependencies. (`npm ci` would be the default, but the workflow
@@ -148,4 +185,6 @@ the lockfile; a comment in the workflow explains this.) Playwright
 artifacts (`playwright-report/` and `test-results/`) are uploaded
 automatically on failure with a 7-day retention. `process.env.CI` is set,
 so the config flips to the `github` reporter, retries twice, and
-serializes workers.
+serializes workers. After the development suite stops, CI builds the app
+without a database and runs the production offline checks. Their traces,
+screenshots, and videos are retained under `test-results/offline/` on failure.

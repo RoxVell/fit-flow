@@ -6,9 +6,6 @@ import { isActiveRecord, withoutDeleted } from "@/lib/db/active-records";
 import { db } from "@/lib/db/dexie";
 import {
   MUSCLE_GROUPS,
-  type DashboardStats,
-  type Exercise,
-  type ExerciseFilters,
   type MuscleGroup,
   type ProgramEntity,
   type WorkoutLogEntity,
@@ -18,59 +15,21 @@ import {
   buildExerciseMapFromManifest,
   manifestToExercise,
 } from "@/lib/exercises/adapter";
-import {
-  matchesUnilateralFilter,
-  toLibraryFilters,
-} from "@/lib/exercises/filter-adapter";
 import type { MuscleWeights } from "@/lib/exercises/types";
 import {
   buildDailyBodyViews,
   getWeightTrendFromDailyViews,
 } from "@/lib/body-measurements/daily-view";
 import { attachExercises } from "@/lib/repositories/exercises";
-import { volume } from "@/lib/training-metrics";
+import { derivePersonalRecords } from "@/lib/workout/personal-records";
 import {
   toExerciseDetailedHistorySession,
   toExerciseHistoryPoint,
 } from "@/lib/workout/exercise-stats";
-import {
-  useExerciseLibrary,
-  useExerciseManifest,
-} from "@/lib/hooks/use-exercise-library";
+import { useExerciseManifest } from "@/lib/hooks/use-exercise-library";
+import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { compareByDate } from "@/lib/utils/date";
-
-export function useExercises(filters?: ExerciseFilters): Exercise[] | undefined {
-  const locale = useLocale();
-  const { manifest, loading: manifestLoading } = useExerciseManifest();
-  const libraryFilters = useMemo(
-    () => toLibraryFilters(filters),
-    [
-      filters?.muscleGroup,
-      filters?.equipment,
-      filters?.category,
-      filters?.search,
-    ]
-  );
-  const { exercises: manifestItems, loading: filterLoading } =
-    useExerciseLibrary(libraryFilters);
-
-  return useMemo(() => {
-    if (manifestLoading || filterLoading || !manifest || !manifestItems) {
-      return undefined;
-    }
-    let result = manifestItems.map((item) => manifestToExercise(item, locale));
-    if (filters?.unilateral !== undefined) {
-      result = result.filter((e) =>
-        matchesUnilateralFilter(
-          e.unilateral ? "UNILATERAL" : "BILATERAL",
-          filters.unilateral
-        )
-      );
-    }
-    return result;
-  }, [manifestItems, manifestLoading, filterLoading, manifest, locale, filters?.unilateral]);
-}
 
 export function useExercise(id: string) {
   const locale = useLocale();
@@ -165,9 +124,10 @@ export function useDailyBodyViews() {
 }
 
 export function usePersonalRecords() {
+  const { exerciseMap } = useExerciseLookup();
   return useLiveQuery(
-    () => db.personalRecords.filter((r) => !r.deletedAt).toArray(),
-    []
+    async () => derivePersonalRecords(await db.workoutLogs.toArray(), exerciseMap),
+    [exerciseMap]
   );
 }
 
@@ -199,6 +159,7 @@ function buildWeeklyHeatmap(
 
   for (const log of logs) {
     for (const ex of log.exercises) {
+      if (ex.excludeFromStats) continue;
       const ref = refs.get(ex.exerciseId);
       if (!ref) continue;
       const completedSets = ex.sets.filter((s) => s.completed);
@@ -218,14 +179,26 @@ function buildWeeklyHeatmap(
   return heatmap;
 }
 
-export function useDashboardStats(): DashboardStats | undefined {
-  const logs = useWorkoutLogs(100);
-  const measurements = useBodyMeasurements();
-  const programs = usePrograms();
+export function useWeightSummary() {
+  const dailyViews = useDailyBodyViews();
+  return useMemo(() => {
+    if (!dailyViews) return undefined;
+    const summary = getWeightTrendFromDailyViews(dailyViews);
+    return { ...summary, hasWeightHistory: summary.currentWeight !== null };
+  }, [dailyViews]);
+}
+
+export function useWeeklyMuscleLoad() {
+  const logs = useLiveQuery(() => {
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return db.workoutLogs.where("startedAt").aboveOrEqual(weekAgo.toISOString())
+      .filter(isCompletedLog).toArray();
+  }, []);
   const { manifest } = useExerciseManifest();
 
   return useMemo(() => {
-    if (!logs || !measurements || !programs || !manifest) return undefined;
+    if (!logs || !manifest) return undefined;
 
     const exerciseRefs = new Map<string, HeatmapExerciseRef>(
       manifest.map((item) => [
@@ -236,44 +209,12 @@ export function useDashboardStats(): DashboardStats | undefined {
         },
       ])
     );
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const thisWeek = logs.filter((l) => new Date(l.startedAt) >= weekAgo);
-
-    const weeklyVolume = thisWeek.reduce(
-      (sum, l) => sum + l.exercises.reduce((es, e) => es + volume(e.sets), 0),
-      0
-    );
-
-    const dailyViews = buildDailyBodyViews(measurements);
-    const { currentWeight, weightTrend } = getWeightTrendFromDailyViews(dailyViews);
-    const hasWeightHistory = dailyViews.some((view) => view.weight != null);
-
-    const activeProgram = programs.find((p) => p.isActive);
-    const today = new Date().getDay();
-    const nextSession =
-      activeProgram?.sessions.find((s) => s.dayOfWeek === today) ??
-      activeProgram?.sessions[0];
-
-    const activeDays = new Set(
-      thisWeek.map((l) => new Date(l.startedAt).toDateString())
-    ).size;
-
-    return {
-      weeklyWorkouts: thisWeek.length,
-      weeklyVolume,
-      currentWeight,
-      weightTrend,
-      hasWeightHistory,
-      activeDays,
-      nextSession,
-      heatmapData: buildWeeklyHeatmap(thisWeek, exerciseRefs),
-    };
-  }, [logs, measurements, programs, manifest]);
+    return buildWeeklyHeatmap(logs, exerciseRefs);
+  }, [logs, manifest]);
 }
 
 async function logsContainingExercise(exerciseId: string): Promise<WorkoutLogEntity[]> {
-  return withoutDeleted(await db.workoutLogs.toArray())
+  return (await db.workoutLogs.filter(isCompletedLog).toArray())
     .filter((l) => l.exercises.some((e) => e.exerciseId === exerciseId))
     .sort((a, b) => compareByDate(a.startedAt, b.startedAt));
 }

@@ -133,16 +133,11 @@ test("bottom-nav shows the active-session indicator while a draft is open", asyn
 test("workout plan shows an empty state when the only program is inactive", async ({
   page,
 }) => {
-  // Deactivate every program in IDB. We retry in case the read lands
-  // on the migration's clear-then-bulkPut window. The data is stable
-  // *between* migrations.
+  // Deactivate every seeded program in IndexedDB.
   const ids = await deactivateAllPrograms(page);
   expect(ids.length).toBeGreaterThan(0);
 
-  // Navigate (full page load) to /workout. The post-load migration
-  // early-returns on `meta.schemaVersion >= 3`, so the seed is not
-  // re-applied with `isActive: true`. The post-deactivation
-  // `isActive: false` rows are what `useActiveProgram` reads.
+  // A full reload preserves existing inactive programs instead of re-seeding.
   await page.goto("/workout");
   // Localized empty-state copy (en): "No active program found." and
   // "Create one in the programs tab."

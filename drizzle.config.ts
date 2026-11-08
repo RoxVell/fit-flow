@@ -34,7 +34,7 @@ if (!databaseUrl) {
 }
 
 export default defineConfig({
-  schema: "./src/server/db/schema.ts",
+  schema: ["./src/server/db/schema.ts", "./src/server/db/archive-schema.ts"],
   out: "./drizzle/migrations",
   dialect: "postgresql",
   dbCredentials: {

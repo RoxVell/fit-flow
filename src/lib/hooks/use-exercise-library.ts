@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { filterManifest } from "@/lib/exercises/filter";
 import {
   ensureManifestLoaded,
   fetchExerciseDetail,
   fetchManifest,
   getCachedManifest,
-  getManifestLoadError,
   setCachedManifest,
   setManifestLoadError,
   subscribeExerciseLibraryCacheClear,
@@ -20,128 +19,88 @@ import type {
 } from "@/lib/exercises/types";
 
 export function useExerciseManifest() {
-  const [manifest, setManifest] = useState<ExerciseManifestItem[] | null>(
-    getCachedManifest
-  );
-  const [error, setError] = useState<Error | null>(getManifestLoadError);
-  const [loading, setLoading] = useState(
-    () => !getCachedManifest() && !getManifestLoadError()
-  );
+  const [state, setState] = useState<{
+    manifest: ExerciseManifestItem[] | null;
+    error: Error | null;
+  }>(() => ({ manifest: getCachedManifest(), error: null }));
 
-  const loadManifest = useCallback(() => {
-    let cancelled = false;
-    setLoading(true);
-    fetchManifest()
-      .then((data) => {
-        if (cancelled) return;
-        setCachedManifest(data);
-        setManifest(data);
-        setError(null);
-      })
-      .catch((err: Error) => {
-        if (cancelled) return;
-        setManifestLoadError(err);
-        setError(err);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+  useEffect(() => {
+    let generation = 0;
+    const load = () => {
+      const request = ++generation;
+      fetchManifest().then((manifest) => {
+        if (request !== generation) return;
+        setCachedManifest(manifest);
+        setState({ manifest, error: null });
+      }).catch((error: Error) => {
+        if (request !== generation) return;
+        setManifestLoadError(error);
+        setState({ manifest: null, error });
       });
+    };
+    const unsubscribe = subscribeExerciseLibraryCacheClear(() => {
+      setState({ manifest: null, error: null });
+      load();
+    });
+    load();
     return () => {
-      cancelled = true;
+      generation++;
+      unsubscribe();
     };
   }, []);
 
-  useEffect(() => {
-    if (getCachedManifest()) return;
-    return loadManifest();
-  }, [loadManifest]);
-
-  useEffect(() => {
-    return subscribeExerciseLibraryCacheClear(() => {
-      setManifest(null);
-      setError(null);
-      loadManifest();
-    });
-  }, [loadManifest]);
-
-  return { manifest, loading, error };
+  return { ...state, loading: !state.manifest && !state.error };
 }
 
 export function useExerciseLibrary(filters?: ExerciseLibraryFilters) {
   const locale = useLocale();
   const { manifest, loading, error } = useExerciseManifest();
-
-  const stableFilters = useMemo(
-    () => filters,
-    [
-      filters?.search,
-      filters?.bodyPart,
-      filters?.equipment,
-      filters?.mechanics,
-      filters?.tag,
-    ]
-  );
-
-  const items = useMemo(() => {
-    if (!manifest) return undefined;
-    return filterManifest(manifest, stableFilters, locale);
-  }, [manifest, stableFilters, locale]);
+  const { search, bodyPart, equipment, mechanics, tag } = filters ?? {};
+  const items = useMemo(() => manifest
+    ? filterManifest(manifest, { search, bodyPart, equipment, mechanics, tag }, locale)
+    : undefined,
+  [manifest, search, bodyPart, equipment, mechanics, tag, locale]);
 
   return { exercises: items, loading, error };
 }
 
 export function useExerciseDetail(exerciseId: string | null) {
   const { manifest, loading: manifestLoading } = useExerciseManifest();
-  const [detail, setDetail] = useState<ExerciseDetail | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
   const manifestItem = useMemo(
-    () => manifest?.find((e) => e.id === exerciseId) ?? null,
+    () => manifest?.find((exercise) => exercise.id === exerciseId) ?? null,
     [manifest, exerciseId]
   );
+  // Each selection gets its own request identity, including closing and reopening
+  // the same exercise. A previous response or error never belongs to a new request.
+  const request = useMemo(() => ({ exerciseId, manifestItem }), [exerciseId, manifestItem]);
+  const [result, setResult] = useState<{
+    request: typeof request;
+    detail: ExerciseDetail | null;
+    error: Error | null;
+  } | null>(null);
 
   useEffect(() => {
-    if (!exerciseId || !manifestItem) {
-      setDetail(null);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
+    if (!request.exerciseId || !request.manifestItem) return;
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    fetchExerciseDetail(exerciseId, manifestItem.bodyPart)
-      .then((data) => {
-        if (cancelled) return;
-        if (!data) {
-          setError(new Error("Exercise not found"));
-          setDetail(null);
-        } else {
-          setDetail(data);
-        }
+    fetchExerciseDetail(request.exerciseId, request.manifestItem.bodyPart)
+      .then((detail) => {
+        if (!cancelled) setResult({
+          request, detail: detail ?? null,
+          error: detail ? null : new Error("Exercise not found"),
+        });
       })
-      .catch((err: Error) => {
-        if (cancelled) return;
-        setError(err);
-        setDetail(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+      .catch((error: Error) => {
+        if (!cancelled) setResult({ request, detail: null, error });
       });
+    return () => { cancelled = true; };
+  }, [request]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [exerciseId, manifestItem]);
-
+  const current = result?.request === request ? result : null;
   return {
-    detail,
+    detail: current?.detail ?? null,
     manifestItem,
-    loading: manifestLoading || loading,
-    error,
+    loading: manifestLoading || Boolean(exerciseId && manifestItem && !current),
+    error: current?.error ?? null,
   };
 }
 

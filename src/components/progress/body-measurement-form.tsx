@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Check, Scale } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowLeft, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
@@ -18,7 +17,6 @@ import { useLocale } from "@/lib/i18n/locale-context";
 import { cn } from "@/lib/utils";
 
 interface BodyMeasurementFormProps {
-  asPage?: boolean;
   onBack?: () => void;
   onSuccess?: () => void;
 }
@@ -49,7 +47,6 @@ function emptyMetricValues(): Record<BodyMetricField, string> {
 }
 
 export function BodyMeasurementForm({
-  asPage = false,
   onBack,
   onSuccess,
 }: BodyMeasurementFormProps) {
@@ -165,31 +162,8 @@ export function BodyMeasurementForm({
 
       {error && <p className="px-1 text-sm text-destructive">{error}</p>}
 
-      {!asPage && (
-        <Button
-          className="w-full"
-          onClick={() => void handleSubmit()}
-          disabled={!hasAnyValue || saving}
-        >
-          {t.programs.save}
-        </Button>
-      )}
     </div>
   );
-
-  if (!asPage) {
-    return (
-      <div className="overflow-hidden rounded-xl border bg-card">
-        <div className="border-b px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Scale className="h-4 w-4 text-primary" />
-            <h2 className="text-sm font-semibold">{t.progress.logMeasurementTitle}</h2>
-          </div>
-        </div>
-        <div className="p-4">{formBody}</div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-full flex-col overflow-hidden">

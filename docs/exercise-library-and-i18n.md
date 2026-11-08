@@ -64,7 +64,7 @@ If sources are missing but `manifest.json` exists, the script exits successfully
 }
 ```
 
-`muscleWeights` is computed in `scripts/build-exercise-library.ts` via `muscleWeightsFromLibrary()` (`src/lib/exercises/muscle-map.ts`). The dashboard heatmap (`useDashboardStats`) adds `(percent / 100) × completedSets` per group — e.g. leg curl counts toward hamstrings, glutes, and calves, not only quads.
+`muscleWeights` is computed in `scripts/build-exercise-library.ts` via `muscleWeightsFromLibrary()` (`src/lib/exercises/muscle-map.ts`). The heatmap (`useWeeklyMuscleLoad`) adds `(percent / 100) × completedSets` per group, excluding entries marked not to count — e.g. leg curl counts toward hamstrings, glutes, and calves, not only quads.
 
 **Detail** adds `description`, `instructions`, `tips`, `commonMistakes`, media URLs, and `exerciseMuscles`.
 
@@ -109,11 +109,9 @@ Program hooks (`usePrograms`, `useActiveProgram`, `useProgram`) wait for manifes
 
 Seed programs reference fixed UUIDs in `src/lib/db/seed-exercise-ids.ts` (derived from manifest).
 
-**Dexie schema v3** (`src/lib/db/seed-loader.ts`):
+**Dexie schema upgrades** (`src/lib/db/dexie.ts`): version 3 preserves legacy exercise descriptions inside referencing programs, logs and drafts; version 4 retains the obsolete exercise store as an unused archive in case sync later replaces an embedded description. User history is never cleared. Old PR rows also remain archived; current record events are derived from completed workouts.
 
-- On schema upgrade, clears `exercises`, `workoutLogs`, `personalRecords`, `workoutDrafts`, `programs` and re-seeds default programs with library UUIDs
-
-The `exercises` Dexie store is unused for the catalog; exercises are resolved from the static manifest.
+Exercises are resolved from the static manifest, with embedded legacy descriptions as a fallback. `seed-loader.ts` only inserts default programs into an empty, uninitialized local database.
 
 ## i18n (UI strings)
 

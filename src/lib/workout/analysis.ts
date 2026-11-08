@@ -1,6 +1,6 @@
 import { eachWeekOfInterval, startOfWeek } from "date-fns";
 import type { WorkoutLogEntity } from "@/lib/db/types";
-import { bestE1RM, bestWeight, volume } from "@/lib/training-metrics";
+import { aggregateExerciseStats } from "./exercise-stats";
 import { formatDateKey } from "@/lib/utils/date";
 import type { WorkoutExportRange } from "./export-csv";
 
@@ -45,30 +45,20 @@ export function buildWorkoutReport(logs: WorkoutLogEntity[], range: WorkoutExpor
   for (const workout of workouts) {
     const week = weekMap.get(formatDateKey(startOfWeek(new Date(workout.startedAt), { weekStartsOn: 1 })))!;
     week.workouts++;
-    for (const exercise of workout.exercises) {
-      if (exercise.excludeFromStats) { excludedExerciseEntries++; continue; }
-      if (!exercise.sets.length) continue;
-      week.sets += exercise.sets.length;
-      week.volumeKgReps += volume(exercise.sets);
-      let entry = exerciseMap.get(exercise.exerciseId);
+    excludedExerciseEntries += workout.exercises.filter((exercise) => exercise.excludeFromStats).length;
+    for (const exerciseId of new Set(workout.exercises.map((exercise) => exercise.exerciseId))) {
+      const stats = aggregateExerciseStats(workout.exercises, exerciseId);
+      if (!stats.sets.length) continue;
+      week.sets += stats.sets.length;
+      week.volumeKgReps += stats.volume;
+      let entry = exerciseMap.get(exerciseId);
       if (!entry) {
-        entry = { exerciseId: exercise.exerciseId, name: exercise.name, history: [] };
-        exerciseMap.set(exercise.exerciseId, entry);
+        entry = { exerciseId, name: workout.exercises.find((exercise) => exercise.exerciseId === exerciseId)!.name, history: [] };
+        exerciseMap.set(exerciseId, entry);
       }
-      // An exercise can occur more than once in the same workout.
-      const existing = entry.history.find((point) => point.workoutId === workout.id);
-      const weighted = exercise.sets.filter((set) => set.weight > 0 && set.reps > 0);
-      const estimate = weighted.length ? bestE1RM(weighted) : null;
-      if (existing) {
-        existing.sets += exercise.sets.length;
-        existing.volumeKgReps += volume(exercise.sets);
-        existing.maxWeightKg = Math.max(existing.maxWeightKg, bestWeight(exercise.sets));
-        existing.estimated1RMKg = estimate === null ? existing.estimated1RMKg : Math.max(existing.estimated1RMKg ?? 0, estimate);
-      } else {
-        entry.history.push({ workoutId: workout.id, date: workout.startedAt,
-          sets: exercise.sets.length, volumeKgReps: volume(exercise.sets),
-          maxWeightKg: bestWeight(exercise.sets), estimated1RMKg: estimate });
-      }
+      entry.history.push({ workoutId: workout.id, date: workout.startedAt,
+        sets: stats.sets.length, volumeKgReps: stats.volume,
+        maxWeightKg: stats.maxWeight, estimated1RMKg: stats.estimated1RM });
     }
   }
   const exercises = [...exerciseMap.values()].map((exercise) => {

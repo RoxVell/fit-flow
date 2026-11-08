@@ -7,12 +7,10 @@ import type { ServerChange } from "./types";
 type SyncedEntity = SyncableEntity & { id: string };
 
 const syncedTables: Record<EntityType, Table<SyncedEntity, string>> = {
-  exercise: db.exercises,
   program: db.programs,
   workoutLog: db.workoutLogs,
   bodyMeasurement: db.bodyMeasurements,
   cardioSession: db.cardioSessions,
-  personalRecord: db.personalRecords,
 };
 
 export async function applyServerChanges(changes: ServerChange[]): Promise<void> {
@@ -21,9 +19,11 @@ export async function applyServerChanges(changes: ServerChange[]): Promise<void>
     const entity = change.entity as SyncedEntity;
     if (!table || !entity?.id) continue;
 
-    const localRevision = (await table.get(entity.id))?.revision ?? null;
+    const local = await table.get(entity.id);
+    const localRevision = local?.revision ?? null;
 
     if (entity.deletedAt) {
+      if (!local) continue;
       if (localRevision !== null && change.revision < localRevision) {
         continue;
       }
@@ -32,6 +32,10 @@ export async function applyServerChanges(changes: ServerChange[]): Promise<void>
     }
 
     if (localRevision !== null && localRevision > change.revision) {
+      continue;
+    }
+    if (localRevision === change.revision && local?.updatedAt === entity.updatedAt &&
+        JSON.stringify(local) === JSON.stringify(entity)) {
       continue;
     }
     if (localRevision === null && (await hasPendingDelete(change.entityType, entity.id))) {

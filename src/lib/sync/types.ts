@@ -24,7 +24,11 @@ export interface SyncResponse {
   accepted: string[];
   /** Stale client changes dropped from queue; server state wins via pull */
   superseded: string[];
-  rejected: Array<{ id: string; reason: string }>;
+  rejected: Array<{ id: string; reason: string; permanent?: boolean }>;
   serverChanges: ServerChange[];
   serverTime: string;
+}
+
+export interface SyncConfig {
+  enabled: boolean;
 }
