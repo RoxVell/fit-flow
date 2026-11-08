@@ -22,7 +22,7 @@ export interface OfflineStatus {
   /** App routes whose HTML is in the precache. */
   precachedPages: number;
   totalPages: number;
-  /** Warmed RSC payloads for client-side navigation. */
+  /** App routes with warmed RSC payloads for client-side navigation. */
   rscEntries: number;
   updateWaiting: boolean;
 }
@@ -35,7 +35,7 @@ const INITIAL: OfflineStatus = {
   updateWaiting: false,
 };
 
-async function readStatus(): Promise<OfflineStatus> {
+export async function readOfflineStatus(): Promise<OfflineStatus> {
   if (
     typeof navigator === "undefined" ||
     !("serviceWorker" in navigator) ||
@@ -61,14 +61,19 @@ async function readStatus(): Promise<OfflineStatus> {
     );
     precachedPages = APP_ROUTES.filter((route) => paths.has(route)).length;
   }
-  const rscKey = keys.find((key) => key.includes(RSC_CACHE));
-  const rscEntries = rscKey
-    ? (await (await caches.open(rscKey)).keys()).length
-    : 0;
+  let rscEntries = 0;
+  if (keys.includes(RSC_CACHE)) {
+    const paths = new Set(
+      (await (await caches.open(RSC_CACHE)).keys()).map(
+        (req) => new URL(req.url).pathname
+      )
+    );
+    rscEntries = APP_ROUTES.filter((route) => paths.has(route)).length;
+  }
 
   // Offline tab switches need the RSC payloads too, not just the HTML.
   const ready =
-    precachedPages === APP_ROUTES.length && rscEntries >= APP_ROUTES.length;
+    precachedPages === APP_ROUTES.length && rscEntries === APP_ROUTES.length;
   return {
     readiness: ready ? "ready" : "partial",
     precachedPages,
@@ -88,7 +93,7 @@ export function useOfflineStatus(): OfflineStatus {
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const refresh = () => {
-      void readStatus()
+      void readOfflineStatus()
         .then((next) => {
           if (cancelled) return;
           setStatus(next);
