@@ -9,6 +9,7 @@ const reply = (body: SyncRequest, rejected: SyncResponse["rejected"] = []): Sync
 });
 
 describe("sync runner uploads", () => {
+  let stopRunner: (() => void) | undefined;
   beforeEach(async () => {
     vi.resetModules();
     vi.stubGlobal("window", {});
@@ -17,7 +18,22 @@ describe("sync runner uploads", () => {
     await db.syncQueue.clear();
     await db.meta.clear();
   });
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    stopRunner?.();
+    stopRunner = undefined;
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  function mockRunnerEnvironment() {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    vi.stubGlobal("window", Object.assign(new EventTarget(), { setInterval, clearInterval }));
+    const document = Object.assign(new EventTarget(), { visibilityState: "visible" });
+    vi.stubGlobal("document", document);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    return document;
+  }
 
   async function seedPending(count: number) {
     const { db } = await import("@/lib/db/dexie");
@@ -68,5 +84,93 @@ describe("sync runner uploads", () => {
     await sync();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(await db.syncQueue.where("status").equals("pending").count()).toBe(101);
+  });
+
+  it.each(["http", "network"])("recovers from an initial %s config failure without user action", async (failure) => {
+    const db = await seedPending(1);
+    mockRunnerEnvironment();
+    let configRequests = 0;
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method !== "POST") {
+        if (++configRequests === 1) {
+          if (failure === "network") throw new TypeError("Failed to fetch");
+          return new Response(null, { status: 503 });
+        }
+        return Response.json({ enabled: true });
+      }
+      return Response.json(reply(JSON.parse(String(init.body)) as SyncRequest));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { startSyncRunner } = await import("./sync-service");
+    stopRunner = startSyncRunner();
+    await vi.waitFor(() => expect(configRequests).toBe(1));
+    expect(await db.syncQueue.count()).toBe(1);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.waitFor(async () => expect(await db.syncQueue.count()).toBe(0));
+    expect(configRequests).toBe(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps periodic attempts disabled when the server explicitly disables sync", async () => {
+    const db = await seedPending(1);
+    mockRunnerEnvironment();
+    const fetchMock = vi.fn(async () => Response.json({ enabled: false }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { startSyncRunner } = await import("./sync-service");
+    stopRunner = startSyncRunner();
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await vi.advanceTimersByTimeAsync(180_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await db.syncQueue.count()).toBe(1);
+  });
+
+  it("defers config retries while hidden and recovers when the app becomes visible", async () => {
+    const db = await seedPending(1);
+    const document = mockRunnerEnvironment();
+    let configRequests = 0;
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method !== "POST") {
+        return ++configRequests === 1
+          ? new Response(null, { status: 503 })
+          : Response.json({ enabled: true });
+      }
+      return Response.json(reply(JSON.parse(String(init.body)) as SyncRequest));
+    }));
+    const { startSyncRunner } = await import("./sync-service");
+    stopRunner = startSyncRunner();
+    await vi.waitFor(() => expect(configRequests).toBe(1));
+    document.visibilityState = "hidden";
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(configRequests).toBe(1);
+    expect(await db.syncQueue.count()).toBe(1);
+
+    document.visibilityState = "visible";
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.waitFor(async () => expect(await db.syncQueue.count()).toBe(0));
+    expect(configRequests).toBe(2);
+  });
+
+  it("retries a failed upload in the background without discarding local changes", async () => {
+    const db = await seedPending(1);
+    mockRunnerEnvironment();
+    let uploads = 0;
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method !== "POST") return Response.json({ enabled: true });
+      if (++uploads === 1) return new Response(null, { status: 503 });
+      return Response.json(reply(JSON.parse(String(init.body)) as SyncRequest));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { startSyncRunner } = await import("./sync-service");
+    stopRunner = startSyncRunner();
+    await vi.waitFor(() => expect(uploads).toBe(1));
+    expect(await db.syncQueue.count()).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.waitFor(async () => expect(await db.syncQueue.count()).toBe(0));
+    expect(uploads).toBe(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });

@@ -86,7 +86,9 @@ export function startSyncRunner(): () => void {
   window.addEventListener("online", run);
   document.addEventListener("visibilitychange", onVisibility);
   const interval = window.setInterval(() => {
-    if (state.config?.enabled && document.visibilityState === "visible") run();
+    // Unknown config may mean the first request failed; retry until the
+    // server explicitly reports that sync is disabled.
+    if (state.config?.enabled !== false && document.visibilityState === "visible") run();
   }, 60_000);
   return () => {
     stopped = true;
@@ -102,7 +104,7 @@ export function useSyncState() {
   const failed = useLiveQuery(() => db.syncQueue.where("status").equals("failed").count(), []) ?? 0;
   const meta = useLiveQuery(getAppMeta, []);
   return { ...snapshot, pending: snapshot.config?.enabled ? pending : 0,
-    lastSyncAt: meta?.lastSyncAt ?? null, error: failed ? "rejected" as const : snapshot.error, flush: sync };
+    lastSyncAt: meta?.lastSyncAt ?? null, error: failed ? "rejected" as const : snapshot.error };
 }
 
 /** Warm up Dexie on app start; a failed open may be retried. */
