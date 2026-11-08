@@ -27,6 +27,15 @@ export const messages = {
       syncUnavailable: "Sync is unavailable. Your data is saved on this device.",
       syncRejected: "Some changes could not be synced. They remain saved on this device; edit them to retry.",
       never: "Never",
+      offlineStatus: "Offline mode",
+      offlineReady: "Ready",
+      offlinePartial: "Partially cached",
+      offlineNotInstalled: "Not installed",
+      offlineUnsupported: "Not supported",
+      offlineChecking: "Checking…",
+      offlineDetails: (pages: number, total: number, rsc: number) =>
+        `Pages ${pages}/${total}, RSC ${rsc}/${total}`,
+      offlineUpdateWaiting: "Update waiting to be applied",
     },
     dashboard: {
       weight: "Weight",
@@ -342,6 +351,15 @@ export const messages = {
       syncUnavailable: "Синхронизация недоступна. Данные сохранены на этом устройстве.",
       syncRejected: "Некоторые изменения не синхронизированы. Они сохранены на устройстве; отредактируйте их для повторной попытки.",
       never: "Никогда",
+      offlineStatus: "Офлайн-режим",
+      offlineReady: "Готов",
+      offlinePartial: "Закеширован частично",
+      offlineNotInstalled: "Не установлен",
+      offlineUnsupported: "Не поддерживается",
+      offlineChecking: "Проверка…",
+      offlineDetails: (pages: number, total: number, rsc: number) =>
+        `Страницы ${pages}/${total}, RSC ${rsc}/${total}`,
+      offlineUpdateWaiting: "Обновление ждёт применения",
     },
     dashboard: {
       weight: "Вес",

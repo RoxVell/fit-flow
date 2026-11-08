@@ -55,4 +55,8 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+/.playwright-mcp/
+
+# local agent tooling
+/.claude/
 

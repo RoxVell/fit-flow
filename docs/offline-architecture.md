@@ -8,6 +8,15 @@ application and static exercise catalog, never user data or `/api/` responses.
 React → Dexie (source of truth) → syncQueue → /api/sync → Neon Postgres
 ```
 
+Settings → "Offline mode" (`src/lib/hooks/use-offline-status.ts`) shows HTML and
+RSC coverage for `APP_ROUTES`. "Ready" requires both for every app route; unrelated
+or duplicate RSC entries do not count. Use it to debug devices without a web inspector.
+
+`public/offline.html` reloads only after `GET /api/ping` returns 204
+(`public/offline.js`). `navigator.onLine` can remain true without working internet;
+reloading on that flag alone causes a loop. Verify this fallback against a stopped
+server, since page-only network emulation may leave worker requests online.
+
 ## Local storage
 
 The `fitflow_v2` database contains:
@@ -36,7 +45,7 @@ versions are managed by Dexie. `meta.initialized` records whether a server sync 
 ## Enabling sync
 
 Development, production builds and local-only use do not require a database. The server
-constructs its Neon client lazily, only when configured sync or an import needs it.
+constructs its Neon client lazily, only when configured sync needs it.
 
 For cross-device use, configure the server environment variable:
 
@@ -51,8 +60,10 @@ this configuration but sends no sync POSTs.
 
 One `SyncProvider` runs the background process. `useSyncState` only subscribes to state;
 adding a status display does not start another timer or network listener. Sync runs on
-launch, reconnect, visible-tab focus, manual request and every 60 seconds while visible
-and enabled. Offline writes remain local until a later successful sync.
+launch, reconnect, visible-tab focus and every 60 seconds while visible. If loading
+the configuration fails, the timer retries it; only an explicit `enabled: false`
+disables periodic attempts. There is no manual sync button. Settings shows the last
+successful sync and any errors. Offline writes remain local until a later successful sync.
 
 ## Protocol and conflict resolution
 
