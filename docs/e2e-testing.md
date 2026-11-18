@@ -166,8 +166,9 @@ npm run test:e2e:headed -- e2e/tests/02-workout-flow.spec.ts
 The repo ships a GitHub Actions workflow at
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
 that runs the suite on every push to `main` and on every pull request
-targeting `main`. It uses `ubuntu-latest`, Node 22, and `npm install`
-to fetch dependencies. (`npm ci` would be the default, but the workflow
+targeting `main`. The Playwright job uses `ubuntu-24.04` for compatibility
+with its Chromium build. It uses Node 22 and `npm install` to fetch
+dependencies. (`npm ci` would be the default, but the workflow
 deliberately uses `npm install --no-audit --no-fund` because
 `@playwright/test`'s optional native binaries drift between platforms in
 the lockfile; a comment in the workflow explains this.) Playwright
