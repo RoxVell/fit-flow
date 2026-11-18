@@ -1,16 +1,10 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
-
-test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
-});
+import { test, expect } from "../fixtures/base";
+import { startWorkout, logFirstSet, finishWorkout, openWorkoutHistory, expandFirstHistoryRow } from "../fixtures/workout";
 
 test("active workout numbers exercises and can save a note plus deload flag", async ({
   page,
 }) => {
-  await page.goto("/workout");
-  await page.getByRole("button", { name: /start workout/i }).click();
-  await expect(page).toHaveURL(/\/workout\/active/);
+  await startWorkout(page);
 
   const firstCard = page.locator(".rounded-2xl.border.bg-card").first();
   await expect(firstCard.getByText("1.").first()).toBeVisible({ timeout: 10_000 });
@@ -30,30 +24,10 @@ test("active workout numbers exercises and can save a note plus deload flag", as
   await expect(page.getByRole("menu")).toHaveCount(0);
   await expect(firstCard.getByText(/deload/i)).toBeVisible();
 
-  const firstWeight = page.getByRole("textbox", { name: /set 1 weight/i }).first();
-  await firstWeight.fill("60");
-  await firstWeight.blur();
-  const firstReps = page.getByRole("spinbutton", { name: /set 1 reps/i }).first();
-  await firstReps.fill("8");
-  await firstReps.blur();
-  await page.getByRole("button", { name: /complete set 1/i }).first().click();
-
-  await page.getByRole("button", { name: /^Finish$/i }).first().click();
-  await page.getByRole("button", { name: /finish anyway/i }).click();
-  await expect(
-    page.getByText(/workout (complete|completed|finished)/i).first()
-  ).toBeVisible({ timeout: 10_000 });
-
-  await page.getByRole("button", { name: /^Done$/i }).click();
-  await page.goto("/workout");
-  await page.getByRole("tab", { name: /^History$/i }).click();
-
-  const firstRow = page
-    .locator(".divide-y.divide-border\\/50 > div")
-    .first()
-    .getByRole("button")
-    .first();
-  await firstRow.click();
+  await logFirstSet(page);
+  await finishWorkout(page);
+  await openWorkoutHistory(page);
+  await expandFirstHistoryRow(page);
   await expect(page.getByText("close-grip handle").first()).toBeVisible();
   await expect(page.getByText(/not in stats/i).first()).toBeVisible();
 });

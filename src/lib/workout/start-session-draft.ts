@@ -1,9 +1,13 @@
-import type { LoggedExercise, WorkoutSession } from "@/lib/db/types";
+import type { LoggedExercise, LoggedSet, WorkoutSession } from "@/lib/db/types";
 import { initDraft } from "@/lib/repositories/drafts";
 import { generateId } from "@/lib/utils/id";
 
+export function newWorkingSet(loggedExerciseId: string, setOrder: number): LoggedSet {
+  return { id: generateId(), loggedExerciseId, setOrder, type: "working", reps: 0, weight: 0, completed: false };
+}
+
 export function buildLoggedExercisesFromSession(
-  session: WorkoutSession
+  session: WorkoutSession, workoutLogId: string
 ): LoggedExercise[] {
   return session.exercises
     .filter((se) => se.exerciseId)
@@ -13,26 +17,19 @@ export function buildLoggedExercisesFromSession(
         id: leId,
         exerciseId: se.exerciseId,
         exercise: se.exercise,
-        workoutLogId: session.id,
+        workoutLogId,
         sortOrder: se.sortOrder,
-        sets: Array.from({ length: se.targetSets }, (_, si) => ({
-          id: generateId(),
-          loggedExerciseId: leId,
-          type: "working" as const,
-          setOrder: si,
-          reps: 0,
-          weight: 0,
-          completed: false,
-        })),
+        sets: Array.from({ length: se.targetSets }, (_, index) => newWorkingSet(leId, index)),
       };
     });
 }
 
 export async function startWorkoutDraft(session: WorkoutSession) {
-  const exercises = buildLoggedExercisesFromSession(session);
+  const workoutId = generateId();
+  const exercises = buildLoggedExercisesFromSession(session, workoutId);
   return initDraft(
     session.id,
-    generateId(),
+    workoutId,
     exercises,
     new Date().toISOString()
   );

@@ -22,18 +22,12 @@ export async function applyServerChanges(changes: ServerChange[]): Promise<void>
     const local = await table.get(entity.id);
     const localRevision = local?.revision ?? null;
 
+    if (localRevision !== null && localRevision > change.revision) continue;
     if (entity.deletedAt) {
-      if (!local) continue;
-      if (localRevision !== null && change.revision < localRevision) {
-        continue;
-      }
-      await table.delete(entity.id);
+      if (local) await table.delete(entity.id);
       continue;
     }
 
-    if (localRevision !== null && localRevision > change.revision) {
-      continue;
-    }
     if (localRevision === change.revision && local?.updatedAt === entity.updatedAt &&
         JSON.stringify(local) === JSON.stringify(entity)) {
       continue;

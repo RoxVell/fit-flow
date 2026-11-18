@@ -1,45 +1,29 @@
 import { db } from "@/lib/db/dexie";
 import type { EntityType, SyncQueueEntry } from "@/lib/db/types";
+import type { SyncChange } from "./types";
 import { generateId } from "@/lib/utils/id";
 
-export async function enqueueSync(input: {
-  entityType: EntityType;
-  entityId: string;
-  operation: SyncQueueEntry["operation"];
-  payload?: unknown;
-  revision: number;
-}): Promise<void> {
-  await coalescePending(input.entityType, input.entityId);
-
-  const entry: SyncQueueEntry = {
-    id: generateId(),
-    entityType: input.entityType,
-    entityId: input.entityId,
-    operation: input.operation,
-    payload: input.payload,
-    revision: input.revision,
-    createdAt: new Date().toISOString(),
-    status: "pending",
-  };
-  await db.syncQueue.put(entry);
+export async function enqueueSync(
+  change: Omit<SyncChange, "id">
+): Promise<void> {
+  await db.transaction("rw", db.syncQueue, async () => {
+    await db.syncQueue.where("entityId").equals(change.entityId)
+      .filter((entry) => entry.entityType === change.entityType)
+      .delete();
+    await db.syncQueue.add({
+      ...change,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+      status: "pending",
+    });
+  });
 }
 
-async function coalescePending(entityType: EntityType, entityId: string): Promise<void> {
-  const pending = await db.syncQueue
-    .where("entityId")
-    .equals(entityId)
-    .filter((e) => e.entityType === entityType)
+export function getPending(limit = Infinity): Promise<SyncQueueEntry[]> {
+  return db.syncQueue.orderBy("createdAt")
+    .filter((entry) => entry.status === "pending")
+    .limit(limit)
     .toArray();
-  if (pending.length > 0) {
-    await db.syncQueue.bulkDelete(pending.map((e) => e.id));
-  }
-}
-
-export async function getPending(): Promise<SyncQueueEntry[]> {
-  return db.syncQueue
-    .where("status")
-    .equals("pending")
-    .sortBy("createdAt");
 }
 
 export async function markSynced(ids: string[]): Promise<void> {
@@ -48,7 +32,7 @@ export async function markSynced(ids: string[]): Promise<void> {
 }
 
 export async function markFailed(ids: string[]): Promise<void> {
-  for (const id of ids) await db.syncQueue.update(id, { status: "failed" });
+  await db.syncQueue.where("id").anyOf(ids).modify({ status: "failed" });
 }
 
 export async function pendingCount(): Promise<number> {
@@ -60,12 +44,12 @@ export async function hasPendingDelete(
   entityId: string
 ): Promise<boolean> {
   const count = await db.syncQueue
-    .where("status")
-    .equals("pending")
+    .where("entityId")
+    .equals(entityId)
     .filter(
       (e) =>
         e.entityType === entityType &&
-        e.entityId === entityId &&
+        e.status === "pending" &&
         e.operation === "delete"
     )
     .count();

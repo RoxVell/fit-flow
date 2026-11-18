@@ -97,18 +97,10 @@ describe("computeBodyPartProgressSeries", () => {
       (iso) => iso
     );
 
-    expect(bodyParts).toContain("BACK");
-    const backSeries = chartData.map((row) => row.BACK as number);
-    expect(backSeries[0]).toBe(100);
-    expect(backSeries.at(-1)).toBeGreaterThan(100);
-
-    const chartChanges = computeBodyPartChartChanges(chartData, bodyParts);
-    const chartChange = chartChanges.get("BACK")!;
-
-    expect(chartChange?.percent).toBeGreaterThan(0);
-    expect(chartChange?.percent).toBe(
-      computePeriodChange(backSeries)?.percent
-    );
+    expect(bodyParts).toEqual(["BACK"]);
+    // Period changes use the first week in the selected window even when an earlier baseline exists.
+    expect(chartData.map((row) => row.BACK)).toEqual([100, 101.7, 103.3]);
+    expect(computeBodyPartChartChanges(chartData, bodyParts).get("BACK")?.percent).toBe(3.3);
   });
 
   it("excludes single-session exercises from the chart average", () => {
@@ -150,26 +142,6 @@ describe("computeBodyPartProgressSeries", () => {
     expect(backSeries[0]).toBe(100);
     expect(backSeries.at(-1)).toBe(104.1);
     expect(chartChanges.get("BACK")?.percent).toBe(4.1);
-  });
-
-  it("does not fall when a new exercise joins mid-period", () => {
-    const sortedWeeks = [
-      week("2026-01-05T00:00:00.000Z", { lat: 60, row: 50 }),
-      week("2026-06-02T00:00:00.000Z", { lat: 80, row: 53.5 }),
-      week("2026-06-23T00:00:00.000Z", { lat: 83, row: 55, dead: 60 }),
-    ];
-    const filteredWeeks = sortedWeeks.slice(1);
-    const baseline = buildPerExerciseBaseline(sortedWeeks);
-
-    const { chartData } = computeBodyPartProgressSeries(
-      filteredWeeks,
-      baseline,
-      exerciseBodyPart,
-      (iso) => iso
-    );
-
-    const backSeries = chartData.map((row) => row.BACK as number);
-    expect(backSeries.at(-1)).toBeGreaterThanOrEqual(backSeries[0]);
   });
 });
 

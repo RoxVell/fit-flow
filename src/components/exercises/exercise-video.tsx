@@ -1,7 +1,8 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 
 interface ExerciseVideoProps {
@@ -11,8 +12,6 @@ interface ExerciseVideoProps {
   alt: string;
   className?: string;
 }
-
-const subscribeNoop = () => () => {};
 
 export function ExerciseVideo({
   videoDarkUrl,
@@ -24,11 +23,7 @@ export function ExerciseVideo({
   const { resolvedTheme } = useTheme();
   // SSR has no resolved theme. A client-opened sheet can use it immediately
   // without first requesting the light video on a dark device.
-  const theme = useSyncExternalStore(
-    subscribeNoop,
-    () => resolvedTheme,
-    () => undefined
-  );
+  const theme = useHydrated() ? resolvedTheme : undefined;
   const src =
     theme === "dark" ? videoDarkUrl : theme === "light" ? videoLightUrl : undefined;
   return <VideoContent key={src} src={src} poster={poster} alt={alt} className={className} />;

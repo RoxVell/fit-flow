@@ -1,9 +1,7 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
+import { test, expect } from "../fixtures/base";
 import { programCard } from "../fixtures/programs";
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
   await page.goto("/programs/library");
 });
 
@@ -61,15 +59,12 @@ test("user can set a different program as active", async ({ page }) => {
   await expect(page.getByText(/Upper \/ Lower/i).first()).toBeVisible();
 });
 
-test("create program form requires a name and can be cancelled", async ({ page }) => {
+test("create program form starts disabled and can be cancelled", async ({ page }) => {
   await page.getByRole("link", { name: /create|new program/i }).first().click();
   await expect(page).toHaveURL(/\/programs\/create/);
 
-  // The form has a name field. Empty form should keep the save button disabled.
-  const saveButton = page.getByRole("button", { name: /^save$|create|^update$/i }).first();
-  // We just verify the form is on screen — the form may pre-populate the name,
-  // but the save action is gated by validation.
-  await expect(saveButton).toBeVisible();
+  await expect(page.getByPlaceholder(/push\/pull\/legs/i)).toHaveValue("");
+  await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
 
   // Cancel/back navigates back to the library.
   await page.getByRole("button", { name: /back|cancel/i }).first().click();

@@ -37,7 +37,8 @@ jobs:
 
   e2e:
     name: Playwright (e2e)
-    runs-on: ubuntu-latest
+    # Playwright 1.60 has Chromium builds for Ubuntu 24.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     env:
@@ -80,12 +81,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ms-playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          key: ms-playwright-ubuntu-24.04-${{ steps.playwright.outputs.version }}
 
       # `--with-deps` is deliberately omitted: it apt-installs system
       # libraries, which live outside the cached directory, so a cache
       # hit would silently skip them and behave differently from a miss.
-      # The ubuntu-latest image already ships Chrome, Chromium, Edge and
+      # The ubuntu-24.04 image already ships Chrome, Chromium, Edge and
       # Firefox, so those libraries are present either way.
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'

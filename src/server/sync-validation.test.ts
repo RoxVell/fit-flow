@@ -34,6 +34,20 @@ describe("sync request validation", () => {
     ]);
   });
 
+  it.each([
+    { operation: ["update"] },
+    { entityType: ["program"] },
+    { revision: 2 ** 31 },
+    { entityType: "workoutLog", payload: { id: "program-1", startedAt: "2026-01-01", exercises: [], durationSeconds: -1 } },
+    { entityType: "bodyMeasurement", payload: { id: "program-1", date: "2026-01-01", weight: 1e40 } },
+    { entityType: "cardioSession", payload: { id: "program-1", date: "2026-01-01", type: "run", distance: 1e-50, duration: 5 } },
+  ])("permanently rejects invalid sync fields %j without blocking a valid change", (fields) => {
+    const current = programChange();
+    const result = parseSyncRequest({ changes: [{ ...current, ...fields, id: "invalid" }, current] });
+    expect(result.changes).toEqual([current]);
+    expect(result.rejected).toEqual([{ id: "invalid", reason: "Invalid change payload", permanent: true }]);
+  });
+
   it("rejects malformed nested workout sets, not just the envelope", () => {
     const result = parseSyncRequest({ changes: [{ id: "bad-set", entityType: "workoutLog", entityId: "log-1", revision: 1, operation: "create",
       payload: { id: "log-1", startedAt: "2026-11-01T12:00:00.000Z", exercises: [

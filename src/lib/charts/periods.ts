@@ -1,3 +1,5 @@
+import { parseLocalDate } from "@/lib/utils/date";
+
 export type ChartPeriod = "1m" | "2m" | "3m" | "6m" | "all";
 
 export const DEFAULT_CHART_PERIOD: ChartPeriod = "1m";
@@ -19,5 +21,5 @@ export function filterByPeriod<T extends { date: string }>(
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-  return items.filter((item) => new Date(item.date) >= cutoff);
+  return items.filter((item) => parseLocalDate(item.date) >= cutoff);
 }

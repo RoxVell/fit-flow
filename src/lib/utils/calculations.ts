@@ -5,8 +5,9 @@ export function calculatePace(durationMinutes: number, distanceKm: number): numb
 
 export function formatPace(minPerKm: number): string {
   if (minPerKm === 0) return "--";
-  const min = Math.floor(minPerKm);
-  const sec = Math.round((minPerKm - min) * 60);
+  const roundedSeconds = Math.round(minPerKm * 60);
+  const min = Math.floor(roundedSeconds / 60);
+  const sec = roundedSeconds % 60;
   return `${min}:${sec.toString().padStart(2, "0")} /km`;
 }
 

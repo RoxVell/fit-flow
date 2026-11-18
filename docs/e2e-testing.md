@@ -50,15 +50,16 @@ e2e/offline/offline.spec.ts # installation, offline navigation and persistence
 
 Each spec uses the shared `test` from `e2e/fixtures/base.ts`, which:
 
-- Clears cookies before each test, preserving locale changes across reloads
-  within a test.
+- Uses a fresh browser context for each test. Cookies and IndexedDB persist
+  across navigations and reloads within that test.
 - Stubs `navigator.serviceWorker.register` so the Serwist SW can never
   cache a stale build into a test run.
+- Serves a local placeholder for external catalog thumbnails.
 - Returns `{ enabled: false }` from the sync configuration
   endpoint and a no-op response for POST requests.
 
-Each test calls `waitForSeed(page)` after the first navigation. The
-helper blocks until `fitflow_v2.programs` in IndexedDB is non-empty,
+Tests that access the seeded IndexedDB records directly call
+`waitForSeed(page)`. The helper waits until `fitflow_v2.programs` in IndexedDB is non-empty,
 which means the seed bootstrap (`ensureSeeded()`) has finished and the
 `PPL` program is available.
 
@@ -123,19 +124,7 @@ not mock service workers, sync, or application storage.
 
 ## Common patterns
 
-### Resetting IndexedDB between tests
-
-```ts
-import { test, clearIndexedDb } from "../fixtures/base";
-
-test("fresh install flow", async ({ page }) => {
-  await page.goto("/dashboard");
-  await clearIndexedDb(page);
-  await page.reload();
-});
-```
-
-### Asserting on a localiased label
+### Asserting on a localized label
 
 ```ts
 // English "Workout" or Russian "Тренировка" — both match.
@@ -166,25 +155,26 @@ npm run test:e2e:headed -- e2e/tests/02-workout-flow.spec.ts
    with a `NN-name.spec.ts` prefix.
 2. Import `test`, `expect`, and any helpers from `../fixtures/base`.
 3. Add a `test.beforeEach` that navigates to the page under test and
-   calls `waitForSeed(page)` if the page depends on the seeded program.
+   uses a locator assertion to wait for the expected UI. Use `waitForSeed(page)`
+   before reading seeded records directly.
 4. Use `getByRole` / `getByText` locators — avoid CSS class selectors.
-5. Keep the test focused: one assertion per flow. Split multi-step
-   journeys into separate `test()` calls so failures are easy to
-   attribute.
+5. Check the user-visible outcome of each flow, including persistence after
+   reload when the scenario exercises saved data.
 
 ## CI
 
 The repo ships a GitHub Actions workflow at
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
 that runs the suite on every push to `main` and on every pull request
-targeting `main`. It uses `ubuntu-latest`, Node 22, and `npm install`
-to fetch dependencies. (`npm ci` would be the default, but the workflow
+targeting `main`. The Playwright job uses `ubuntu-24.04` for compatibility
+with its Chromium build. It uses Node 22 and `npm install` to fetch
+dependencies. (`npm ci` would be the default, but the workflow
 deliberately uses `npm install --no-audit --no-fund` because
 `@playwright/test`'s optional native binaries drift between platforms in
 the lockfile; a comment in the workflow explains this.) Playwright
 artifacts (`playwright-report/` and `test-results/`) are uploaded
 automatically on failure with a 7-day retention. `process.env.CI` is set,
-so the config flips to the `github` reporter, retries twice, and
+so the development suite adds GitHub annotations, retries twice, and
 serializes workers. After the development suite stops, CI builds the app
 without a database and runs the production offline checks. Their traces,
 screenshots, and videos are retained under `test-results/offline/` on failure.

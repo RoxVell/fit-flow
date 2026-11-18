@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { logFirstSet, startWorkout } from "../fixtures/workout";
+import { logFirstSet, startWorkout, finishWorkout } from "../fixtures/workout";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/dashboard");
@@ -61,9 +61,7 @@ test("a workout started offline retains its draft and completed history after re
   await expect(page).toHaveURL(/\/workout\/active/);
   await expect(page.getByRole("textbox", { name: /set 1 weight/i }).first()).toHaveValue("72.5");
 
-  await page.getByRole("button", { name: "Finish", exact: true }).first().click();
-  await page.getByRole("button", { name: /^Finish anyway$/i }).click();
-  await expect(page.getByText(/workout (complete|completed|finished)/i).first()).toBeVisible();
+  await finishWorkout(page);
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.goto("/workout?tab=history");
   await page.reload();
@@ -84,6 +82,7 @@ test("activating a waiting service worker preserves the active workout draft", a
   await logFirstSet(page, "65", "7");
   // A new script URL installs a real waiting worker without a second app build.
   await page.evaluate(async () => {
+    await caches.open("other-app-rsc-cache");
     await navigator.serviceWorker.register("/serwist/sw.js?update-smoke=1", {
       scope: "/", updateViaCache: "none",
     });
@@ -92,6 +91,7 @@ test("activating a waiting service worker preserves the active workout draft", a
   await expect(reload).toBeVisible();
   await Promise.all([page.waitForEvent("domcontentloaded"), reload.click()]);
   await page.waitForFunction(() => navigator.serviceWorker.controller?.scriptURL.includes("update-smoke=1"));
+  expect(await page.evaluate(() => caches.has("other-app-rsc-cache"))).toBe(true);
   await expect(page.getByRole("textbox", { name: /set 1 weight/i }).first()).toHaveValue("65");
   await context.setOffline(true);
   await page.reload();

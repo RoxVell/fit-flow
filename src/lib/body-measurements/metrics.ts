@@ -1,5 +1,5 @@
 import type { BodyMeasurement } from "@/lib/db/types";
-import { formatDateKey } from "@/lib/utils/date";
+import { formatDateKey, parseLocalDate } from "@/lib/utils/date";
 
 export const BODY_SINGLE_METRIC_FIELDS = ["weight", "chest", "waist"] as const;
 
@@ -15,14 +15,7 @@ export const BODY_BILATERAL_METRIC_GROUPS = [
 
 export const BODY_SIDED_METRIC_FIELDS = BODY_BILATERAL_METRIC_GROUPS.flatMap(
   (group) => [group.left, group.right]
-) as [
-  "leftArm",
-  "rightArm",
-  "leftThigh",
-  "rightThigh",
-  "leftCalf",
-  "rightCalf",
-];
+);
 
 export const BODY_METRIC_FIELDS = [
   ...BODY_SINGLE_METRIC_FIELDS,
@@ -34,7 +27,7 @@ export type BodyMetricField = (typeof BODY_METRIC_FIELDS)[number];
 export type BodyMetricValues = Pick<BodyMeasurement, BodyMetricField>;
 
 export function hasBodyMetricValue(value: number | undefined): value is number {
-  return value !== undefined && !Number.isNaN(value);
+  return Number.isFinite(value);
 }
 
 export function hasAnyBodyMetric(data: Partial<BodyMetricValues>): boolean {
@@ -42,5 +35,5 @@ export function hasAnyBodyMetric(data: Partial<BodyMetricValues>): boolean {
 }
 
 export function calendarDayKey(isoDate: string): string {
-  return formatDateKey(new Date(isoDate));
+  return formatDateKey(parseLocalDate(isoDate));
 }

@@ -93,7 +93,7 @@ instead of immediately retrying a failed batch. Deletions need no payload.
 The response contains `accepted`, `superseded`, `rejected`, `serverChanges` and
 `serverTime`. Accepted and superseded changes leave the queue. Invalid changes have
 `permanent: true` and become `failed` locally; a new edit replaces that failed entry.
-Transient write failures remain pending. Legacy exercise/PR changes are acknowledged
+The client retries a 413 response with a smaller batch. An individual entry that exceeds the request limit stays in IndexedDB as failed, so other entries can sync. Transient write failures remain pending. Legacy exercise/PR changes are acknowledged
 as superseded so old queues cannot block current data.
 
 Writes use a conditional SQL upsert: the incoming revision must be greater than the
@@ -122,10 +122,11 @@ Programs and workouts store their nested structures as JSONB. Existing `exercise
 Drizzle configuration so schema management does not propose dropping them.
 
 New databases can use `npm run db:push` after configuring the environment. Existing
-databases need the additive `drizzle/migrations/0002_program_rest_duration.sql` migration
-before this version syncs; it adds the rest duration with a 90-second default. Review
-schema operations before applying them. Application startup and builds never apply
-migrations automatically.
+databases need the outstanding SQL migrations before deploying the sync server.
+Migration `0002_program_rest_duration.sql` adds the program rest duration.
+Migration `0003_workout_duration.sql` adds a nullable active duration in seconds to
+workout logs. Earlier logs use the difference between their start and end timestamps.
+Application startup and builds never apply migrations automatically.
 
 Tests cover the request boundary, disabled/enabled modes, SQL revision guard,
 serialization, delayed writes, tombstones and queue handling without a live database.

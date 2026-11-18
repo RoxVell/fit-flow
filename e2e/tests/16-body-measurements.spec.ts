@@ -1,4 +1,4 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
+import { test, expect } from "../fixtures/base";
 
 /**
  * Logging a body snapshot. `05-progress.spec.ts` only asserted that the
@@ -8,8 +8,6 @@ import { test, expect, waitForSeed } from "../fixtures/base";
  */
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
   await page.goto("/progress?tab=body");
   await expect(page.getByRole("tab", { name: /^Body$/i })).toHaveAttribute(
     "aria-selected",

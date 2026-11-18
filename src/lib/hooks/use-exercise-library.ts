@@ -5,13 +5,9 @@ import { filterManifest } from "@/lib/exercises/filter";
 import {
   ensureManifestLoaded,
   fetchExerciseDetail,
-  fetchManifest,
   getCachedManifest,
-  setCachedManifest,
-  setManifestLoadError,
   subscribeExerciseLibraryCacheClear,
 } from "@/lib/exercises/library-client";
-import { useLocale } from "@/lib/i18n/locale-context";
 import type {
   ExerciseDetail,
   ExerciseLibraryFilters,
@@ -28,13 +24,11 @@ export function useExerciseManifest() {
     let generation = 0;
     const load = () => {
       const request = ++generation;
-      fetchManifest().then((manifest) => {
+      ensureManifestLoaded().then((manifest) => {
         if (request !== generation) return;
-        setCachedManifest(manifest);
         setState({ manifest, error: null });
       }).catch((error: Error) => {
         if (request !== generation) return;
-        setManifestLoadError(error);
         setState({ manifest: null, error });
       });
     };
@@ -53,13 +47,12 @@ export function useExerciseManifest() {
 }
 
 export function useExerciseLibrary(filters?: ExerciseLibraryFilters) {
-  const locale = useLocale();
   const { manifest, loading, error } = useExerciseManifest();
   const { search, bodyPart, equipment, mechanics, tag } = filters ?? {};
   const items = useMemo(() => manifest
-    ? filterManifest(manifest, { search, bodyPart, equipment, mechanics, tag }, locale)
+    ? filterManifest(manifest, { search, bodyPart, equipment, mechanics, tag })
     : undefined,
-  [manifest, search, bodyPart, equipment, mechanics, tag, locale]);
+  [manifest, search, bodyPart, equipment, mechanics, tag]);
 
   return { exercises: items, loading, error };
 }

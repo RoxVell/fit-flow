@@ -9,42 +9,21 @@ import {
 } from "./rest-duration";
 
 describe("formatRestDuration", () => {
-  it("formats whole minutes without padding minutes", () => {
-    expect(formatRestDuration(120)).toBe("2:00");
-  });
-
-  it("pads seconds with a leading zero", () => {
-    expect(formatRestDuration(90)).toBe("1:30");
-    expect(formatRestDuration(45)).toBe("0:45");
-  });
+  it.each([[120, "2:00"], [90, "1:30"], [45, "0:45"], [65, "1:05"]] as const)(
+    "formats %i seconds as %s", (seconds, expected) => {
+      expect(formatRestDuration(seconds)).toBe(expected);
+    }
+  );
 });
 
-describe("resolveRestDuration", () => {
-  it("returns the default when value is missing", () => {
-    expect(resolveRestDuration(undefined)).toBe(DEFAULT_REST_DURATION_SECONDS);
-  });
-
-  it("returns the stored value when present", () => {
-    expect(resolveRestDuration(120)).toBe(120);
-  });
+it("applies the 90-second default only when no saved duration exists", () => {
+  expect(resolveRestDuration()).toBe(90);
+  expect(resolveRestDuration(120)).toBe(120);
 });
 
-describe("rest duration bounds", () => {
-  it("uses a 90-second default within the allowed range", () => {
-    expect(DEFAULT_REST_DURATION_SECONDS).toBe(90);
-    expect(DEFAULT_REST_DURATION_SECONDS).toBeGreaterThanOrEqual(
-      REST_DURATION_MIN_SECONDS
-    );
-    expect(DEFAULT_REST_DURATION_SECONDS).toBeLessThanOrEqual(
-      REST_DURATION_MAX_SECONDS
-    );
-  });
-
-  it("allows stepping from min to max in 15-second increments", () => {
-    const steps =
-      (REST_DURATION_MAX_SECONDS - REST_DURATION_MIN_SECONDS) /
-      REST_DURATION_STEP_SECONDS;
-    expect(steps).toBe(18);
-    expect(Number.isInteger(steps)).toBe(true);
-  });
+it("supports the default and both endpoints in 15-second steps", () => {
+  expect(REST_DURATION_STEP_SECONDS).toBe(15);
+  expect(REST_DURATION_MIN_SECONDS).toBe(30);
+  expect(REST_DURATION_MAX_SECONDS).toBe(300);
+  expect((DEFAULT_REST_DURATION_SECONDS - REST_DURATION_MIN_SECONDS) % REST_DURATION_STEP_SECONDS).toBe(0);
 });

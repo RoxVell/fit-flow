@@ -4,15 +4,15 @@ interface CircularProgressProps {
   size?: number;
   strokeWidth?: number;
   progress: number;
-  className?: string;
+  arcClassName?: string;
 }
 
-export function CircularProgress({ size = 60, strokeWidth = 3, progress, className }: CircularProgressProps) {
+export function CircularProgress({ size = 60, strokeWidth = 3, progress, arcClassName = "transition-all duration-200" }: CircularProgressProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
   return (
-    <svg width={size} height={size} className={`-rotate-90 ${className ?? ""}`}>
+    <svg width={size} height={size} className="-rotate-90" aria-hidden>
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -31,7 +31,7 @@ export function CircularProgress({ size = 60, strokeWidth = 3, progress, classNa
         strokeDasharray={circumference}
         strokeDashoffset={circumference * (1 - progress)}
         strokeLinecap="round"
-        className="transition-all duration-200"
+        className={arcClassName}
       />
     </svg>
   );

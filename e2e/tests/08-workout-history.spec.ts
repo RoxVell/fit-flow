@@ -1,11 +1,9 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
+import { test, expect } from "../fixtures/base";
 import { readFile } from "node:fs/promises";
-import { finishQuickWorkout, openWorkoutHistory, expandFirstHistoryRow } from "../fixtures/workout";
-
-test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
-});
+import {
+  expandFirstHistoryRow, finishQuickWorkout, finishWorkout,
+  logFirstSet, openWorkoutHistory, startWorkout,
+} from "../fixtures/workout";
 
 test("workout page shows plan and history tabs", async ({ page }) => {
   await page.goto("/workout");
@@ -27,6 +25,7 @@ test("dashboard shows recent workouts after completing a session", async ({
   await page.goto("/dashboard");
 
   await expect(page.getByText(/^Recent Workouts$/i)).toBeVisible();
+  await expect(page.getByText(/480/).first()).toBeVisible();
   await page
     .getByRole("link", { name: /view all workouts/i })
     .click();
@@ -34,14 +33,29 @@ test("dashboard shows recent workouts after completing a session", async ({
   await expect(page.getByText(/^Workout History$/i)).toBeVisible();
 });
 
-test("history tab lists a completed workout after finishing a session", async ({
-  page,
-}) => {
-  await finishQuickWorkout(page);
-  await openWorkoutHistory(page);
+test("paused time is excluded from the completion screen and persisted workout history", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-06-15T10:00:00Z"));
+  await startWorkout(page);
+  await logFirstSet(page);
 
-  await expandFirstHistoryRow(page);
-  await expect(page.getByText(/60\s*kg\s*×\s*8/i).first()).toBeVisible();
+  await page.clock.setFixedTime(new Date("2026-06-15T10:10:00Z"));
+  await page.getByRole("button", { name: "Pause timer" }).click();
+  const resume = page.getByRole("button", { name: "Resume timer" });
+  await expect(resume).toBeVisible();
+  await page.clock.setFixedTime(new Date("2026-06-15T10:20:00Z"));
+  await resume.click();
+  await expect(page.getByRole("button", { name: "Pause timer" })).toBeVisible();
+
+  await page.clock.setFixedTime(new Date("2026-06-15T10:30:45Z"));
+  await expect(page.getByText("20:45", { exact: true })).toBeVisible();
+  await finishWorkout(page);
+  await expect(page.getByText("20m", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Done" }).click();
+  await page.getByRole("link", { name: /view all workouts/i }).click();
+  await expect(page).toHaveURL(/\/workout\?tab=history/);
+  await page.reload();
+  await expect(page.getByRole("button", { name: /\b20m\b/ })).toBeVisible();
 });
 
 test("user can edit set values from workout history", async ({ page }) => {
@@ -49,6 +63,7 @@ test("user can edit set values from workout history", async ({ page }) => {
   await openWorkoutHistory(page);
 
   await expandFirstHistoryRow(page);
+  await expect(page.getByText(/60\s*kg\s*×\s*8/i).first()).toBeVisible();
 
   await page.getByRole("button", { name: /^Edit$/i }).click();
 

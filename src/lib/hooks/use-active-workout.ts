@@ -4,75 +4,31 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { useRouter } from "next/navigation";
 import { useWorkoutStore } from "@/lib/store/workout-store";
 import {
-  useActiveProgram,
+  useSessionProgram,
   useWorkoutDraft,
-  useWorkoutLogs,
+  useCompletedWorkoutLogs,
 } from "@/lib/hooks/use-data";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
 import { derivePersonalRecords } from "@/lib/workout/personal-records";
 import { db } from "@/lib/db/dexie";
 import { finishWorkout } from "@/lib/repositories/workouts";
-import { clearDraft, updateDraftExercises } from "@/lib/repositories/drafts";
+import { clearDraft, elapsedWorkoutSeconds, toggleDraftPause, updateDraftExercises } from "@/lib/repositories/drafts";
 import { generateId } from "@/lib/utils/id";
 import { volume } from "@/lib/training-metrics";
+import { newWorkingSet } from "@/lib/workout/start-session-draft";
 import { resolveRestDuration } from "@/lib/workout/rest-duration";
 import { buildPreviousSetsMap } from "@/lib/workout/previous-sets";
 import type {
-  Exercise,
   LoggedExercise,
   LoggedSet,
   PersonalRecord,
 } from "@/lib/db/types";
 
-export interface UseActiveWorkoutResult {
-  exerciseMap: Map<string, Exercise>;
-  previousSetsMap: Map<string, ({ weight: number; reps: number } | null)[]>;
-  activeExerciseId: string | undefined;
-  activeWorkoutId: string | null;
-  exercises: LoggedExercise[];
-  elapsed: number;
-  minutes: number;
-  seconds: number;
-  isPaused: boolean;
-  togglePause: () => void;
-  completedSetsCount: number;
-  totalSetsCount: number;
-  totalVolume: number;
-  handleFinish: () => void;
-  confirmFinish: () => void;
-  showConfirmFinish: boolean;
-  setShowConfirmFinish: (b: boolean) => void;
-  abandonWorkout: () => Promise<void>;
-  showTriumph: boolean;
-  isAbandoning: boolean;
-  newRecords: PersonalRecord[];
-  previousRecords: PersonalRecord[];
-  programId: string | undefined;
-  triumphData: { volume: number; minutes: number; seconds: number } | null;
-  handleCloseTriumph: () => void;
-  toggleSetCompleted: (exerciseId: string, setIndex: number) => void;
-  addExercise: (exerciseId: string) => void;
-  removeExercise: (loggedExerciseId: string) => void;
-  addSet: (loggedExerciseId: string) => void;
-  removeSet: (loggedExerciseId: string, setIndex: number) => void;
-  updateSet: (
-    loggedExerciseId: string,
-    setIndex: number,
-    data: Partial<LoggedSet>,
-    options?: { propagateWeight?: boolean; baselineWeight?: number }
-  ) => void;
-  swapExercise: (loggedExerciseId: string, newExerciseId: string) => Promise<void>;
-  updateExercise: (
-    loggedExerciseId: string,
-    data: Partial<Pick<LoggedExercise, "notes" | "excludeFromStats">>
-  ) => void;
-}
-
 export function updateLoggedSet(
   exercise: LoggedExercise,
   setIndex: number,
   data: Partial<LoggedSet>,
-  options?: { propagateWeight?: boolean; baselineWeight?: number }
+  options?: { propagateWeight?: boolean }
 ): LoggedExercise {
   const currentSet = exercise.sets[setIndex];
   if (!currentSet) return exercise;
@@ -97,20 +53,19 @@ const EMPTY_EXERCISES: LoggedExercise[] = [];
 
 export function useActiveWorkout(
   sessionId: string | undefined
-): UseActiveWorkoutResult {
+) {
   const router = useRouter();
   const restStore = useWorkoutStore();
   const draft = useWorkoutDraft();
   const { exerciseMap } = useExerciseLookup();
-  const program = useActiveProgram();
-  const workoutLogs = useWorkoutLogs(50);
+  const draftSessionId = draft?.sessionId ?? sessionId;
+  const program = useSessionProgram(draftSessionId);
+  const workoutLogs = useCompletedWorkoutLogs(50);
   const restDurationSeconds = resolveRestDuration(program?.restDurationSeconds);
 
   const exercises = draft?.exercises ?? EMPTY_EXERCISES;
-  const startedAt = draft?.startedAt ?? null;
   const activeWorkoutId = draft?.activeWorkoutId ?? null;
 
-  const [isPaused, setIsPaused] = useState(false);
   const [showConfirmFinish, setShowConfirmFinish] = useState(false);
   const [showTriumph, setShowTriumph] = useState(false);
   const [newRecords, setNewRecords] = useState<PersonalRecord[]>([]);
@@ -118,7 +73,6 @@ export function useActiveWorkout(
   const [triumphData, setTriumphData] = useState<{
     volume: number;
     minutes: number;
-    seconds: number;
   } | null>(null);
   const [lastActiveExerciseId, setLastActiveExerciseId] = useState<string | null>(null);
   const [isAbandoning, setIsAbandoning] = useState(false);
@@ -133,17 +87,7 @@ export function useActiveWorkout(
     () => 0
   );
 
-  const computedElapsed = startedAt
-    ? Math.max(0, nowSec - Math.floor(new Date(startedAt).getTime() / 1000))
-    : 0;
-
-  const [frozenElapsed, setFrozenElapsed] = useState<number | null>(null);
-  const [prevIsPaused, setPrevIsPaused] = useState(isPaused);
-  if (isPaused !== prevIsPaused) {
-    setPrevIsPaused(isPaused);
-    setFrozenElapsed(isPaused ? computedElapsed : null);
-  }
-  const elapsed = frozenElapsed ?? computedElapsed;
+  const elapsed = elapsedWorkoutSeconds(draft, nowSec);
 
   useEffect(() => {
     if (draft === undefined) return;
@@ -153,8 +97,7 @@ export function useActiveWorkout(
   }, [draft, router, showTriumph, isAbandoning]);
 
   const previousSetsMap = useMemo(() => {
-    if (!workoutLogs) return new Map();
-    return buildPreviousSetsMap(exercises, workoutLogs);
+    return buildPreviousSetsMap(exercises, workoutLogs ?? []);
   }, [workoutLogs, exercises]);
 
   const totalVolume = useMemo(
@@ -183,10 +126,7 @@ export function useActiveWorkout(
     );
   }, [lastActiveExerciseId, exercises]);
 
-  const incompleteExists = useMemo(
-    () => exercises.some((ex) => ex.sets.some((s) => !s.completed)),
-    [exercises]
-  );
+  const incompleteExists = completedSetsCount < totalSetsCount;
 
   const minutes = Math.floor(elapsed / 60);
   const seconds = elapsed % 60;
@@ -195,11 +135,8 @@ export function useActiveWorkout(
     if (hasFinishedRef.current) return;
     hasFinishedRef.current = true;
 
-    const session = program?.sessions.find((s) => s.id === sessionId);
+    const session = program?.sessions.find((s) => s.id === draftSessionId);
     const completedAt = new Date().toISOString();
-
-    const capturedMinutes = minutes;
-    const capturedSeconds = seconds;
 
     void (async () => {
       try {
@@ -212,13 +149,13 @@ export function useActiveWorkout(
           sessionName: session?.name,
         });
         const previousLogs = history.filter((log) => log.id !== createdLog.id);
-        setPreviousRecords(derivePersonalRecords(previousLogs, exerciseMap));
-        setNewRecords(derivePersonalRecords([...previousLogs, createdLog], exerciseMap)
-          .filter((record) => record.workoutLogId === createdLog.id));
+        const records = derivePersonalRecords([...previousLogs, createdLog], exerciseMap);
+        setPreviousRecords(records.filter((record) => record.workoutLogId !== createdLog.id));
+        setNewRecords(records.filter((record) => record.workoutLogId === createdLog.id));
+        restStore.stopRestTimer();
         setTriumphData({
           volume: volume(createdLog.exercises.flatMap((exercise) => exercise.sets.filter((set) => set.completed))),
-          minutes: capturedMinutes,
-          seconds: capturedSeconds,
+          minutes: Math.floor((createdLog.durationSeconds ?? elapsed) / 60),
         });
         setShowTriumph(true);
       } catch (err) {
@@ -252,7 +189,8 @@ export function useActiveWorkout(
     hasFinishedRef.current = true;
     setIsAbandoning(true);
     try {
-      await clearDraft();
+      await clearDraft(activeWorkoutId);
+      restStore.stopRestTimer();
       router.replace("/workout");
     } catch (err) {
       console.warn("[abandonWorkout] clearDraft failed", err);
@@ -261,24 +199,18 @@ export function useActiveWorkout(
     }
   };
 
+  const editExercise = (id: string, change: (entry: LoggedExercise) => LoggedExercise) =>
+    updateDraftExercises(activeWorkoutId, (current) => current.map((entry) =>
+      entry.id === id ? change(entry) : entry
+    ));
+
   const toggleSetCompleted = (exerciseId: string, setIndex: number) => {
     const before = exercises.find((e) => e.id === exerciseId)?.sets[setIndex];
     if (!before) return;
     const willComplete = !before.completed;
-    if (willComplete && (before.weight === 0 || before.reps === 0)) return;
+    if (willComplete && (before.weight <= 0 || before.reps <= 0)) return;
 
-    void updateDraftExercises((current) =>
-      current.map((e) =>
-        e.id !== exerciseId
-          ? e
-          : {
-              ...e,
-              sets: e.sets.map((s, i) =>
-                i === setIndex ? { ...s, completed: willComplete } : s
-              ),
-            }
-      )
-    );
+    void editExercise(exerciseId, (entry) => updateLoggedSet(entry, setIndex, { completed: willComplete }));
     if (willComplete) {
       restStore.startRestTimer(restDurationSeconds);
       setLastActiveExerciseId(exerciseId);
@@ -286,7 +218,7 @@ export function useActiveWorkout(
   };
 
   const addExercise = (exerciseId: string) => {
-    void updateDraftExercises((current) => {
+    void updateDraftExercises(activeWorkoutId, (current) => {
       const id = generateId();
       return [
         ...current,
@@ -295,24 +227,14 @@ export function useActiveWorkout(
           exerciseId,
           workoutLogId: activeWorkoutId ?? id,
           sortOrder: current.length,
-          sets: [
-            {
-              id: generateId(),
-              loggedExerciseId: id,
-              type: "working",
-              setOrder: 0,
-              reps: 0,
-              weight: 0,
-              completed: false,
-            },
-          ],
+          sets: [newWorkingSet(id, 0)],
         },
       ];
     });
   };
 
   const removeExercise = (loggedExerciseId: string) => {
-    void updateDraftExercises((current) =>
+    void updateDraftExercises(activeWorkoutId, (current) =>
       current
         .filter((e) => e.id !== loggedExerciseId)
         .map((e, i) => ({ ...e, sortOrder: i }))
@@ -320,84 +242,41 @@ export function useActiveWorkout(
   };
 
   const addSet = (loggedExerciseId: string) => {
-    void updateDraftExercises((current) =>
-      current.map((e) => {
-        if (e.id !== loggedExerciseId) return e;
-        const lastSet = e.sets[e.sets.length - 1];
-        const newSet: LoggedSet = {
-          id: generateId(),
-          loggedExerciseId: e.id,
-          type: "working",
-          setOrder: (lastSet?.setOrder ?? -1) + 1,
-          reps: lastSet?.reps || 10,
-          weight: lastSet?.weight || 0,
-          completed: false,
-        };
-        return { ...e, sets: [...e.sets, newSet] };
-      })
-    );
+    void editExercise(loggedExerciseId, (entry) => {
+      const last = entry.sets.at(-1);
+      const set = newWorkingSet(entry.id, (last?.setOrder ?? -1) + 1);
+      set.reps = last?.reps || 10;
+      set.weight = last?.weight ?? 0;
+      return { ...entry, sets: [...entry.sets, set] };
+    });
   };
 
-  const removeSet = (loggedExerciseId: string, setIndex: number) => {
-    void updateDraftExercises((current) =>
-      current.map((e) => {
-        if (e.id !== loggedExerciseId) return e;
-        return {
-          ...e,
-          sets: e.sets
-            .filter((_, i) => i !== setIndex)
-            .map((s, i) => ({ ...s, setOrder: i })),
-        };
-      })
-    );
+  const removeSet = (id: string, setIndex: number) => {
+    void editExercise(id, (entry) => ({
+      ...entry, sets: entry.sets.filter((_, i) => i !== setIndex).map((set, i) => ({ ...set, setOrder: i })),
+    }));
   };
 
-  const updateSet = (
-    loggedExerciseId: string,
-    setIndex: number,
-    data: Partial<LoggedSet>,
-    options?: { propagateWeight?: boolean; baselineWeight?: number }
-  ) => {
-    void updateDraftExercises((current) =>
-      current.map((e) => {
-        if (e.id !== loggedExerciseId) return e;
-        return updateLoggedSet(e, setIndex, data, options);
-      })
-    );
+  const updateSet = (id: string, setIndex: number, data: Partial<LoggedSet>, options?: { propagateWeight?: boolean }) => {
+    void editExercise(id, (entry) => updateLoggedSet(entry, setIndex, data, options));
   };
 
-  const updateExercise = (
-    loggedExerciseId: string,
-    data: Partial<Pick<LoggedExercise, "notes" | "excludeFromStats">>
-  ) => {
-    void updateDraftExercises((current) =>
-      current.map((e) => (e.id === loggedExerciseId ? { ...e, ...data } : e))
-    );
+  const updateExercise = (id: string, data: Partial<Pick<LoggedExercise, "notes" | "excludeFromStats">>) => {
+    void editExercise(id, (entry) => ({ ...entry, ...data }));
   };
 
   const swapExercise = async (loggedExerciseId: string, newExerciseId: string) => {
     const original = exercises.find((e) => e.id === loggedExerciseId);
     if (!original || original.exerciseId === newExerciseId) return;
-    await updateDraftExercises((current) =>
-      current.map((e) =>
-        e.id === loggedExerciseId
-          ? {
-              ...e,
-              exerciseId: newExerciseId,
-              exercise: undefined,
-              notes: undefined,
-              excludeFromStats: undefined,
-              sets: e.sets.map((s) => ({
-                ...s,
-                id: generateId(),
-                weight: 0,
-                reps: 0,
-                completed: false,
-              })),
-            }
-          : e
-      )
-    );
+    const updated = await editExercise(loggedExerciseId, (entry) => ({
+      ...entry,
+      exerciseId: newExerciseId,
+      exercise: undefined,
+      notes: undefined,
+      excludeFromStats: undefined,
+      sets: entry.sets.map((set) => ({ ...set, id: generateId(), weight: 0, reps: 0, completed: false })),
+    }));
+    if (!updated) return;
     await db.exerciseReplacements.put({
       fromExerciseId: original.exerciseId,
       toExerciseId: newExerciseId,
@@ -414,8 +293,8 @@ export function useActiveWorkout(
     elapsed,
     minutes,
     seconds,
-    isPaused,
-    togglePause: () => setIsPaused(!isPaused),
+    isPaused: draft?.pausedAt !== undefined,
+    togglePause: () => void toggleDraftPause(activeWorkoutId, Math.floor(Date.now() / 1000)),
     completedSetsCount,
     totalSetsCount,
     totalVolume,
@@ -428,7 +307,7 @@ export function useActiveWorkout(
     isAbandoning,
     newRecords,
     previousRecords,
-    programId: program?.sessions.some((s) => s.id === sessionId) ? program.id : undefined,
+    programId: program?.id,
     triumphData,
     handleCloseTriumph,
     toggleSetCompleted,

@@ -47,26 +47,10 @@ describe("offline.js", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it("never reloads while the server is unreachable, even with onLine=true", async () => {
-    const page = runOfflinePage({ onLine: true, ping: unreachable });
-    await vi.advanceTimersByTimeAsync(10 * 60_000);
-    expect(page.reload).not.toHaveBeenCalled();
-    // one probe on load + bounded background polling
-    expect(page.fetch.mock.calls.length).toBeLessThanOrEqual(6);
-    expect(page.btn.disabled).toBe(false);
-  });
-
   it("reloads once the probe answers 204", async () => {
     const page = runOfflinePage({ onLine: true, ping: reachable });
     await flush();
     expect(page.reload).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not probe at all without a network interface", async () => {
-    const page = runOfflinePage({ onLine: false, ping: reachable });
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(page.fetch).not.toHaveBeenCalled();
-    expect(page.btn.disabled).toBe(true);
   });
 
   it("recovers on the online event after the auto-probe budget is spent", async () => {
@@ -76,13 +60,14 @@ describe("offline.js", () => {
       ping: () => (up ? reachable() : unreachable()),
     });
     await vi.advanceTimersByTimeAsync(10 * 60_000);
-    const probesSoFar = page.fetch.mock.calls.length;
+    expect(page.fetch).toHaveBeenCalledTimes(6);
+    expect(page.btn.disabled).toBe(false);
     expect(page.reload).not.toHaveBeenCalled();
 
     up = true;
     page.emit("online");
     await flush();
-    expect(page.fetch.mock.calls.length).toBe(probesSoFar + 1);
+    expect(page.fetch).toHaveBeenCalledTimes(7);
     expect(page.reload).toHaveBeenCalledTimes(1);
   });
 
@@ -91,9 +76,12 @@ describe("offline.js", () => {
     await vi.advanceTimersByTimeAsync(10 * 60_000);
     expect(page.fetch).not.toHaveBeenCalled();
 
+    expect(page.btn.disabled).toBe(true);
     page.navigator.onLine = true;
     page.emit("online");
     await flush();
     expect(page.fetch).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(page.fetch).toHaveBeenCalledTimes(2);
   });
 });

@@ -10,25 +10,11 @@ let manifestPromise: Promise<ExerciseManifestItem[]> | null = null;
 const detailCache = new Map<BodyPart, Promise<Record<string, ExerciseDetail>>>();
 
 let cachedManifest: ExerciseManifestItem[] | null = null;
-let manifestLoadError: Error | null = null;
 
 const cacheClearListeners = new Set<() => void>();
 
 export function getCachedManifest(): ExerciseManifestItem[] | null {
   return cachedManifest;
-}
-
-export function getManifestLoadError(): Error | null {
-  return manifestLoadError;
-}
-
-export function setCachedManifest(data: ExerciseManifestItem[] | null): void {
-  cachedManifest = data;
-  if (data) manifestLoadError = null;
-}
-
-export function setManifestLoadError(err: Error | null): void {
-  manifestLoadError = err;
 }
 
 export function subscribeExerciseLibraryCacheClear(
@@ -42,23 +28,26 @@ export function clearExerciseLibraryCache() {
   manifestPromise = null;
   detailCache.clear();
   cachedManifest = null;
-  manifestLoadError = null;
   cacheClearListeners.forEach((listener) => listener());
 }
 
-export async function fetchManifest(): Promise<ExerciseManifestItem[]> {
-  if (!manifestPromise) {
-    manifestPromise = fetch(MANIFEST_URL)
-      .then((r) => {
-        if (!r.ok) throw new Error("Failed to load exercise manifest");
-        return r.json() as Promise<ExerciseManifestItem[]>;
-      })
-      .catch((err) => {
-        manifestPromise = null;
-        throw err;
-      });
-  }
-  return manifestPromise;
+export function ensureManifestLoaded(): Promise<ExerciseManifestItem[]> {
+  if (manifestPromise) return manifestPromise;
+  const request = fetch(MANIFEST_URL)
+    .then((r) => {
+      if (!r.ok) throw new Error("Failed to load exercise manifest");
+      return r.json() as Promise<ExerciseManifestItem[]>;
+    })
+    .then((manifest) => {
+      if (manifestPromise === request) cachedManifest = manifest;
+      return manifest;
+    })
+    .catch((err) => {
+      if (manifestPromise === request) manifestPromise = null;
+      throw err;
+    });
+  manifestPromise = request;
+  return request;
 }
 
 async function fetchBodyPartDetails(
@@ -72,7 +61,7 @@ async function fetchBodyPartDetails(
         return r.json() as Promise<Record<string, ExerciseDetail>>;
       })
       .catch((err) => {
-        detailCache.delete(bodyPart);
+        if (detailCache.get(bodyPart) === promise) detailCache.delete(bodyPart);
         throw err;
       });
     detailCache.set(bodyPart, promise);
@@ -86,12 +75,4 @@ export async function fetchExerciseDetail(
 ): Promise<ExerciseDetail | undefined> {
   const chunk = await fetchBodyPartDetails(bodyPart);
   return chunk[id];
-}
-
-export async function ensureManifestLoaded(): Promise<ExerciseManifestItem[]> {
-  const cached = getCachedManifest();
-  if (cached) return cached;
-  const data = await fetchManifest();
-  setCachedManifest(data);
-  return data;
 }

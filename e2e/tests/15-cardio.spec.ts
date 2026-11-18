@@ -1,4 +1,4 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
+import { test, expect } from "../fixtures/base";
 
 /**
  * `/workout/cardio` was completely untested — no spec ever loaded the
@@ -17,8 +17,6 @@ function field(page: import("@playwright/test").Page, key: keyof typeof FIELD) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
   await page.goto("/workout/cardio");
   await expect(page.getByRole("heading", { name: /^Cardio$/i })).toBeVisible();
 });

@@ -37,7 +37,9 @@ it("upgrades a legacy database without clearing history, drafts, programs or leg
     expect((await upgraded.workoutDrafts.get("active"))?.exercises[0].exercise).toMatchObject(exercise);
     expect((await upgraded.workoutDrafts.get("active"))?.activeWorkoutId).not.toBe("session");
     const session = (await upgraded.programs.get("program"))!.sessions[0];
-    expect(buildLoggedExercisesFromSession(session)[0].exercise).toMatchObject(exercise);
+    expect(buildLoggedExercisesFromSession(session, "next-workout")[0]).toMatchObject({
+      exercise, workoutLogId: "next-workout",
+    });
     expect(await upgraded.table("personalRecords").get("standalone-pr")).toMatchObject({ value: 90 });
     expect(await upgraded.table("exercises").get(exercise.id)).toMatchObject(exercise);
     expect(await upgraded.syncQueue.get("obsolete")).toBeUndefined();

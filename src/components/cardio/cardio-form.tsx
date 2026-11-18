@@ -16,15 +16,6 @@ import { calculatePace, formatPace } from "@/lib/utils/calculations";
 import type { CardioType } from "@/lib/db/types";
 import { useT } from "@/lib/i18n/use-t";
 
-/**
- * An empty field parses to `NaN`, which propagates through every sum it
- * touches. Blank means "none entered", so read it as zero.
- */
-function toNumber(value: string): number {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
 export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
   const [type, setType] = useState<CardioType>("run");
   const [distance, setDistance] = useState("");
@@ -32,25 +23,32 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
   const [seconds, setSeconds] = useState("");
   const [heartRate, setHeartRate] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const t = useT();
 
-  const durationSeconds = toNumber(minutes) * 60 + toNumber(seconds);
-  const distKm = toNumber(distance);
+  const durationSeconds = Number(minutes) * 60 + Number(seconds);
+  const distKm = Number(distance);
+  const avgHeartRate = heartRate === "" ? undefined : Number(heartRate);
   const pace = calculatePace(durationSeconds / 60, distKm);
-  const canSave = distKm > 0 && durationSeconds > 0;
+  const canSave = Number.isFinite(distKm) && distKm > 0
+    && Number.isFinite(durationSeconds) && durationSeconds > 0 && Number(minutes) >= 0 && Number(seconds) >= 0
+    && (avgHeartRate === undefined || (Number.isSafeInteger(avgHeartRate) && avgHeartRate >= 0 && avgHeartRate <= 2147483647));
 
   const handleSubmit = async () => {
-    if (!canSave) return;
+    if (!canSave || saving) return;
     setSaving(true);
+    setSaveFailed(false);
     try {
       await createCardioSession({
         type,
         distance: distKm,
         duration: durationSeconds,
-        avgHeartRate: heartRate ? parseInt(heartRate) : undefined,
+        avgHeartRate,
         date: new Date().toISOString(),
       });
       onSuccess?.();
+    } catch {
+      setSaveFailed(true);
     } finally {
       setSaving(false);
     }
@@ -75,8 +73,10 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
         </Select>
 
         <div>
-          <label className="text-xs text-muted-foreground">{t.cardio.distanceKm}</label>
+          <label htmlFor="cardio-distanceKm" className="text-xs text-muted-foreground">{t.cardio.distanceKm}</label>
           <Input
+            id="cardio-distanceKm"
+            min="0"
             type="number"
             step="0.1"
             value={distance}
@@ -87,8 +87,10 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-muted-foreground">{t.cardio.minutes}</label>
+            <label htmlFor="cardio-minutes" className="text-xs text-muted-foreground">{t.cardio.minutes}</label>
             <Input
+              id="cardio-minutes"
+              min="0"
               type="number"
               value={minutes}
               onChange={(e) => setMinutes(e.target.value)}
@@ -96,8 +98,10 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
             />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">{t.cardio.seconds}</label>
+            <label htmlFor="cardio-seconds" className="text-xs text-muted-foreground">{t.cardio.seconds}</label>
             <Input
+              id="cardio-seconds"
+              min="0"
               type="number"
               value={seconds}
               onChange={(e) => setSeconds(e.target.value)}
@@ -114,14 +118,18 @@ export function CardioForm({ onSuccess }: { onSuccess?: () => void }) {
         )}
 
         <div>
-          <label className="text-xs text-muted-foreground">{t.cardio.avgHeartRate}</label>
+          <label htmlFor="cardio-avgHeartRate" className="text-xs text-muted-foreground">{t.cardio.avgHeartRate}</label>
           <Input
+            id="cardio-avgHeartRate"
+            min="0"
             type="number"
             value={heartRate}
             onChange={(e) => setHeartRate(e.target.value)}
             placeholder={t.cardio.optional}
           />
         </div>
+
+        {saveFailed && <p role="alert" className="text-sm text-destructive">{t.common.saveFailed}</p>}
 
         <Button
           className="w-full"

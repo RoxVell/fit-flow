@@ -1,9 +1,5 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
-
-test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
-});
+import { test, expect } from "../fixtures/base";
+import { startWorkout, logFirstSet, seedPreviousSet, finishWorkout } from "../fixtures/workout";
 
 test("workout plan lists the seeded PPL session and shows start button", async ({ page }) => {
   await page.goto("/workout");
@@ -36,71 +32,19 @@ test("change-day picker lets the user pick a different session", async ({ page }
   // Dialog title is the localized "Change Day" string.
   await expect(page.getByText(/change day/i).first()).toBeVisible();
 
-  // Pick the second session in the list.
-  const options = dialog.getByRole("button");
-  const count = await options.count();
-  expect(count).toBeGreaterThan(1);
-  await options.nth(1).click();
-
-  // Dialog closes.
+  const otherSession = dialog.getByRole("button", { name: /exercises/i })
+    .filter({ hasNotText: /Today/i }).first();
+  const nextName = await otherSession.locator("p").first().innerText();
+  await otherSession.click();
   await expect(dialog).toBeHidden();
+  await expect(sessionCard).toContainText(nextName);
 });
 
 test("user can start a workout, log a set, and finish the session", async ({ page }) => {
-  await page.goto("/workout");
-  await page.getByRole("button", { name: /start workout/i }).click();
-
-  // We should now be on the active workout screen.
-  await expect(page).toHaveURL(/\/workout\/active/);
-
-  // PRs are derived from completed workouts, including the previous weight.
-  await page.evaluate(() => new Promise<void>((resolve, reject) => {
-    const request = indexedDB.open("fitflow_v2");
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      const database = request.result;
-      const tx = database.transaction(["workoutDrafts", "workoutLogs"], "readwrite");
-      const draft = tx.objectStore("workoutDrafts").get("active");
-      draft.onsuccess = () => {
-        tx.objectStore("workoutLogs").put({
-          id: "previous-workout", startedAt: "2026-01-01T00:00:00Z",
-          endedAt: "2026-01-01T01:00:00Z", revision: 1, updatedAt: "2026-01-01T01:00:00Z",
-          exercises: [{ id: "previous-entry", exerciseId: draft.result.exercises[0].exerciseId,
-            workoutLogId: "previous-workout", sortOrder: 0,
-            sets: [{ id: "previous-set", loggedExerciseId: "previous-entry", type: "working",
-              setOrder: 0, weight: 50, reps: 8, completed: true }] }],
-        });
-      };
-      tx.oncomplete = () => { database.close(); resolve(); };
-      tx.onerror = () => { database.close(); reject(tx.error); };
-    };
-  }));
-
-  const firstWeight = page.getByRole("textbox", { name: /set 1 weight/i }).first();
-  await expect(firstWeight).toBeVisible({ timeout: 10_000 });
-  await firstWeight.fill("60");
-  await firstWeight.blur();
-
-  const firstReps = page.getByRole("spinbutton", { name: /set 1 reps/i }).first();
-  await firstReps.fill("8");
-  await firstReps.blur();
-
-  const completeSet = page.getByRole("button", { name: /complete set 1/i }).first();
-  await expect(completeSet).toBeEnabled();
-  await completeSet.click();
-
-  // Open the finish confirmation.
-  await page.getByRole("button", { name: /^Finish$/i }).first().click();
-
-  // Confirm dialog appears with the localized "Finish anyway" button.
-  const confirm = page.getByRole("button", { name: /finish anyway/i });
-  await expect(confirm).toBeVisible({ timeout: 5_000 });
-  await confirm.click();
-
-  // Triumph screen shows the completion message.
-  await expect(
-    page.getByText(/workout (complete|completed|finished)/i).first(),
-  ).toBeVisible({ timeout: 10_000 });
+  await startWorkout(page);
+  await seedPreviousSet(page);
+  await logFirstSet(page);
+  await finishWorkout(page);
   await expect(page.getByText(/\+10\.00 kg/i)).toBeVisible();
   await expect(page.getByText(/\+10\.00 kg/i).getByText("(+20.0%)", { exact: true })).toBeVisible();
 });

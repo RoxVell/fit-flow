@@ -1,9 +1,5 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
-
-test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
-});
+import { test, expect } from "../fixtures/base";
+import { startWorkout } from "../fixtures/workout";
 
 test("create program form shows rest duration stepper", async ({ page }) => {
   await page.goto("/programs/create");
@@ -30,9 +26,7 @@ test("exercises tab renders the library inside a shared card container", async (
 test("active workout opens exercise history sheet from the exercise name", async ({
   page,
 }) => {
-  await page.goto("/workout");
-  await page.getByRole("button", { name: /start workout/i }).click();
-  await expect(page).toHaveURL(/\/workout\/active/);
+  await startWorkout(page);
 
   const exerciseName = page.locator("button.underline").first();
   await expect(exerciseName).toBeVisible({ timeout: 10_000 });
@@ -61,38 +55,4 @@ test("active workout opens exercise history sheet from the exercise name", async
   }
 
   await expect(sheet).toBeHidden();
-});
-
-test("triumph screen done button closes the overlay and navigates to dashboard", async ({
-  page,
-}) => {
-  await page.goto("/workout");
-  await page.getByRole("button", { name: /start workout/i }).click();
-  await expect(page).toHaveURL(/\/workout\/active/);
-
-  const firstWeight = page.getByRole("textbox", { name: /set 1 weight/i }).first();
-  await expect(firstWeight).toBeVisible({ timeout: 10_000 });
-  await firstWeight.fill("60");
-  await firstWeight.blur();
-
-  const firstReps = page.getByRole("spinbutton", { name: /set 1 reps/i }).first();
-  await firstReps.fill("8");
-  await firstReps.blur();
-
-  await page.getByRole("button", { name: /complete set 1/i }).first().click();
-  await page.getByRole("button", { name: /^Finish$/i }).first().click();
-  await page.getByRole("button", { name: /finish anyway/i }).click();
-
-  await expect(
-    page.getByText(/workout (complete|completed|finished)/i).first(),
-  ).toBeVisible({ timeout: 10_000 });
-
-  const doneButton = page.getByRole("button", { name: /^Done$/i });
-  await expect(doneButton).toBeVisible();
-  await doneButton.click();
-
-  await expect(page).toHaveURL(/\/dashboard/);
-  await expect(
-    page.getByText(/workout (complete|completed|finished)/i).first(),
-  ).toHaveCount(0);
 });

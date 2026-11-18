@@ -100,6 +100,8 @@ export interface WorkoutLog {
   id: string;
   startedAt: string;
   endedAt?: string;
+  /** Active time excluding pauses. Older logs only have start and end timestamps. */
+  durationSeconds?: number;
   programId?: string;
   sessionId?: string;
   programName?: string;
@@ -196,6 +198,8 @@ export interface WorkoutDraft {
   sessionId: string | null;
   exercises: LoggedExercise[];
   startedAt: string | null;
+  pausedAt?: number; // Epoch seconds when the elapsed clock was paused.
+  pausedSeconds?: number;
   updatedAt: string;
 }
 

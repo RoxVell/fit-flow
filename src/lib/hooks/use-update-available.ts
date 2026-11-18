@@ -15,51 +15,30 @@ const RETRY_KEY = "fitflow.update.retries";
 const MAX_AUTO_RETRIES = 3;
 const ACTIVATION_TIMEOUT_MS = 3000;
 
-function requestSkipWaiting(reg: ServiceWorkerRegistration): void {
-  reg.waiting?.postMessage({ type: "SKIP_WAITING" });
-  window.serwist?.messageSkipWaiting();
-}
-
-function waitForControllerChange(timeoutMs: number): Promise<boolean> {
+function activateWaitingWorker(worker: ServiceWorker, timeoutMs: number): Promise<void> {
   return new Promise((resolve) => {
-    if (!navigator.serviceWorker) {
-      resolve(false);
-      return;
+    function finish() {
+      clearTimeout(timer);
+      navigator.serviceWorker.removeEventListener("controllerchange", finish);
+      resolve();
     }
 
-    let settled = false;
-    const finish = (activated: boolean) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      navigator.serviceWorker.removeEventListener(
-        "controllerchange",
-        onControllerChange
-      );
-      resolve(activated);
-    };
-
-    const onControllerChange = () => finish(true);
-    navigator.serviceWorker.addEventListener(
-      "controllerchange",
-      onControllerChange
-    );
-
-    const timer = setTimeout(() => finish(false), timeoutMs);
+    const timer = setTimeout(finish, timeoutMs);
+    navigator.serviceWorker.addEventListener("controllerchange", finish);
+    worker.postMessage({ type: "SKIP_WAITING" });
   });
 }
 
-async function finishUpdate(reloadingRef: { current: boolean }): Promise<void> {
-  if (reloadingRef.current) return;
-  reloadingRef.current = true;
+function clearUpdateFlags() {
   sessionStorage.removeItem(RELOAD_KEY);
   sessionStorage.removeItem(RETRY_KEY);
-  if (navigator.onLine) {
-    reloadApp();
-  } else {
-    reloadingRef.current = false;
-    sessionStorage.setItem(RELOAD_KEY, "1");
-  }
+}
+
+function finishUpdate(reloadingRef: { current: boolean }): void {
+  if (reloadingRef.current || !navigator.onLine) return;
+  reloadingRef.current = true;
+  clearUpdateFlags();
+  reloadApp();
 }
 
 export function useUpdateAvailable(): UpdateAvailableState {
@@ -78,20 +57,18 @@ export function useUpdateAvailable(): UpdateAvailableState {
       const reg = await navigator.serviceWorker?.getRegistration();
 
       if (reg?.waiting) {
-        requestSkipWaiting(reg);
-        await waitForControllerChange(ACTIVATION_TIMEOUT_MS);
+        await activateWaitingWorker(reg.waiting, ACTIVATION_TIMEOUT_MS);
 
         const current = await navigator.serviceWorker?.getRegistration();
         if (current?.waiting) {
-          requestSkipWaiting(current);
-          await waitForControllerChange(1000);
+          await activateWaitingWorker(current.waiting, 1000);
         }
       }
-
-      await finishUpdate(reloadingRef);
     } catch (err) {
       console.warn("[useUpdateAvailable] apply failed", err);
-      await finishUpdate(reloadingRef);
+    } finally {
+      finishUpdate(reloadingRef);
+      if (!reloadingRef.current) setApplying(false);
     }
   }, []);
 
@@ -102,11 +79,9 @@ export function useUpdateAvailable(): UpdateAvailableState {
     );
 
     const onOnline = () => {
-      void navigator.serviceWorker?.getRegistration().then(async (reg) => {
+      void navigator.serviceWorker?.getRegistration().then((reg) => {
         if (sessionStorage.getItem(RELOAD_KEY) === "1" && !reg?.waiting) {
-          sessionStorage.removeItem(RELOAD_KEY);
-          sessionStorage.removeItem(RETRY_KEY);
-          reloadApp();
+          finishUpdate(reloadingRef);
         }
       });
     };
@@ -114,8 +89,7 @@ export function useUpdateAvailable(): UpdateAvailableState {
 
     void navigator.serviceWorker?.getRegistration().then(async (reg) => {
       if (!reg?.waiting) {
-        sessionStorage.removeItem(RELOAD_KEY);
-        sessionStorage.removeItem(RETRY_KEY);
+        clearUpdateFlags();
         return;
       }
 
@@ -125,7 +99,7 @@ export function useUpdateAvailable(): UpdateAvailableState {
 
       const retries = Number(sessionStorage.getItem(RETRY_KEY) ?? "0");
       if (retries >= MAX_AUTO_RETRIES) {
-        await finishUpdate(reloadingRef);
+        finishUpdate(reloadingRef);
         return;
       }
 

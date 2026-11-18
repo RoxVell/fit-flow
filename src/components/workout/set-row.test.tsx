@@ -8,7 +8,7 @@ import type { LoggedSet } from "@/lib/db/types";
 import { SetRow } from "./set-row";
 
 type Previous = { weight: number; reps: number } | null;
-type Update = { data: Partial<LoggedSet>; options?: { propagateWeight?: boolean; baselineWeight?: number } };
+type Update = { data: Partial<LoggedSet>; options?: { propagateWeight?: boolean } };
 
 function emptySet(overrides?: Partial<LoggedSet>): LoggedSet {
   return {
@@ -106,11 +106,11 @@ describe("SetRow previous-set prefill", () => {
     for (const view of mounted.splice(0)) view.unmount();
   });
 
-  it("prefills after an early weight focus once history arrives, and blur keeps it", () => {
+  it.each(["weight", "reps"] as const)("keeps the prefill when history arrives during early %s focus", (field) => {
     const view = mountSetRow();
     mounted.push(view);
 
-    view.focus(view.weight());
+    view.focus(view[field]());
     expect(view.updates).toEqual([]);
 
     view.setPrevious({ weight: 80, reps: 6 });
@@ -120,19 +120,9 @@ describe("SetRow previous-set prefill", () => {
     expect(view.weight().value).toBe("80");
     expect(view.reps().value).toBe("6");
 
-    view.blur(view.weight());
+    view.blur(view[field]());
     expect(view.updates).toEqual([]);
     expect(view.weight().value).toBe("80");
-  });
-
-  it("prefills after an early reps focus and does not queue a zero that overwrites history", () => {
-    const view = mountSetRow();
-    mounted.push(view);
-
-    view.focus(view.reps());
-    view.setPrevious({ weight: 80, reps: 6 });
-
-    expect(view.updates.map((update) => update.data)).toEqual([{ weight: 80, reps: 6 }]);
   });
 
   it("does not let a focus that lands before the prefill is painted wipe the copy", () => {
@@ -188,7 +178,7 @@ describe("SetRow previous-set prefill", () => {
     view.blur(view.weight());
     expect(view.updates.at(-1)).toMatchObject({
       data: { weight: 0 },
-      options: { propagateWeight: true, baselineWeight: 80 },
+      options: { propagateWeight: true },
     });
   });
 });

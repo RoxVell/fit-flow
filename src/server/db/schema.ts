@@ -37,6 +37,7 @@ export const workoutLogs = pgTable("workout_logs", {
   id: text("id").primaryKey(),
   startedAt: timestamp("started_at", { withTimezone: true, mode: "string" }).notNull(),
   endedAt: timestamp("ended_at", { withTimezone: true, mode: "string" }),
+  durationSeconds: integer("duration_seconds"),
   programId: text("program_id"),
   sessionId: text("session_id"),
   programName: text("program_name"),

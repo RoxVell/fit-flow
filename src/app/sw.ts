@@ -20,7 +20,7 @@ import {
   STATIC_ASSETS_CACHE,
 } from "@/lib/pwa/cache";
 
-const networkOnlyApi = new NetworkOnly();
+const cacheMonth = 30 * 24 * 60 * 60;
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -74,7 +74,7 @@ const rscStrategy = new StaleWhileRevalidate({
   plugins: [
     pathOnlyKey,
     new CacheableResponsePlugin({ statuses: [0, 200] }),
-    new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 30 }),
+    new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: cacheMonth }),
   ],
 });
 
@@ -93,12 +93,8 @@ const serwist = new Serwist({
   navigationPreload: false,
   runtimeCaching: [
     {
-      matcher: ({ url }) => url.pathname.startsWith("/api/"),
-      handler: networkOnlyApi,
-    },
-    {
-      matcher: ({ url }) => url.hostname === "api.smartworkout.app",
-      handler: networkOnlyApi,
+      matcher: ({ url }) => url.pathname.startsWith("/api/") || url.hostname === "api.smartworkout.app",
+      handler: new NetworkOnly(),
     },
     {
       matcher: ({ url }) => url.pathname.startsWith("/exercises/"),
@@ -108,7 +104,7 @@ const serwist = new Serwist({
           new CacheableResponsePlugin({ statuses: [0, 200] }),
           new ExpirationPlugin({
             maxEntries: 20,
-            maxAgeSeconds: 60 * 60 * 24 * 30,
+            maxAgeSeconds: cacheMonth,
             purgeOnQuotaError: true,
           }),
         ],
@@ -121,7 +117,7 @@ const serwist = new Serwist({
         plugins: [
           new ExpirationPlugin({
             maxEntries: 60,
-            maxAgeSeconds: 60 * 60 * 24 * 30,
+            maxAgeSeconds: cacheMonth,
           }),
         ],
       }),
@@ -133,7 +129,7 @@ const serwist = new Serwist({
         plugins: [
           new ExpirationPlugin({
             maxEntries: 200,
-            maxAgeSeconds: 60 * 60 * 24 * 30,
+            maxAgeSeconds: cacheMonth,
             purgeOnQuotaError: true,
           }),
         ],
@@ -196,12 +192,7 @@ getRoutes.unshift(
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
-      const keys = await caches.keys();
-      await Promise.all(
-        keys
-          .filter((key) => BUILD_BOUND_CACHES.some((name) => key.includes(name)))
-          .map((key) => caches.delete(key))
-      );
+      await Promise.all(BUILD_BOUND_CACHES.map((name) => caches.delete(name)));
       const results = await Promise.allSettled(
         APP_ROUTES.map((url) => {
           const request = new Request(url, { headers: { RSC: "1" } });

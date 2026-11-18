@@ -35,6 +35,13 @@ const INITIAL: OfflineStatus = {
   updateWaiting: false,
 };
 
+async function countCachedRoutes(name: string | undefined): Promise<number> {
+  if (!name) return 0;
+  const cache = await caches.open(name);
+  const paths = new Set((await cache.keys()).map((request) => new URL(request.url).pathname));
+  return APP_ROUTES.filter((route) => paths.has(route)).length;
+}
+
 export async function readOfflineStatus(): Promise<OfflineStatus> {
   if (
     typeof navigator === "undefined" ||
@@ -52,24 +59,10 @@ export async function readOfflineStatus(): Promise<OfflineStatus> {
 
   const keys = await caches.keys();
   const precacheKey = keys.find((key) => key.startsWith(PRECACHE_PREFIX));
-  let precachedPages = 0;
-  if (precacheKey) {
-    const paths = new Set(
-      (await (await caches.open(precacheKey)).keys()).map(
-        (req) => new URL(req.url).pathname
-      )
-    );
-    precachedPages = APP_ROUTES.filter((route) => paths.has(route)).length;
-  }
-  let rscEntries = 0;
-  if (keys.includes(RSC_CACHE)) {
-    const paths = new Set(
-      (await (await caches.open(RSC_CACHE)).keys()).map(
-        (req) => new URL(req.url).pathname
-      )
-    );
-    rscEntries = APP_ROUTES.filter((route) => paths.has(route)).length;
-  }
+  const [precachedPages, rscEntries] = await Promise.all([
+    countCachedRoutes(precacheKey),
+    countCachedRoutes(keys.includes(RSC_CACHE) ? RSC_CACHE : undefined),
+  ]);
 
   // Offline tab switches need the RSC payloads too, not just the HTML.
   const ready =
@@ -88,14 +81,15 @@ export function useOfflineStatus(): OfflineStatus {
   const [status, setStatus] = useState<OfflineStatus>(INITIAL);
 
   useEffect(() => {
-    let cancelled = false;
+    let generation = 0;
     let polls = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const refresh = () => {
+      const current = ++generation;
       void readOfflineStatus()
         .then((next) => {
-          if (cancelled) return;
+          if (current !== generation) return;
           setStatus(next);
           // The worker warms the RSC cache right after activation; keep
           // polling for a while so the row does not stay stale.
@@ -107,7 +101,7 @@ export function useOfflineStatus(): OfflineStatus {
           }
         })
         .catch(() => {
-          if (!cancelled) setStatus({ ...INITIAL, readiness: "not-installed" });
+          if (current === generation) setStatus({ ...INITIAL, readiness: "not-installed" });
         });
     };
     const restart = () => {
@@ -123,7 +117,7 @@ export function useOfflineStatus(): OfflineStatus {
     document.addEventListener("visibilitychange", onVisible);
     navigator.serviceWorker?.addEventListener("controllerchange", restart);
     return () => {
-      cancelled = true;
+      generation++;
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
       navigator.serviceWorker?.removeEventListener("controllerchange", restart);

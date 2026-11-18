@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ensureManifestLoaded } from "@/lib/exercises/library-client";
 import { db } from "@/lib/db/dexie";
 import { DEFAULT_REST_DURATION_SECONDS } from "@/lib/workout/rest-duration";
 import {
@@ -9,9 +10,8 @@ import {
   replaceExerciseInProgram,
 } from "./programs";
 
-vi.mock("@/lib/repositories/exercises", () => ({
-  attachExercises: <T>(items: T) => items,
-  getExerciseMap: vi.fn().mockResolvedValue(new Map()),
+vi.mock("@/lib/exercises/library-client", () => ({
+  ensureManifestLoaded: vi.fn().mockResolvedValue([]),
 }));
 
 const SESSION = {
@@ -35,80 +35,58 @@ const PROGRAM_BASE = {
   sessions: [SESSION],
 };
 
-async function resetPrograms() {
-  await Promise.all([db.programs.clear(), db.syncQueue.clear()]);
-}
-
 describe("programs repository", () => {
   beforeEach(async () => {
-    await resetPrograms();
+    vi.restoreAllMocks();
+    await Promise.all([db.programs.clear(), db.syncQueue.clear()]);
   });
 
-  it("persists restDurationSeconds on create", async () => {
-    const created = await createProgram({
-      ...PROGRAM_BASE,
-      name: "Test Program",
-      description: "Rest timer test",
-      restDurationSeconds: 120,
+  it("persists changes to rest duration and preserves activation and template IDs on edit", async () => {
+    const created = await createProgram({ ...PROGRAM_BASE, name: "Test", restDurationSeconds: 120 });
+    expect((await getProgramById(created.id))?.restDurationSeconds).toBe(120);
+
+    await updateProgram(created.id, {
+      ...created, name: "Renamed", restDurationSeconds: 45, isActive: false,
     });
-
-    expect(created.restDurationSeconds).toBe(120);
-
-    const loaded = await getProgramById(created.id);
-    expect(loaded?.restDurationSeconds).toBe(120);
-  });
-
-  it("updates restDurationSeconds on save", async () => {
-    const created = await createProgram({
-      ...PROGRAM_BASE,
-      name: "Test Program",
+    const updated = await getProgramById(created.id);
+    expect(updated).toMatchObject({
+      name: "Renamed", restDurationSeconds: 45, isActive: true,
+      sessions: created.sessions, revision: created.revision + 1,
     });
-
-    const updated = await updateProgram(created.id, {
-      ...PROGRAM_BASE,
-      name: "Test Program",
-      restDurationSeconds: 45,
-    });
-
-    expect(updated?.restDurationSeconds).toBe(45);
   });
 
-  it("auto-activates the first created program", async () => {
-    const created = await createProgram({
-      ...PROGRAM_BASE,
-      name: "First Program",
-    });
-
-    expect(created.isActive).toBe(true);
+  it("returns the saved program when the optional exercise catalog cannot load", async () => {
+    vi.mocked(ensureManifestLoaded).mockRejectedValueOnce(new TypeError("offline"));
+    const saved = await createProgram({ ...PROGRAM_BASE, name: "Offline" });
+    expect(saved.sessions[0].exercises[0].exerciseId).toBe("ex-bench");
+    expect(await db.programs.get(saved.id)).toMatchObject({ name: "Offline" });
+    expect(await db.syncQueue.count()).toBe(1);
   });
 
-  it("keeps later programs inactive until explicitly activated", async () => {
-    await createProgram({ ...PROGRAM_BASE, name: "First Program" });
-    const second = await createProgram({ ...PROGRAM_BASE, name: "Second Program" });
+  it("creates only one active program even when two tabs create simultaneously", async () => {
+    const programs = await Promise.all(["First", "Second"].map((name) =>
+      createProgram({ ...PROGRAM_BASE, name })
+    ));
+    expect(programs.filter((p) => p.isActive)).toHaveLength(1);
+    const inactive = programs.find((p) => !p.isActive)!;
+    await setActiveProgram(inactive.id);
+    expect((await db.programs.toArray()).filter((p) => p.isActive).map((p) => p.id))
+      .toEqual([inactive.id]);
 
-    expect(second.isActive).toBe(false);
+    const newest = await createProgram({ ...PROGRAM_BASE, name: "Third", isActive: true });
+    expect((await db.programs.toArray()).filter((p) => p.isActive).map((p) => p.id))
+      .toEqual([newest.id]);
   });
 
-  it("setActiveProgram switches the active program", async () => {
-    const first = await createProgram({ ...PROGRAM_BASE, name: "First Program" });
-    const second = await createProgram({ ...PROGRAM_BASE, name: "Second Program" });
-
-    await setActiveProgram(second.id);
-
-    expect((await getProgramById(first.id))?.isActive).toBe(false);
-    expect((await getProgramById(second.id))?.isActive).toBe(true);
-  });
-
-  it("updateProgram preserves isActive", async () => {
-    const created = await createProgram({ ...PROGRAM_BASE, name: "Active Program" });
-
-    const updated = await updateProgram(created.id, {
-      ...PROGRAM_BASE,
-      name: "Renamed Program",
-      isActive: false,
-    });
-
-    expect(updated?.isActive).toBe(true);
+  it("rolls back deactivation if the new active program cannot be queued", async () => {
+    const first = await createProgram({ ...PROGRAM_BASE, name: "First" });
+    const second = await createProgram({ ...PROGRAM_BASE, name: "Second" });
+    vi.spyOn(db.syncQueue, "add")
+      .mockResolvedValueOnce("queued")
+      .mockRejectedValueOnce(new Error("storage full"));
+    await expect(setActiveProgram(second.id)).rejects.toThrow("storage full");
+    expect(await db.programs.get(first.id)).toEqual(first);
+    expect(await db.programs.get(second.id)).toEqual(second);
   });
 
   it("replaces every matching template while preserving session IDs, targets and other programs", async () => {

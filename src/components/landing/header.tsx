@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { useTheme } from "next-themes";
 import { ArrowUpRight, Dumbbell, Menu, Moon, Sun, X } from "lucide-react";
@@ -119,7 +120,7 @@ export function LandingHeader() {
 function ThemeButton() {
   const { resolvedTheme, setTheme } = useTheme();
   // Theme is unknown until hydration; render a neutral icon on the server.
-  const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
+  const mounted = useHydrated();
 
   const dark = mounted && resolvedTheme === "dark";
 
@@ -144,8 +145,4 @@ function ThemeButton() {
       </AnimatePresence>
     </button>
   );
-}
-
-function subscribeNoop() {
-  return () => {};
 }

@@ -1,101 +1,32 @@
 import { test as base, expect, type Page } from "@playwright/test";
 
-/**
- * Base test with project-wide setup:
- *  - Stubs the Serwist service worker so it can't intercept requests.
- *  - Clears all cookies before every test so the suite always boots in
- *    English (the default). The clear is done in `beforeEach` rather
- *    than as an init script: a per-load init script would run *after*
- *    the reload's HTTP response and would silently delete the
- *    `fitflow-locale` cookie that the previous request set, so any
- *    client-side reader of `document.cookie` would see no value and
- *    fall back to the default locale (defeating tests that try to
- *    verify persistence). Clearing in `beforeEach` keeps the cookie
- *    intact for the duration of a single test, including across
- *    reloads.
- *  - Disables sync through its configuration endpoint and stubs POSTs so
- *    local environment credentials cannot make UI tests contact a database.
- *
- * The service-worker stub returns a minimal `ServiceWorkerRegistration`
- * shape so Serwist's `register()` can call `.addEventListener`,
- * `.update()`, etc. without throwing. We can't return a fully-typed
- * ServiceWorkerRegistration (the constructor is not exposed), so a
- * duck-typed object with the fields Serwist touches is enough.
- */
-const SYNC_STUB_BODY = JSON.stringify({
-  changes: [],
-  accepted: [],
-  superseded: [],
-  serverChanges: [],
-  serverTime: new Date().toISOString(),
-});
-
 export const test = base.extend({
   context: async ({ context }, provideContext) => {
-    await context.route("**/api/sync", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: route.request().method() === "GET"
-          ? JSON.stringify({ enabled: false })
-          : SYNC_STUB_BODY,
-      });
-    });
+    // Catalog thumbnails are hosted outside the app. Keep the development
+    // suite independent of that CDN, including while closing a large picker.
+    await context.route("https://api.smartworkout.app/asset/image/**", (route) =>
+      route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>' })
+    );
+    await context.route("**/api/sync", (route) => route.fulfill({
+      json: route.request().method() === "GET"
+        ? { enabled: false }
+        : { changes: [], accepted: [], superseded: [], rejected: [], serverChanges: [], serverTime: new Date().toISOString() },
+    }));
 
+    // Serwist registers event listeners and requests updates on this object.
     await context.addInitScript(() => {
-      // Stub the service-worker registration so it can't intercept
-      // requests. The app calls `navigator.serviceWorker.register(...)`
-      // from ServiceWorkerRegister; we replace it with a no-op before any
-      // client code runs. The property is readonly on the public type, so
-      // we cast through `unknown` to mutate it.
-      //
-      // Serwist's `register()` chains `_registration.addEventListener(...)`
-      // (for the `updatefound` event) and `_registration.update()` — see
-      // node_modules/@serwist/window/src/Serwist.ts. The stub must
-      // implement the full `EventTarget` interface (addEventListener,
-      // removeEventListener, dispatchEvent) plus the other fields
-      // Serwist reads, otherwise a `TypeError: ... is not a function`
-      // fires the Next.js dev error overlay which intercepts pointer
-      // events and breaks clicks in the e2e tests.
       if ("serviceWorker" in navigator) {
-        const stubRegistration = {
-          waiting: null,
-          active: null,
-          installing: null,
-          scope: "/",
-          updateViaCache: "none" as ServiceWorkerUpdateViaCache,
-          pushManager: {
-            subscribe: () => Promise.reject(new Error("stubbed")),
-            getSubscription: () => Promise.resolve(null),
-            permissionState: () =>
-              Promise.resolve("denied" as NotificationPermission),
-          },
-          navigationPreload: {
-            enable: () => Promise.resolve(),
-            disable: () => Promise.resolve(),
-            setHeaderValue: () => Promise.resolve(),
-            getState: () => Promise.resolve(),
-          },
-          addEventListener: () => {},
-          removeEventListener: () => {},
-          dispatchEvent: () => true,
-          update: () => Promise.resolve(),
-          unregister: () => Promise.resolve(true),
-          getNotifications: () => Promise.resolve([]),
-          showNotification: () => Promise.resolve(),
-        };
-        const stub = navigator.serviceWorker as unknown as {
-          register: () => Promise<unknown>;
-        };
-        stub.register = () => Promise.resolve(stubRegistration);
+        const registration = Object.assign(new EventTarget(), {
+          waiting: null, installing: null, active: null, update: async () => {},
+        });
+        Object.defineProperty(navigator.serviceWorker, "register", {
+          configurable: true, value: async () => registration,
+        });
       }
     });
     await provideContext(context);
+    await context.unrouteAll({ behavior: "wait" });
   },
-});
-
-test.beforeEach(async ({ context }) => {
-  await context.clearCookies();
 });
 
 export { expect };
@@ -135,25 +66,4 @@ export async function waitForSeed(page: Page) {
     null,
     { timeout: 10_000 },
   );
-}
-
-/**
- * Wipe IndexedDB so the next page load re-seeds fresh data.
- * Use at the start of tests that need a clean slate.
- */
-export async function clearIndexedDb(page: Page) {
-  await page.evaluate(async () => {
-    const dbs = await indexedDB.databases?.();
-    if (!dbs) return;
-    for (const info of dbs) {
-      if (info.name) {
-        await new Promise<void>((resolve) => {
-          const req = indexedDB.deleteDatabase(info.name as string);
-          req.onsuccess = () => resolve();
-          req.onerror = () => resolve();
-          req.onblocked = () => resolve();
-        });
-      }
-    }
-  });
 }

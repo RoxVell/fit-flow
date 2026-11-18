@@ -1,4 +1,4 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
+import { test, expect } from "../fixtures/base";
 import { startWorkout } from "../fixtures/workout";
 
 /**
@@ -10,8 +10,6 @@ import { startWorkout } from "../fixtures/workout";
  */
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
   await startWorkout(page);
 });
 

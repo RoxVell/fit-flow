@@ -1,12 +1,7 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
-
-test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
-  await page.goto("/settings");
-});
+import { test, expect } from "../fixtures/base";
 
 test("settings page shows theme and language controls", async ({ page }) => {
+  await page.goto("/settings");
   await expect(page.getByRole("heading", { name: /^Settings$/i })).toBeVisible();
   await expect(page.getByText(/^Theme$/i)).toBeVisible();
   await expect(page.getByText(/^Language$/i)).toBeVisible();
@@ -23,8 +18,6 @@ test("settings page shows theme and language controls", async ({ page }) => {
 test("configured sync recovers automatically without a manual control or key", async ({ page }) => {
   const requests: Record<string, string>[] = [];
   let configRequests = 0;
-  // Finish requests from the shared setup before simulating a fresh launch.
-  await page.goto("about:blank");
   await page.clock.install();
   await page.route("**/api/sync", async (route) => {
     const request = route.request();
@@ -59,7 +52,7 @@ test("configured sync recovers automatically without a manual control or key", a
 test("switching to Russian updates visible labels and persists across reload", async ({
   page,
 }) => {
-  // Click the RU language button.
+  await page.goto("/settings");
   await page.getByRole("button", { name: /^RU$/i }).click();
 
   // The settings title in Russian is "Настройки" — must now be visible.

@@ -31,15 +31,16 @@ export function BottomNav() {
     <nav className="z-50 w-full shrink-0 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto grid h-16 grid-cols-5 items-center px-0.5">
         {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
+          const isActive = pathname.split("/")[1] === item.href.split("/")[1];
           const Icon = item.icon;
           const isWorkout = item.href === "/workout";
           return (
             <Link
               key={item.href}
               href={item.href}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
-                "relative flex min-w-0 flex-col items-center gap-0.5 px-0.5 py-1.5 text-[10px] text-xs font-medium leading-tight transition-colors sm:text-[11px]",
+                "relative flex min-w-0 flex-col items-center gap-0.5 px-0.5 py-1.5 text-xs font-medium leading-tight transition-colors sm:text-[11px]",
                 isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"

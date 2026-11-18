@@ -1,13 +1,6 @@
-import type { EntityType } from "@/lib/db/types";
+import type { EntityType, SyncQueueEntry } from "@/lib/db/types";
 
-export interface SyncChange {
-  id: string;
-  entityType: EntityType;
-  entityId: string;
-  operation: "create" | "update" | "delete";
-  payload?: unknown;
-  revision: number;
-}
+export type SyncChange = Pick<SyncQueueEntry, "id" | "entityType" | "entityId" | "operation" | "payload" | "revision">;
 
 export interface ServerChange {
   entityType: EntityType;

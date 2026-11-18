@@ -1,35 +1,24 @@
 # FitFlow
 
-Mobile-first fitness tracking PWA. All data is local — IndexedDB via `lib/db/`, no backend. TanStack Query for reads/mutations; Zustand for the active-workout session state.
+Mobile-first fitness tracking PWA. IndexedDB stores workouts locally. React components subscribe through Dexie live queries. The optional sync API exchanges changes with PostgreSQL when configured.
 
 ## Language
 
-**API method**:
-A method-shaped function in `lib/api.ts` that reads or writes a domain resource (workout log, program, exercise, body measurement, etc.). Replaces the older URL-string transport; callers pass typed args and get typed results, not URLs and HTTP statuses.
-_Avoid_: endpoint, route, transport, URL path
+**repository**:
+A module in `src/lib/repositories/` that reads and writes a domain resource. Changes to synced entities and their queue entries commit together in IndexedDB.
 
-**op**:
-A named, JSON-serializable operation registered with the outbox. Each op has a name (string) and an args array; the outbox persists both, then on flush calls the registered function with the saved args. The outbox does not know what the args mean.
-_Avoid_: endpoint, request, action
-
-**outbox**:
-A generic operation-retry engine in `lib/outbox.ts`. Stores failed writes to IDB and replays them on reconnect. The outbox is the policy for "what happens when a write fails"; the API methods are the policy's only consumers.
-_Avoid_: queue, sync queue, retry queue, pending requests
-
-**queued write**:
-A write that threw at the db layer and was deferred to the outbox. The caller sees `undefined` from the API method; the outbox calls `useOutboxState`'s listener set so any UI showing pending count refreshes. After a successful flush, the write is gone from the outbox and the next read sees it.
-_Avoid_: failed request, pending mutation, offline write
+**sync queue**:
+The `syncQueue` table stores pending creates, updates and deletes. The sync runner uploads them to `/api/sync`, acknowledges accepted or superseded changes and applies the server's snapshot.
 
 **seeded read**:
-A read against a resource that requires the seed bootstrap (`exercises`, `programs`). The `db/queries.ts` read functions call `ensureSeeded()` first; the seed is a one-time insert guarded by an IDB meta flag. The seed concern lives in the read module, not in the API or transport.
-_Avoid_: initial fetch, cold start, first-run load
+A read that requires the default program to exist. `ensureSeeded()` initializes an empty local database. The exercise catalog is served separately from `public/exercises/`.
 
 **active program**:
 The single `WorkoutProgram` marked `isActive: true` in IndexedDB. Drives the Workout plan tab, rest duration, and session picker. Exactly one program is active at a time; the user switches it from Programs → library via **Set active**. Editing a program does not change which one is active.
 _Avoid_: current program, selected plan, default workout
 
 **active workout**:
-The in-progress workout session held in the Zustand `workout-store`. Distinct from a `WorkoutLog` (which is the persisted record of a completed workout). The active workout can be edited freely; the log is created on finish and is immutable thereafter.
+The in-progress session persisted as a `WorkoutDraft` in IndexedDB. Finishing saves a `WorkoutLog` and clears its draft in the same transaction. History supports editing completed sets and deleting logs.
 _Avoid_: current session, live workout, draft workout
 
 **rest duration**:
@@ -57,7 +46,7 @@ Epley-estimated one-rep max. `e1RM(weight, reps)` returns `weight` for a single 
 _Avoid_: estimated 1RM, projected max, one-rep max
 
 **personal record (PR)**:
-A `PersonalRecord` entry the system emits on workout finish for each completed exercise. Built by `createPRsFromWorkout(loggedExercises, exerciseMap, completedAt)` in `db/queries.ts`: for each completed exercise with `bestWeight > 0` emits a `weight` PR; with `volume > 0` emits a `volume` PR. `PRType` allows a third value (`"estimated_1rm"`) but the function never emits it — the gap is intentional, not a bug, and would need a history lookup to know if a new e1RM is actually a PR. PRs are persisted by the active-workout hook via the outbox; they survive offline finishes.
+A new best weight, volume or estimated 1RM for an exercise. `derivePersonalRecords()` derives records from completed workout history so edits, deletions and sync updates are reflected.
 _Avoid_: achievement, milestone, best lift
 
 **progress index**:
@@ -69,7 +58,7 @@ Weekly and summary progress grouped by catalog `BodyPart`. Chart lines are perio
 _Avoid_: muscle group chart, body region stats
 
 **chart period**:
-Time window for progress charts: `1m` (30 days), `2m`, `3m`, `6m`, or `all`. Default `3m`. Defined in `lib/charts/periods.ts`; UI in `ChartPeriodSelector`.
+Time window for progress charts: `1m` (30 days), `2m`, `3m`, `6m`, or `all`. Default `1m`. Defined in `lib/charts/periods.ts`; UI in `ChartPeriodSelector`.
 _Avoid_: date range, zoom level
 
 **focus domain**:

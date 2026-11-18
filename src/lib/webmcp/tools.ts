@@ -1,7 +1,7 @@
 import { getCompletedWorkoutLogsInRange } from "@/lib/repositories/workouts";
 import { buildWorkoutReport } from "@/lib/workout/analysis";
 import { createWorkoutExportRange } from "@/lib/workout/export-csv";
-import { atEndOfDay, atStartOfDay, formatDateKey } from "@/lib/utils/date";
+import { atEndOfDay, formatDateKey, parseLocalDate } from "@/lib/utils/date";
 
 export type BrowserTool = {
   name: string;
@@ -15,7 +15,7 @@ function parseDate(value: unknown, field: string) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     throw new Error(`${field} must be a calendar date YYYY-MM-DD.`);
   }
-  const date = new Date(`${value}T00:00:00`);
+  const date = parseLocalDate(value);
   if (!Number.isFinite(date.getTime()) || formatDateKey(date) !== value) {
     throw new Error(`${field} is not a valid calendar date.`);
   }
@@ -29,13 +29,13 @@ export function parseToolInput(input: unknown, paginated: boolean, now = new Dat
   if (Object.keys(args).some((key) => !allowed.includes(key))) throw new Error("Unknown argument.");
   if ((args.from === undefined) !== (args.to === undefined)) throw new Error("Supply both from and to, or omit both for the last three calendar months.");
   const range = args.from === undefined ? createWorkoutExportRange("3m", now) : {
-    from: atStartOfDay(parseDate(args.from, "from")), to: atEndOfDay(parseDate(args.to, "to")),
+    from: parseDate(args.from, "from"), to: atEndOfDay(parseDate(args.to, "to")),
   };
   if (range.from > range.to) throw new Error("from must be on or before to.");
   // Bound response size and weekly aggregation work; longer histories can be queried in parts.
   if (range.to.getTime() - range.from.getTime() > 366 * 5 * 86400000) throw new Error("Query at most five years at a time.");
-  const limit = args.limit ?? 50;
-  const offset = args.offset ?? 0;
+  const limit = args.limit === undefined ? 50 : args.limit;
+  const offset = args.offset === undefined ? 0 : args.offset;
   if (typeof limit !== "number" || !Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("limit must be an integer from 1 to 100.");
   if (typeof offset !== "number" || !Number.isSafeInteger(offset) || offset < 0) throw new Error("offset must be a non-negative safe integer.");
   return { range, limit, offset };
