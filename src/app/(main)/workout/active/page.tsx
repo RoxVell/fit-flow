@@ -314,6 +314,7 @@ function WorkoutToolbar({
           </span>
           <button
             onClick={togglePause}
+            aria-label={isPaused ? t.workout.resumeTimer : t.workout.pauseTimer}
             className="rounded-full p-1 text-muted-foreground hover:bg-muted"
           >
             {isPaused ? (

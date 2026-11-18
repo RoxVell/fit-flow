@@ -45,6 +45,7 @@ function validPayload(entityType: unknown, payload: unknown): boolean {
       dbInteger(payload.daysPerWeek) && typeof payload.isActive === "boolean" && date(payload.createdAt) &&
       optional(payload.restDurationSeconds, dbInteger) && array(payload.sessions, validSession);
     case "workoutLog": return date(payload.startedAt) && optional(payload.endedAt, date) &&
+      optional(payload.durationSeconds, dbInteger) &&
       optionalTextFields(payload, ["programId", "sessionId", "programName", "sessionName", "notes"]) &&
       array(payload.exercises, validLoggedExercise);
     case "bodyMeasurement": return date(payload.date) &&

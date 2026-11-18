@@ -38,6 +38,7 @@ describe("sync request validation", () => {
     { operation: ["update"] },
     { entityType: ["program"] },
     { revision: 2 ** 31 },
+    { entityType: "workoutLog", payload: { id: "program-1", startedAt: "2026-01-01", exercises: [], durationSeconds: -1 } },
     { entityType: "bodyMeasurement", payload: { id: "program-1", date: "2026-01-01", weight: 1e40 } },
     { entityType: "cardioSession", payload: { id: "program-1", date: "2026-01-01", type: "run", distance: 1e-50, duration: 5 } },
   ])("permanently rejects invalid sync fields %j without blocking a valid change", (fields) => {

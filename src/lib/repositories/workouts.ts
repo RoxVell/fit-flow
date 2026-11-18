@@ -8,7 +8,7 @@ import type {
 import { compareByDate } from "@/lib/utils/date";
 import { hardDeleteEntity, putEntityWithSync, updateEntity } from "./entity-crud";
 import { attachExercises, getExerciseMap } from "./exercises";
-import { enqueueDraftWrite } from "./drafts";
+import { elapsedWorkoutSeconds, enqueueDraftWrite } from "./drafts";
 
 export async function getCompletedWorkoutLogsInRange(
   from: Date,
@@ -41,7 +41,7 @@ export async function removeWorkoutLog(id: string): Promise<void> {
 /** Await pending set edits, then commit the log, outbox and draft removal together. */
 export function finishWorkout(
   activeWorkoutId: string,
-  details: Pick<WorkoutLog, "endedAt" | "programId" | "programName" | "sessionName">
+  details: Pick<WorkoutLog, "programId" | "programName" | "sessionName"> & { endedAt: string }
 ): Promise<WorkoutLogEntity> {
   return enqueueDraftWrite(() => db.transaction(
     "rw", db.workoutDrafts, db.workoutLogs, db.syncQueue, async () => {
@@ -58,6 +58,7 @@ export function finishWorkout(
         ...details,
         id: activeWorkoutId,
         startedAt: draft.startedAt,
+        durationSeconds: elapsedWorkoutSeconds(draft, Math.floor(Date.parse(details.endedAt) / 1000)),
         sessionId: draft.sessionId ?? undefined,
         exercises: draft.exercises.map((exercise) => ({ ...exercise, workoutLogId: activeWorkoutId })),
         revision: 1,

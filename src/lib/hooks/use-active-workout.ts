@@ -73,7 +73,6 @@ export function useActiveWorkout(
   const [triumphData, setTriumphData] = useState<{
     volume: number;
     minutes: number;
-    seconds: number;
   } | null>(null);
   const [lastActiveExerciseId, setLastActiveExerciseId] = useState<string | null>(null);
   const [isAbandoning, setIsAbandoning] = useState(false);
@@ -156,7 +155,7 @@ export function useActiveWorkout(
         restStore.stopRestTimer();
         setTriumphData({
           volume: volume(createdLog.exercises.flatMap((exercise) => exercise.sets.filter((set) => set.completed))),
-          minutes, seconds,
+          minutes: Math.floor((createdLog.durationSeconds ?? elapsed) / 60),
         });
         setShowTriumph(true);
       } catch (err) {

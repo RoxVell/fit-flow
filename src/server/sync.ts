@@ -43,6 +43,8 @@ async function applyChange(change: SyncChange): Promise<boolean> {
       result = await buildUpsert(workoutLogs, {
         ...(deleted ? { startedAt: now, exercises: [] } : {
           startedAt: p.startedAt, endedAt: p.endedAt ?? null,
+          // Older clients omit duration; leave it out of conflict updates.
+          durationSeconds: p.durationSeconds,
           programId: p.programId ?? null, sessionId: p.sessionId ?? null,
           programName: p.programName ?? null, sessionName: p.sessionName ?? null,
           notes: p.notes ?? null, exercises: p.exercises,

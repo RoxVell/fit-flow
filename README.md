@@ -159,9 +159,10 @@ back online, when you refocus the tab, and every minute while the app is visible
 revisions win conflicts; equal revisions keep the server copy. Personal records are
 calculated from workout history, and the exercise catalog stays bundled with the app.
 
-Leave `DATABASE_URL` unset to disable sync. Existing databases need the additive
+Leave `DATABASE_URL` unset to disable sync. For an existing database, apply any
+outstanding migrations before deploying this version, including
 [`0002_program_rest_duration.sql`](./drizzle/migrations/0002_program_rest_duration.sql)
-migration (or a reviewed schema push) before using this version.
+and [`0003_workout_duration.sql`](./drizzle/migrations/0003_workout_duration.sql).
 
 ---
 

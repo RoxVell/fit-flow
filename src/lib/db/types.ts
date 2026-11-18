@@ -100,6 +100,8 @@ export interface WorkoutLog {
   id: string;
   startedAt: string;
   endedAt?: string;
+  /** Active time excluding pauses. Older logs only have start and end timestamps. */
+  durationSeconds?: number;
   programId?: string;
   sessionId?: string;
   programName?: string;

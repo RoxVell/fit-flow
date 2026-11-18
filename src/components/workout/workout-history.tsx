@@ -39,7 +39,8 @@ const WORKOUT_ROW_GRID =
 
 const EXPORT_PRESETS: WorkoutExportPreset[] = ["1m", "3m", "6m", "custom"];
 
-function getDurationMinutes(startedAt: string, endedAt?: string) {
+function getDurationMinutes({ durationSeconds, startedAt, endedAt }: WorkoutLogEntity) {
+  if (durationSeconds !== undefined) return Math.floor(durationSeconds / 60);
   if (!endedAt) return null;
   const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
   return Math.max(1, Math.round(ms / 60000));
@@ -131,7 +132,7 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
         </div>
         <div className="divide-y divide-border/50">
           {(hasMore ? logs.slice(0, limit) : logs).map((log) => {
-            const duration = getDurationMinutes(log.startedAt, log.endedAt);
+            const duration = getDurationMinutes(log);
             const completedExercises = log.exercises
               .map((exercise) => ({
                 ...exercise,

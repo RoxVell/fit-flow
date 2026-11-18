@@ -37,6 +37,30 @@ describe("server sync contract", () => {
     expect(update).toMatch(/where "workout_logs"\."revision" < \$\d+/);
   });
 
+  it("syncs active workout duration and preserves the stored value on an older client's edit", async () => {
+    const startedAt = "2026-01-01T00:00:00.000Z";
+    const payload = { id: "w", startedAt, exercises: [] };
+    const change = { entityType: "workoutLog", entityId: "w", operation: "update" } as const;
+    const onConflictDoUpdate = vi.fn<(config: { set: Record<string, unknown> }) => unknown>(
+      () => ({ returning: async () => [{ id: "w" }] })
+    );
+    const values = vi.fn(() => ({ onConflictDoUpdate }));
+    const stored = { ...payload, revision: 3, durationSeconds: 1200 };
+    getDb.mockReturnValue({
+      insert: () => ({ values }),
+      select: () => ({ from: async (table: unknown) => table === schema.workoutLogs ? [stored] : [] }),
+    });
+
+    const result = await handleSync([
+      { ...change, id: "new", revision: 2, payload: { ...payload, durationSeconds: 1200 } },
+      { ...change, id: "legacy", revision: 3, payload },
+    ]);
+    expect(values).toHaveBeenNthCalledWith(1, expect.objectContaining({ durationSeconds: 1200 }));
+    expect(onConflictDoUpdate.mock.calls[0][0].set).toHaveProperty("durationSeconds", 1200);
+    expect(onConflictDoUpdate.mock.calls[1][0].set).not.toHaveProperty("durationSeconds");
+    expect(result.serverChanges).toEqual([{ entityType: "workoutLog", revision: 3, entity: stored }]);
+  });
+
   it("normalizes PostgreSQL timestamps to ISO for IndexedDB sorting and date-range comparisons", () => {
     const postgres = "2026-11-01 15:30:00+03";
     const change = toServerChanges("workoutLog", [{ revision: 1, ...Object.fromEntries(

@@ -33,6 +33,20 @@ describe("finishWorkout", () => {
     })]);
   });
 
+  it.each([
+    { resume: true, expectedMinutes: 20 },
+    { resume: false, expectedMinutes: 10 },
+  ])("persists active time at finish (resume = $resume)", async ({ resume, expectedMinutes }) => {
+    const start = Date.parse(START) / 1000;
+    await toggleDraftPause("workout", start + 10 * 60);
+    if (resume) await toggleDraftPause("workout", start + 20 * 60);
+    const endedAt = "2026-06-01T12:30:00.000Z";
+    await finishWorkout("workout", { endedAt });
+    const expected = { startedAt: START, endedAt, durationSeconds: expectedMinutes * 60 };
+    expect(await db.workoutLogs.get("workout")).toMatchObject(expected);
+    expect(await db.syncQueue.toArray()).toMatchObject([{ payload: expected }]);
+  });
+
   it("rolls back the log and retains the draft when the outbox write fails", async () => {
     vi.spyOn(db.syncQueue, "add").mockRejectedValueOnce(new Error("Storage full"));
     await expect(finishWorkout("workout", { endedAt: END })).rejects.toThrow("Storage full");
