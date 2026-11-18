@@ -1,4 +1,4 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
+import { test, expect } from "../fixtures/base";
 import { startWorkout, logFirstSet } from "../fixtures/workout";
 
 /**
@@ -8,11 +8,6 @@ import { startWorkout, logFirstSet } from "../fixtures/workout";
  * to the active screen but never checked that the logged numbers survive
  * — a draft that reloaded empty would still pass that suite.
  */
-
-test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
-});
 
 test("logged sets survive a full page reload", async ({ page }) => {
   await startWorkout(page);

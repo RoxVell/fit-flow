@@ -12,7 +12,7 @@ describe("server sync contract", () => {
   it("compares revisions in the same SQL statement that writes, preserving createdAt", () => {
     getDb.mockReturnValue(drizzle.mock({ schema }));
     const query = buildUpsert(schema.programs, { id: "p", name: "PPL", daysPerWeek: 3,
-      createdAt: "2026-01-01T00:00:00Z", revision: 7, restDurationSeconds: 150 }, 7).toSQL();
+      createdAt: "2026-01-01T00:00:00Z", revision: 7, restDurationSeconds: 150 }).toSQL();
     expect(query.sql).toContain('on conflict ("id") do update set');
     expect(query.sql).toMatch(/where "programs"\."revision" < \$\d+ returning/);
     expect(query.sql.split("do update set")[1]).not.toContain('"created_at" =');
@@ -29,7 +29,7 @@ describe("server sync contract", () => {
   it("preserves stored payload when a delete updates an existing row", () => {
     getDb.mockReturnValue(drizzle.mock({ schema }));
     const query = buildUpsert(schema.workoutLogs, { id: "w", startedAt: "2026-01-01T00:00:00Z", exercises: [],
-      deletedAt: "2026-01-01T01:00:00Z", updatedAt: "2026-01-01T01:00:00Z", revision: 3 }, 3).toSQL();
+      deletedAt: "2026-01-01T01:00:00Z", updatedAt: "2026-01-01T01:00:00Z", revision: 3 }).toSQL();
     const update = query.sql.split("do update set")[1];
     expect(update).toContain('"deleted_at" =');
     expect(update).not.toContain('"exercises" =');
@@ -46,7 +46,6 @@ describe("server sync contract", () => {
     for (const key of ["createdAt", "startedAt", "endedAt", "date", "updatedAt", "deletedAt"]) {
       expect(entity[key]).toBe("2026-11-01T12:30:00.000Z");
     }
-    expect(String(entity.startedAt) > "2026-11-01T12:00:00.000Z").toBe(true);
   });
 
   it("pulls delayed writes on the next sync even when their timestamps precede the prior response", async () => {

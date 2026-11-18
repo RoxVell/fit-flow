@@ -93,7 +93,7 @@ instead of immediately retrying a failed batch. Deletions need no payload.
 The response contains `accepted`, `superseded`, `rejected`, `serverChanges` and
 `serverTime`. Accepted and superseded changes leave the queue. Invalid changes have
 `permanent: true` and become `failed` locally; a new edit replaces that failed entry.
-Transient write failures remain pending. Legacy exercise/PR changes are acknowledged
+The client retries a 413 response with a smaller batch. An individual entry that exceeds the request limit stays in IndexedDB as failed, so other entries can sync. Transient write failures remain pending. Legacy exercise/PR changes are acknowledged
 as superseded so old queues cannot block current data.
 
 Writes use a conditional SQL upsert: the incoming revision must be greater than the

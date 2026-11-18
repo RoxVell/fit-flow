@@ -1,12 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, ChevronDown, Download, Pencil, Trash2 } from "lucide-react";
-import {
-  useCompletedWorkoutLogs,
-  useCompletedWorkoutLogsCount,
-} from "@/lib/hooks/use-data";
+import { useCompletedWorkoutLogs } from "@/lib/hooks/use-data";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
 import { formatDuration } from "@/lib/utils/calculations";
 import { volume } from "@/lib/training-metrics";
@@ -65,82 +62,23 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
   const { formatShortDate } = useFormat();
   const { getName } = useExerciseLookup();
   const [limit, setLimit] = useState(PAGE_SIZE);
-  const logs = useCompletedWorkoutLogs(preview ? PREVIEW_LIMIT : limit);
-  const totalCount = useCompletedWorkoutLogsCount();
+  const logs = useCompletedWorkoutLogs(preview ? PREVIEW_LIMIT : limit + 1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingLog, setEditingLog] = useState<WorkoutLogEntity | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [exportPreset, setExportPreset] = useState<WorkoutExportPreset>("1m");
-  const [exportFrom, setExportFrom] = useState(
-    () => createWorkoutExportRange("1m").from
-  );
-  const [exportTo, setExportTo] = useState(
-    () => createWorkoutExportRange("1m").to
-  );
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const hasMore =
-    !preview &&
-    logs !== undefined &&
-    totalCount !== undefined &&
-    logs.length < totalCount;
-
-  const loadMore = useCallback(() => {
-    setLimit((n) => n + PAGE_SIZE);
-  }, []);
-
-  const handlePresetChange = (preset: WorkoutExportPreset) => {
-    setExportPreset(preset);
-    setExportError(null);
-    if (preset === "custom") return;
-    const range = createWorkoutExportRange(preset);
-    setExportFrom(range.from);
-    setExportTo(range.to);
-  };
-
-  const handleExport = (format: "csv" | "json") => {
-    if (exporting) return;
-    const from = atStartOfDay(exportFrom);
-    const to = atEndOfDay(exportTo);
-    if (from.getTime() > to.getTime()) {
-      setExportError(t.workout.exportInvalidRange);
-      return;
-    }
-    setExporting(true);
-    setExportError(null);
-    void getCompletedWorkoutLogsInRange(from, to)
-      .then((exportLogs) => {
-        if (exportLogs.length === 0) {
-          setExportError(t.workout.exportEmpty);
-          return;
-        }
-        const range = { from, to };
-        const filename = getWorkoutExportFilename(range);
-        downloadExport(
-          format === "csv" ? filename : filename.replace(/\.csv$/, ".json"),
-          format === "csv" ? buildWorkoutLogsCsv(exportLogs) : JSON.stringify(buildWorkoutReport(exportLogs, range), null, 2),
-          format
-        );
-      })
-      .catch((err) => {
-        console.warn("[workout-history] export failed", err);
-        setExportError(t.workout.exportFailed);
-      })
-      .finally(() => setExporting(false));
-  };
+  const hasMore = !preview && !!logs && logs.length > limit;
 
   useEffect(() => {
-    if (preview) return;
     const el = sentinelRef.current;
     if (!el || !hasMore) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
-          loadMore();
+          setLimit((n) => n + PAGE_SIZE);
         }
       },
       { rootMargin: "120px" }
@@ -148,13 +86,26 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasMore, loadMore, preview]);
+  }, [hasMore, logs]);
 
   if (logs === undefined || logs.length === 0) {
     return <WorkoutHistoryPlaceholder loading={logs === undefined} preview={preview} />;
   }
 
-
+  const deleteTarget = logs.find((log) => log.id === deleteId);
+  const handleDelete = async () => {
+    if (!deleteId || deleting) return;
+    setDeleting(true);
+    try {
+      await removeWorkoutLog(deleteId);
+      setDeleteId(null);
+      setExpandedId((current) => current === deleteId ? null : current);
+    } catch (err) {
+      console.warn("[workout-history] delete failed", err);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <>
@@ -165,15 +116,7 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
             {preview ? t.dashboard.recentWorkouts : t.workout.historyTitle}
           </h2>
         </div>
-        {!preview && (
-          <WorkoutExportControls
-            exportPreset={exportPreset} exportFrom={exportFrom} exportTo={exportTo}
-            exporting={exporting} exportError={exportError}
-            handlePresetChange={handlePresetChange} handleExport={handleExport}
-            setExportPreset={setExportPreset} setExportFrom={setExportFrom}
-            setExportTo={setExportTo} setExportError={setExportError}
-          />
-        )}
+        {!preview && <WorkoutExportControls />}
         <div
           className={cn(
             WORKOUT_ROW_GRID,
@@ -187,18 +130,22 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
           <span />
         </div>
         <div className="divide-y divide-border/50">
-          {logs.map((log) => {
+          {(hasMore ? logs.slice(0, limit) : logs).map((log) => {
             const duration = getDurationMinutes(log.startedAt, log.endedAt);
-            const totalVolume = log.exercises.reduce(
-              (sum, e) => sum + volume(e.sets.filter((s) => s.completed)),
-              0
-            );
+            const completedExercises = log.exercises
+              .map((exercise) => ({
+                ...exercise,
+                sets: exercise.sets.filter((set) => set.completed).sort((a, b) => a.setOrder - b.setOrder),
+              }))
+              .filter((exercise) => exercise.sets.length > 0);
+            const totalVolume = completedExercises.reduce((sum, exercise) => sum + volume(exercise.sets), 0);
             const isOpen = expandedId === log.id;
 
             return (
               <div key={log.id}>
                 <button
                   type="button"
+                  aria-expanded={isOpen}
                   onClick={() => setExpandedId(isOpen ? null : log.id)}
                   className={cn(
                     WORKOUT_ROW_GRID,
@@ -230,6 +177,7 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
                 </button>
 
                 <div
+                  inert={!isOpen}
                   className={cn(
                     "grid transition-all duration-200",
                     isOpen
@@ -239,80 +187,70 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
                 >
                   <div className="min-h-0 overflow-hidden">
                     <div className="space-y-3 border-t border-border/50 px-4 py-3">
-                      {log.exercises.length === 0 ? (
+                      {completedExercises.length === 0 ? (
                         <p className="text-xs text-muted-foreground">
                           {t.workout.noCompletedSets}
                         </p>
                       ) : (
-                        log.exercises
-                          .filter((exercise) =>
-                            exercise.sets.some((s) => s.completed)
-                          )
-                          .map((exercise) => {
-                            const completedSets = exercise.sets
-                              .filter((s) => s.completed)
-                              .sort((a, b) => a.setOrder - b.setOrder);
-
-                            return (
-                              <div key={exercise.id}>
-                                <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                                  <p className="text-xs font-medium">
-                                    {getName(exercise.exerciseId, exercise.exercise?.name ?? t.workout.unknownExercise)}
-                                  </p>
-                                  {exercise.excludeFromStats ? (
-                                    <span className="rounded-full border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                                      {t.workout.excludedFromStats}
-                                    </span>
-                                  ) : null}
+                        completedExercises.map((exercise) => (
+                          <div key={exercise.id}>
+                            <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                              <p className="text-xs font-medium">
+                                {getName(exercise.exerciseId, exercise.exercise?.name ?? t.workout.unknownExercise)}
+                              </p>
+                              {exercise.excludeFromStats ? (
+                                <span className="rounded-full border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                  {t.workout.excludedFromStats}
+                                </span>
+                              ) : null}
+                            </div>
+                            {exercise.notes?.trim() ? (
+                              <p className="mb-1 pl-2 text-xs italic text-muted-foreground">
+                                {exercise.notes.trim()}
+                              </p>
+                            ) : null}
+                            <div className="space-y-0.5 pl-2">
+                              {exercise.sets.map((set, index) => (
+                                <div
+                                  key={set.id}
+                                  className="grid grid-cols-[auto_1fr] gap-2 text-xs text-muted-foreground"
+                                >
+                                  <span className="w-4 text-right tabular-nums text-muted-foreground/40">
+                                    {index + 1}
+                                  </span>
+                                  <span className="tabular-nums text-foreground">
+                                    {set.weight} {t.dashboard.kg} ×{" "}
+                                    {set.reps}
+                                  </span>
                                 </div>
-                                {exercise.notes?.trim() ? (
-                                  <p className="mb-1 pl-2 text-xs italic text-muted-foreground">
-                                    {exercise.notes.trim()}
-                                  </p>
-                                ) : null}
-                                <div className="space-y-0.5 pl-2">
-                                  {completedSets.map((set, index) => (
-                                    <div
-                                      key={set.id}
-                                      className="grid grid-cols-[auto_1fr] gap-2 text-xs text-muted-foreground"
-                                    >
-                                      <span className="w-4 text-right tabular-nums text-muted-foreground/40">
-                                        {index + 1}
-                                      </span>
-                                      <span className="tabular-nums text-foreground">
-                                        {set.weight} {t.dashboard.kg} ×{" "}
-                                        {set.reps}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })
+                              ))}
+                            </div>
+                          </div>
+                        ))
                       )}
                       {!preview && (
-                      <div className="flex gap-2 pt-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 gap-1.5"
-                          onClick={() => setEditingLog(log)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          {t.workout.editWorkout}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 gap-1.5 text-destructive hover:text-destructive"
-                          onClick={() => setDeleteId(log.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          {t.workout.deleteWorkout}
-                        </Button>
-                      </div>
+                        <div className="flex gap-2 pt-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 gap-1.5"
+                            onClick={() => setEditingLog(log)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            {t.workout.editWorkout}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 gap-1.5 text-destructive hover:text-destructive"
+                            onClick={() => setDeleteId(log.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            {t.workout.deleteWorkout}
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -330,34 +268,46 @@ export function WorkoutHistory({ preview = false }: { preview?: boolean } = {}) 
               {t.dashboard.viewAllWorkouts}
             </Link>
           </div>
-        ) : (
-          hasMore && (
+        ) : hasMore ? (
           <div ref={sentinelRef} className="px-4 py-3">
             <Skeleton className="h-8 w-full rounded-lg" />
           </div>
-          )
-        )}
+        ) : null}
       </div>
 
-      <WorkoutHistoryActions
-        preview={preview} logs={logs} editingLog={editingLog} setEditingLog={setEditingLog}
-        deleteId={deleteId} setDeleteId={setDeleteId} deleting={deleting}
-        onDelete={() => {
-          if (!deleteId || deleting) return;
-          setDeleting(true);
-          void removeWorkoutLog(deleteId)
-            .then(() => {
-              setDeleteId(null);
-              if (expandedId === deleteId) setExpandedId(null);
-            })
-            .catch((err) => {
-              console.warn("[workout-history] delete failed", err);
-            })
-            .finally(() => {
-              setDeleting(false);
-            });
-        }}
-      />
+      {!preview && (
+        <>
+          <WorkoutEditSheet
+            log={editingLog}
+            open={editingLog !== null}
+            onOpenChange={(open) => {
+              if (!open) setEditingLog(null);
+            }}
+          />
+
+          <ConfirmDialog
+            open={deleteId !== null}
+            onOpenChange={(open) => {
+              if (!open) setDeleteId(null);
+            }}
+            title={t.workout.deleteConfirmTitle}
+            description={t.workout.deleteConfirmDesc}
+            confirmLabel={t.workout.deleteWorkout}
+            cancelLabel={t.workout.cancel}
+            pendingLabel={t.workout.deleting}
+            destructive
+            pending={deleting}
+            onConfirm={handleDelete}
+          >
+            {deleteTarget && (
+              <p className="text-sm text-muted-foreground">
+                {deleteTarget.sessionName || t.dashboard.workoutFallback} ·{" "}
+                {formatShortDate(deleteTarget.startedAt)}
+              </p>
+            )}
+          </ConfirmDialog>
+        </>
+      )}
     </>
   );
 }
@@ -386,33 +336,51 @@ function WorkoutHistoryPlaceholder({
   );
 }
 
-function WorkoutExportControls({
-  exportPreset,
-  exportFrom,
-  exportTo,
-  exporting,
-  exportError,
-  handlePresetChange,
-  handleExport,
-  setExportPreset,
-  setExportFrom,
-  setExportTo,
-  setExportError,
-}: {
-  exportPreset: WorkoutExportPreset;
-  exportFrom: Date;
-  exportTo: Date;
-  exporting: boolean;
-  exportError: string | null;
-  handlePresetChange: (preset: WorkoutExportPreset) => void;
-  handleExport: (format: "csv" | "json") => void;
-  setExportPreset: Dispatch<SetStateAction<WorkoutExportPreset>>;
-  setExportFrom: Dispatch<SetStateAction<Date>>;
-  setExportTo: Dispatch<SetStateAction<Date>>;
-  setExportError: Dispatch<SetStateAction<string | null>>;
-}) {
+function WorkoutExportControls() {
   const t = useT();
   const locale = useLocale();
+  const [exportPreset, setExportPreset] = useState<WorkoutExportPreset>("1m");
+  const [range, setRange] = useState(() => createWorkoutExportRange("1m"));
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const handlePresetChange = (preset: WorkoutExportPreset) => {
+    setExportPreset(preset);
+    setExportError(null);
+    if (preset === "custom") return;
+    setRange(createWorkoutExportRange(preset));
+  };
+
+  const handleExport = async (format: "csv" | "json") => {
+    if (exporting) return;
+    const { from, to } = range;
+    if (from.getTime() > to.getTime()) {
+      setExportError(t.workout.exportInvalidRange);
+      return;
+    }
+    setExporting(true);
+    setExportError(null);
+    try {
+      const logs = await getCompletedWorkoutLogsInRange(from, to);
+      if (!logs.length) {
+        setExportError(t.workout.exportEmpty);
+        return;
+      }
+      const filename = getWorkoutExportFilename(range);
+      if (format === "csv") {
+        downloadExport(filename, buildWorkoutLogsCsv(logs), format);
+      } else {
+        const json = JSON.stringify(buildWorkoutReport(logs, range), null, 2);
+        downloadExport(filename.replace(/\.csv$/, ".json"), json, format);
+      }
+    } catch (err) {
+      console.warn("[workout-history] export failed", err);
+      setExportError(t.workout.exportFailed);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-3 px-4 pb-4">
       <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
@@ -434,121 +402,42 @@ function WorkoutExportControls({
         />
         {exportPreset === "custom" && (
           <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">
-                {t.workout.exportFrom}
-              </label>
-              <DatePicker
-                value={exportFrom}
-                locale={locale}
-                onChange={(date) => {
-                  setExportPreset("custom");
-                  setExportFrom(atStartOfDay(date));
-                  setExportError(null);
-                }}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">
-                {t.workout.exportTo}
-              </label>
-              <DatePicker
-                value={exportTo}
-                locale={locale}
-                onChange={(date) => {
-                  setExportPreset("custom");
-                  setExportTo(atEndOfDay(date));
-                  setExportError(null);
-                }}
-              />
-            </div>
+            {(["from", "to"] as const).map((bound) => (
+              <div key={bound} className="space-y-1">
+                <label htmlFor={`export-${bound}`} className="text-xs text-muted-foreground">
+                  {bound === "from" ? t.workout.exportFrom : t.workout.exportTo}
+                </label>
+                <DatePicker
+                  id={`export-${bound}`}
+                  value={range[bound]}
+                  locale={locale}
+                  onChange={(date) => {
+                    const value = bound === "from" ? atStartOfDay(date) : atEndOfDay(date);
+                    setRange((current) => ({ ...current, [bound]: value }));
+                    setExportError(null);
+                  }}
+                />
+              </div>
+            ))}
           </div>
         )}
         {exportError && (
           <p className="text-xs text-destructive">{exportError}</p>
         )}
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => handleExport("csv")}
-          disabled={exporting}
-          className="w-full gap-1.5"
-        >
-          <Download className="h-4 w-4" />
-          {exporting ? t.workout.exporting : t.workout.exportCsv}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => handleExport("json")}
-          disabled={exporting}
-          className="w-full gap-1.5"
-        >
-          <Download className="h-4 w-4" />
-          {exporting ? t.workout.exporting : t.workout.exportJson}
-        </Button>
+        {(["csv", "json"] as const).map((format) => (
+          <Button
+            key={format}
+            type="button"
+            variant="outline"
+            onClick={() => void handleExport(format)}
+            disabled={exporting}
+            className="w-full gap-1.5"
+          >
+            <Download className="h-4 w-4" />
+            {exporting ? t.workout.exporting : format === "csv" ? t.workout.exportCsv : t.workout.exportJson}
+          </Button>
+        ))}
       </div>
     </div>
-  );
-}
-
-function WorkoutHistoryActions({
-  preview,
-  logs,
-  editingLog,
-  setEditingLog,
-  deleteId,
-  setDeleteId,
-  deleting,
-  onDelete,
-}: {
-  preview: boolean;
-  logs: WorkoutLogEntity[];
-  editingLog: WorkoutLogEntity | null;
-  setEditingLog: Dispatch<SetStateAction<WorkoutLogEntity | null>>;
-  deleteId: string | null;
-  setDeleteId: Dispatch<SetStateAction<string | null>>;
-  deleting: boolean;
-  onDelete: () => void;
-}) {
-  const t = useT();
-  const { formatShortDate } = useFormat();
-  if (preview) return null;
-  const deleteTarget = deleteId
-    ? logs.find((log) => log.id === deleteId)
-    : undefined;
-  return (
-    <>
-      <WorkoutEditSheet
-        log={editingLog}
-        open={editingLog !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditingLog(null);
-        }}
-        onSaved={() => setEditingLog(null)}
-      />
-
-      <ConfirmDialog
-        open={deleteId !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteId(null);
-        }}
-        title={t.workout.deleteConfirmTitle}
-        description={t.workout.deleteConfirmDesc}
-        confirmLabel={t.workout.deleteWorkout}
-        cancelLabel={t.workout.cancel}
-        pendingLabel={t.workout.deleting}
-        destructive
-        pending={deleting}
-        onConfirm={onDelete}
-      >
-        {deleteTarget && (
-          <p className="text-sm text-muted-foreground">
-            {deleteTarget.sessionName || t.dashboard.workoutFallback} ·{" "}
-            {formatShortDate(deleteTarget.startedAt)}
-          </p>
-        )}
-      </ConfirmDialog>
-    </>
   );
 }

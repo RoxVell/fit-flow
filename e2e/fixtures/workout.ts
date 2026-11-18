@@ -33,11 +33,37 @@ export async function logFirstSet(page: Page, weight = "60", reps = "8") {
   await expect(completeSet).toHaveAttribute("aria-pressed", "true");
 }
 
+/** Seed a previous 50 kg × 8 set for the draft's first exercise. */
+export async function seedPreviousSet(page: Page) {
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open("fitflow_v2");
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const database = request.result;
+      const tx = database.transaction(["workoutDrafts", "workoutLogs"], "readwrite");
+      const draft = tx.objectStore("workoutDrafts").get("active");
+      draft.onsuccess = () => tx.objectStore("workoutLogs").put({
+        id: "previous-workout", startedAt: "2026-01-01T00:00:00Z",
+        endedAt: "2026-01-01T01:00:00Z", revision: 1, updatedAt: "2026-01-01T01:00:00Z",
+        exercises: [{ id: "previous-entry", exerciseId: draft.result.exercises[0].exerciseId,
+          workoutLogId: "previous-workout", sortOrder: 0,
+          sets: [{ id: "previous-set", loggedExerciseId: "previous-entry", type: "working",
+            setOrder: 0, weight: 50, reps: 8, completed: true }] }],
+      });
+      tx.oncomplete = () => { database.close(); resolve(); };
+      tx.onerror = () => { database.close(); reject(tx.error); };
+    };
+  }));
+}
+
 /** Log one set and finish the active workout, landing on the triumph screen. */
 export async function finishQuickWorkout(page: Page) {
   await startWorkout(page);
   await logFirstSet(page);
+  await finishWorkout(page);
+}
 
+export async function finishWorkout(page: Page) {
   await page.getByRole("button", { name: /^Finish$/i }).first().click();
   const confirm = page.getByRole("button", { name: /finish anyway/i });
   await expect(confirm).toBeVisible({ timeout: 5_000 });

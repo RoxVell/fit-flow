@@ -4,7 +4,8 @@ import { getActiveLocale } from "@/lib/i18n/locale-context";
 import type { Exercise } from "@/lib/db/types";
 
 export async function getExerciseMap(): Promise<Map<string, Exercise>> {
-  const manifest = await ensureManifestLoaded();
+  // Saved exercise snapshots remain usable when the static catalog is unavailable.
+  const manifest = await ensureManifestLoaded().catch(() => []);
   const locale = getActiveLocale();
   return buildExerciseMapFromManifest(manifest, locale);
 }

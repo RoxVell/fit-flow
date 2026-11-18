@@ -12,7 +12,6 @@ import {
   StopCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useWorkoutStore } from "@/lib/store/workout-store";
 import { useActiveWorkout } from "@/lib/hooks/use-active-workout";
 import { useExerciseLookup } from "@/lib/hooks/use-exercise-lookup";
 import { useT } from "@/lib/i18n/use-t";
@@ -35,7 +34,6 @@ function CenteredMessage({ children }: { children: ReactNode }) {
 
 function ActiveWorkoutContent() {
   const sessionId = useSearchParams().get("session") ?? undefined;
-  const restStore = useWorkoutStore();
   const t = useT();
   const { getName } = useExerciseLookup();
   const {
@@ -252,12 +250,7 @@ function ActiveWorkoutContent() {
       />
 
       <AnimatePresence>
-        <RestTimer
-          endTime={restStore.restTimer.endTime}
-          duration={restStore.restTimer.duration}
-          isRunning={restStore.restTimer.isRunning}
-          onStop={restStore.stopRestTimer}
-        />
+        <RestTimer />
       </AnimatePresence>
 
       <FinishWorkoutDialog

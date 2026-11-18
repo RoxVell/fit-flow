@@ -61,6 +61,22 @@ describe("sync runner uploads", () => {
     expect(await db.syncQueue.count()).toBe(0);
   });
 
+  it("splits oversized uploads and preserves an individually oversized entry for correction", async () => {
+    const db = await seedPending(3);
+    const uploaded: string[][] = [];
+    vi.stubGlobal("fetch", async (_url: string, init?: RequestInit) => {
+      if (init?.method !== "POST") return Response.json({ enabled: true });
+      const body = JSON.parse(String(init.body)) as SyncRequest;
+      uploaded.push(body.changes.map((change) => change.id));
+      if (body.changes.some((change) => change.id === "q-0")) return new Response(null, { status: 413 });
+      return Response.json(reply(body));
+    });
+    const { sync } = await import("./sync-service");
+    await sync();
+    expect(uploaded).toEqual([["q-0", "q-1", "q-2"], ["q-0", "q-1"], ["q-0"], ["q-1"], ["q-2"]]);
+    expect(await db.syncQueue.toArray()).toMatchObject([{ id: "q-0", status: "failed" }]);
+  });
+
   it("does not POST or consume local changes when the server disables sync", async () => {
     const db = await seedPending(1);
     const fetchMock = vi.fn(async () => Response.json({ enabled: false }));

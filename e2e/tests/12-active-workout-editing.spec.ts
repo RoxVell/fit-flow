@@ -1,5 +1,5 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
-import { startWorkout } from "../fixtures/workout";
+import { test, expect } from "../fixtures/base";
+import { startWorkout, logFirstSet, seedPreviousSet } from "../fixtures/workout";
 import type { ProgramEntity } from "../../src/lib/db/types";
 
 async function readPrograms(page: import("@playwright/test").Page): Promise<ProgramEntity[]> {
@@ -23,23 +23,12 @@ async function readPrograms(page: import("@playwright/test").Page): Promise<Prog
  */
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
   await startWorkout(page);
 });
 
 /** Exercise cards on the active screen. */
 function exerciseCards(page: import("@playwright/test").Page) {
   return page.locator(".rounded-2xl.border.bg-card");
-}
-
-/**
- * The exercise-name button that opens the history sheet. `exact` is
- * required: the "Complete set N, <exercise>" buttons embed the same name
- * in their aria-label.
- */
-function exerciseTitle(page: import("@playwright/test").Page, name: string) {
-  return page.getByRole("button", { name, exact: true });
 }
 
 test("user can append a set to an exercise", async ({ page }) => {
@@ -57,25 +46,7 @@ test("user can append a set to an exercise", async ({ page }) => {
 });
 
 test("clearing suggested values keeps a set empty after other workout edits", async ({ page }) => {
-  await page.evaluate(() => new Promise<void>((resolve, reject) => {
-    const request = indexedDB.open("fitflow_v2");
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      const database = request.result;
-      const tx = database.transaction(["workoutDrafts", "workoutLogs"], "readwrite");
-      const draft = tx.objectStore("workoutDrafts").get("active");
-      draft.onsuccess = () => tx.objectStore("workoutLogs").put({
-        id: "previous-workout", startedAt: "2026-01-01T00:00:00Z",
-        endedAt: "2026-01-01T01:00:00Z", revision: 1, updatedAt: "2026-01-01T01:00:00Z",
-        exercises: [{ id: "previous-entry", exerciseId: draft.result.exercises[0].exerciseId,
-          workoutLogId: "previous-workout", sortOrder: 0,
-          sets: [{ id: "previous-set", loggedExerciseId: "previous-entry", type: "working",
-            setOrder: 0, weight: 50, reps: 8, completed: true }] }],
-      });
-      tx.oncomplete = () => { database.close(); resolve(); };
-      tx.onerror = () => { database.close(); reject(tx.error); };
-    };
-  }));
+  await seedPreviousSet(page);
   await page.reload();
 
   const firstCard = exerciseCards(page).first();
@@ -135,20 +106,13 @@ test("user can add an extra exercise mid-workout", async ({ page }) => {
 });
 
 test("user can swap an exercise for a different one", async ({ page }) => {
+  // Flushing the trace and video for two full catalog openings can exceed 30s.
+  test.setTimeout(60_000);
   const programsBefore = await readPrograms(page);
   const firstCard = exerciseCards(page).first();
-  // Use a uniquely named source: the library contains multiple Hip Thrust
-  // variants with identical names but different exercise IDs.
-  const original = "Jefferson Curl";
+  const original = await firstCard.getByRole("button").first().innerText();
   await firstCard.getByRole("button", { name: /exercise options/i }).click();
   await page.getByRole("menuitem", { name: /swap exercise/i }).click();
-  await page.getByPlaceholder(/search exercises/i).fill(original);
-  await page.getByRole("dialog").getByRole("button", { name: /Jefferson Curl/ }).click();
-  await page.getByRole("button", { name: "Only this workout", exact: true }).click();
-
-  await firstCard.getByRole("button", { name: /exercise options/i }).click();
-  await page.getByRole("menuitem", { name: /swap exercise/i }).click();
-
   const search = page.getByPlaceholder(/search exercises/i);
   await search.fill("Anderson Squat");
   await page.getByRole("button", { name: "Anderson Squat" }).click();
@@ -158,26 +122,25 @@ test("user can swap an exercise for a different one", async ({ page }) => {
   await expect(
     firstCard.getByRole("button", { name: "Anderson Squat", exact: true })
   ).toBeVisible();
-  await expect(exerciseTitle(page, original!)).toHaveCount(0);
+  await expect(firstCard.getByRole("button", { name: original, exact: true })).toHaveCount(0);
   expect(await readPrograms(page)).toEqual(programsBefore);
 
-  // Return to the source exercise, reload, and check that its earlier
-  // replacement is suggested before exercises from general usage history.
-  await firstCard.getByRole("button", { name: /exercise options/i }).click();
-  await page.getByRole("menuitem", { name: /swap exercise/i }).click();
-  await page.getByPlaceholder(/search exercises/i).fill(original!);
-  await page.getByRole("dialog").getByRole("button").filter({
-    has: page.getByText(original!, { exact: true }),
-  }).click();
-  await page.getByRole("button", { name: "Only this workout", exact: true }).click();
-  await page.reload();
+  // A fresh workout from the same template keeps the original exercise and
+  // remembers the replacement selected in the previous workout.
+  await page.getByRole("button", { name: "Finish", exact: true }).first().click();
+  await page.getByRole("button", { name: "Discard", exact: true }).click();
+  await page.getByRole("button", { name: "Abandon", exact: true }).click();
+  await expect(page).toHaveURL(/\/workout$/);
+  await startWorkout(page);
+  await expect(firstCard.getByRole("button", { name: original, exact: true })).toBeVisible();
   await exerciseCards(page).first().getByRole("button", { name: /exercise options/i }).click();
   await page.getByRole("menuitem", { name: /swap exercise/i }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText("Previous replacements", { exact: true })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: /Anderson Squat/ })).toBeVisible();
-  const buttons = await dialog.getByRole("button").allTextContents();
-  expect(buttons.find((name) => name.trim() && name !== "Close")).toContain("Anderson Squat");
+  await expect(dialog.getByRole("button").first()).toHaveAccessibleName(/Anderson Squat/);
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(firstCard.getByRole("button", { name: original, exact: true })).toBeVisible();
 });
 
 test("confirmed replacement updates all future program sessions and survives reload", async ({ page }) => {
@@ -206,13 +169,7 @@ test("completing a set starts the rest timer, which can be skipped", async ({ pa
   // No set completed yet — no timer.
   await expect(page.getByText(/^Rest timer$/i)).toHaveCount(0);
 
-  const firstWeight = page.getByRole("textbox", { name: /set 1 weight/i }).first();
-  await firstWeight.fill("60");
-  await firstWeight.blur();
-  const firstReps = page.getByRole("spinbutton", { name: /set 1 reps/i }).first();
-  await firstReps.fill("8");
-  await firstReps.blur();
-  await page.getByRole("button", { name: /complete set 1/i }).first().click();
+  await logFirstSet(page);
 
   // The timer bar is the parent flex row of the "Rest timer" label; its
   // only button is the skip control (an icon-only SkipForward).

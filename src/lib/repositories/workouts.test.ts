@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db/dexie";
 import type { LoggedExercise } from "@/lib/db/types";
-import { initDraft, updateDraftExercises } from "./drafts";
+import { clearDraft, elapsedWorkoutSeconds, initDraft, toggleDraftPause, updateDraftExercises } from "./drafts";
 import { finishWorkout } from "./workouts";
 
 const START = "2026-06-01T12:00:00.000Z";
@@ -20,7 +20,7 @@ beforeEach(async () => {
 
 describe("finishWorkout", () => {
   it("waits for pending edits, persists the log and outbox, and removes the draft", async () => {
-    const pendingEdit = updateDraftExercises((exercises) => exercises.map((entry) => ({
+    const pendingEdit = updateDraftExercises("workout", (exercises) => exercises.map((entry) => ({
       ...entry, sets: entry.sets.map((set) => ({ ...set, completed: true, weight: 70 })),
     })));
     const log = await finishWorkout("workout", { endedAt: END });
@@ -34,7 +34,7 @@ describe("finishWorkout", () => {
   });
 
   it("rolls back the log and retains the draft when the outbox write fails", async () => {
-    vi.spyOn(db.syncQueue, "put").mockRejectedValueOnce(new Error("Storage full"));
+    vi.spyOn(db.syncQueue, "add").mockRejectedValueOnce(new Error("Storage full"));
     await expect(finishWorkout("workout", { endedAt: END })).rejects.toThrow("Storage full");
     expect(await db.workoutLogs.count()).toBe(0);
     expect(await db.workoutDrafts.get("active")).toBeDefined();
@@ -46,8 +46,21 @@ describe("finishWorkout", () => {
     await finishWorkout("workout", { endedAt: END });
     await initDraft("session", "next-workout", [exercise], END);
     await finishWorkout("workout", { endedAt: END });
+    await updateDraftExercises("workout", () => []);
+    await clearDraft("workout");
+    expect((await db.workoutDrafts.get("active"))?.exercises).toEqual([exercise]);
     expect(await db.workoutLogs.count()).toBe(1);
     expect(await db.syncQueue.count()).toBe(1);
     expect((await db.workoutDrafts.get("active"))?.activeWorkoutId).toBe("next-workout");
   });
+});
+
+it("resumes the existing timer and set data if a second tab starts a workout", async () => {
+  const start = Date.parse(START) / 1000;
+  await toggleDraftPause("workout", start + 10);
+  const draft = await initDraft("other-session", "other-workout", [], END);
+  expect(draft).toMatchObject({ activeWorkoutId: "workout", exercises: [exercise] });
+  expect(elapsedWorkoutSeconds(draft, start + 30)).toBe(10);
+  await toggleDraftPause("workout", start + 40);
+  expect(elapsedWorkoutSeconds(await db.workoutDrafts.get("active"), start + 45)).toBe(15);
 });

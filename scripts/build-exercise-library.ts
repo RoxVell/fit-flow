@@ -1,11 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { muscleWeightsFromLibrary } from "../src/lib/exercises/muscle-map";
-import type { MuscleWeights } from "../src/lib/exercises/types";
+import type { BodyPart, ExerciseDetail, ExerciseLibraryMeta, ExerciseManifestItem } from "../src/lib/exercises/types";
 
 type RawExercise = {
   id: string;
-  bodyPart: string;
+  bodyPart: ExerciseManifestItem["bodyPart"];
   translations: Record<string, string>;
   descriptions: Record<string, string>;
   instructions: Record<string, string[]>;
@@ -13,8 +13,8 @@ type RawExercise = {
   commonMistakes: Record<string, string[]>;
   equipments: string[];
   exerciseMuscles: Record<string, number>;
-  laterality: string;
-  mechanics: string;
+  laterality: ExerciseManifestItem["laterality"];
+  mechanics: ExerciseManifestItem["mechanics"];
   weightType: string;
   tags: string[];
   image?: { uri: string };
@@ -24,57 +24,12 @@ type RawExercise = {
   videoLightUrl: string;
 };
 
-type LocalizedString = { en: string; ru: string };
-type LocalizedList = { en: string[]; ru: string[] };
-
-type ManifestItem = {
-  id: string;
-  name: LocalizedString;
-  bodyPart: string;
-  equipments: string[];
-  mechanics: string;
-  laterality: string;
-  weightType: string;
-  tags: string[];
-  thumbnailUri: string | null;
-  muscleWeights: MuscleWeights;
-};
-
-type ExerciseDetail = ManifestItem & {
-  description: LocalizedString;
-  instructions: LocalizedList;
-  tips: LocalizedList;
-  commonMistakes: LocalizedList;
-  imageUri: string | null;
-  thumbnail1Uri: string | null;
-  thumbnail2Uri: string | null;
-  videoDarkUrl: string;
-  videoLightUrl: string;
-  exerciseMuscles: Record<string, number>;
-};
-
 function uri(asset?: { uri: string }): string | null {
   return asset?.uri ?? null;
 }
 
-function mergeLocalizedString(
-  enVal: string | undefined,
-  ruVal: string | undefined
-): LocalizedString {
-  return {
-    en: enVal ?? ruVal ?? "",
-    ru: ruVal ?? enVal ?? "",
-  };
-}
-
-function mergeLocalizedList(
-  enVal: string[] | undefined,
-  ruVal: string[] | undefined
-): LocalizedList {
-  return {
-    en: enVal ?? ruVal ?? [],
-    ru: ruVal ?? enVal ?? [],
-  };
+function localized<T>(en: T | undefined, ru: T | undefined, fallback: T) {
+  return { en: en ?? ru ?? fallback, ru: ru ?? en ?? fallback };
 }
 
 function loadExercises(path: string): RawExercise[] {
@@ -83,7 +38,7 @@ function loadExercises(path: string): RawExercise[] {
 }
 
 function build() {
-  const root = join(process.cwd());
+  const root = process.cwd();
   const enPath =
     process.env.EXERCISE_EN ??
     join(root, "data/raw/exercise-library.json");
@@ -112,8 +67,8 @@ function build() {
   const ruExercises = loadExercises(ruPath);
   const ruById = new Map(ruExercises.map((e) => [e.id, e]));
 
-  const manifest: ManifestItem[] = [];
-  const chunks: Record<string, Record<string, ExerciseDetail>> = {};
+  const manifest: ExerciseManifestItem[] = [];
+  const chunks = new Map<BodyPart, Record<string, ExerciseDetail>>();
 
   for (const en of enExercises) {
     const ru = ruById.get(en.id);
@@ -121,30 +76,12 @@ function build() {
       console.warn(`Missing RU entry for ${en.id}`);
     }
 
-    const name = mergeLocalizedString(
-      en.translations.en,
-      ru?.translations.ru
-    );
-    const description = mergeLocalizedString(
-      en.descriptions.en,
-      ru?.descriptions.ru
-    );
-    const instructions = mergeLocalizedList(
-      en.instructions.en,
-      ru?.instructions.ru
-    );
-    const tips = mergeLocalizedList(en.tips.en, ru?.tips.ru);
-    const commonMistakes = mergeLocalizedList(
-      en.commonMistakes.en,
-      ru?.commonMistakes.ru
-    );
-
     const thumbnailUri =
       uri(en.thumbnail1) ?? uri(en.thumbnail2) ?? uri(en.image);
 
-    const item: ManifestItem = {
+    const item: ExerciseManifestItem = {
       id: en.id,
-      name,
+      name: localized(en.translations.en, ru?.translations.ru, ""),
       bodyPart: en.bodyPart,
       equipments: en.equipments,
       mechanics: en.mechanics,
@@ -157,10 +94,10 @@ function build() {
 
     const detail: ExerciseDetail = {
       ...item,
-      description,
-      instructions,
-      tips,
-      commonMistakes,
+      description: localized(en.descriptions.en, ru?.descriptions.ru, ""),
+      instructions: localized(en.instructions.en, ru?.instructions.ru, []),
+      tips: localized(en.tips.en, ru?.tips.ru, []),
+      commonMistakes: localized(en.commonMistakes.en, ru?.commonMistakes.ru, []),
       imageUri: uri(en.image),
       thumbnail1Uri: uri(en.thumbnail1),
       thumbnail2Uri: uri(en.thumbnail2),
@@ -170,25 +107,26 @@ function build() {
     };
 
     manifest.push(item);
-    if (!chunks[en.bodyPart]) chunks[en.bodyPart] = {};
-    chunks[en.bodyPart][en.id] = detail;
+    const chunk = chunks.get(en.bodyPart) ?? {};
+    chunk[en.id] = detail;
+    chunks.set(en.bodyPart, chunk);
   }
 
   manifest.sort((a, b) => a.name.en.localeCompare(b.name.en));
 
   mkdirSync(detailsDir, { recursive: true });
-  writeFileSync(join(outDir, "manifest.json"), JSON.stringify(manifest));
+  writeFileSync(manifestPath, JSON.stringify(manifest));
   writeFileSync(
     join(outDir, "meta.json"),
     JSON.stringify({
       version: 1,
       builtAt: new Date().toISOString(),
       count: manifest.length,
-      bodyParts: Object.keys(chunks).sort(),
-    })
+      bodyParts: [...chunks.keys()].sort(),
+    } satisfies ExerciseLibraryMeta)
   );
 
-  for (const [bodyPart, records] of Object.entries(chunks)) {
+  for (const [bodyPart, records] of chunks) {
     writeFileSync(
       join(detailsDir, `${bodyPart}.json`),
       JSON.stringify(records)
@@ -196,7 +134,7 @@ function build() {
   }
 
   console.log(
-    `Built ${manifest.length} exercises into ${outDir} (${Object.keys(chunks).length} body-part chunks)`
+    `Built ${manifest.length} exercises into ${outDir} (${chunks.size} body-part chunks)`
   );
 }
 

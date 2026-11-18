@@ -22,8 +22,6 @@ import {
   Trash2,
   Dumbbell,
   ChevronRight,
-  ArrowLeft,
-  Check,
   Calendar,
   List,
   GripVertical,
@@ -46,43 +44,23 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { RestDurationStepper } from "@/components/programs/rest-duration-stepper";
 import { resolveRestDuration } from "@/lib/workout/rest-duration";
+import type { ProgramInput } from "@/lib/repositories/programs";
+import type { WorkoutProgram } from "@/lib/db/types";
+import { FormHeader } from "@/components/shared/form-header";
 
-interface ExerciseEntry {
-  exerciseId: string;
-  targetSets: number;
-  targetReps: string;
-}
+type ExerciseEntry = Omit<ProgramInput["sessions"][number]["exercises"][number], "sortOrder">;
 
 interface SessionEntry {
+  id?: string;
   name: string;
   dayOfWeek: number;
   exercises: ExerciseEntry[];
 }
 
 interface ProgramFormProps {
-  onSave: (data: {
-    name: string;
-    description: string;
-    daysPerWeek: number;
-    restDurationSeconds: number;
-    sessions: {
-      name: string;
-      dayOfWeek: number;
-      sortOrder: number;
-      exercises: { exerciseId: string; targetSets: number; targetReps: string; sortOrder: number }[];
-    }[];
-  }) => Promise<void>;
-  onBack?: () => void;
-  initialData?: {
-    name: string;
-    description: string;
-    restDurationSeconds?: number;
-    sessions: {
-      name: string;
-      dayOfWeek: number;
-      exercises: { exerciseId: string; targetSets: number; targetReps: string }[];
-    }[];
-  };
+  onSave: (data: ProgramInput) => Promise<void>;
+  onBack: () => void;
+  initialData?: WorkoutProgram;
 }
 
 export function ProgramForm({ onSave, onBack, initialData }: ProgramFormProps) {
@@ -94,15 +72,7 @@ export function ProgramForm({ onSave, onBack, initialData }: ProgramFormProps) {
     resolveRestDuration(initialData?.restDurationSeconds)
   );
   const [sessions, setSessions] = useState<SessionEntry[]>(
-    initialData?.sessions.map((s) => ({
-      name: s.name,
-      dayOfWeek: s.dayOfWeek,
-      exercises: s.exercises.map((e) => ({
-        exerciseId: e.exerciseId,
-        targetSets: e.targetSets,
-        targetReps: e.targetReps,
-      })),
-    })) ?? []
+    initialData?.sessions ?? []
   );
   const [editingSessionIdx, setEditingSessionIdx] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -123,13 +93,12 @@ export function ProgramForm({ onSave, onBack, initialData }: ProgramFormProps) {
         daysPerWeek: sessions.length,
         restDurationSeconds,
         sessions: sessions.map((s, i) => ({
+          id: s.id,
           name: s.name.trim(),
           dayOfWeek: s.dayOfWeek,
           sortOrder: i,
           exercises: s.exercises.map((e, j) => ({
-            exerciseId: e.exerciseId,
-            targetSets: e.targetSets,
-            targetReps: e.targetReps,
+            ...e,
             sortOrder: j,
           })),
         })),
@@ -169,9 +138,12 @@ export function ProgramForm({ onSave, onBack, initialData }: ProgramFormProps) {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <ProgramFormHeader
-        isEditMode={isEditMode} canSave={!!canSave && !saving} saving={saving}
-        onSave={() => void handleSave()} onBack={onBack}
+      <FormHeader
+        title={isEditMode ? t.programs.editProgram : t.programs.newProgram}
+        saveLabel={saving ? t.workout.saving : isEditMode ? t.programs.update : t.programs.save}
+        disabled={!canSave || saving}
+        onSave={handleSave}
+        onBack={onBack}
       />
 
       {/* Scrollable content */}
@@ -240,10 +212,11 @@ export function ProgramForm({ onSave, onBack, initialData }: ProgramFormProps) {
             ) : (
               <div className="overflow-hidden rounded-xl border bg-card divide-y divide-border">
                 {sessions.map((s, i) => (
-                  <div
-                    key={i}
+                  <button
+                    type="button"
+                    key={s.id ?? i}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-3.5 cursor-pointer active:bg-accent/50 transition-colors",
+                      "flex w-full items-center gap-3 px-4 py-3.5 text-left cursor-pointer active:bg-accent/50 transition-colors",
                       editingSessionIdx === i && "bg-accent/30"
                     )}
                     onClick={() => setEditingSessionIdx(i)}
@@ -265,7 +238,7 @@ export function ProgramForm({ onSave, onBack, initialData }: ProgramFormProps) {
                       </p>
                     </div>
                     <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -285,49 +258,6 @@ export function ProgramForm({ onSave, onBack, initialData }: ProgramFormProps) {
           if (editingSessionIdx !== null) removeSession(editingSessionIdx);
         }}
       />
-    </div>
-  );
-}
-
-function ProgramFormHeader({
-  isEditMode,
-  canSave,
-  saving,
-  onSave,
-  onBack,
-}: {
-  isEditMode: boolean;
-  canSave: boolean;
-  saving: boolean;
-  onSave: () => void;
-  onBack?: () => void;
-}) {
-  const t = useT();
-  return (
-    <div className="flex items-center justify-between border-b bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3">
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex items-center gap-1 text-sm text-muted-foreground active:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {t.programs.back}
-      </button>
-      <h1 className="text-base font-semibold">
-        {isEditMode ? t.programs.editProgram : t.programs.newProgram}
-      </h1>
-      <button
-        type="button"
-        onClick={onSave}
-        disabled={!canSave}
-        className={cn(
-          "flex items-center gap-1 text-sm font-semibold transition-colors",
-          canSave ? "text-primary" : "text-muted-foreground/30"
-        )}
-      >
-        <Check className="h-4 w-4" />
-        {saving ? t.workout.saving : isEditMode ? t.programs.update : t.programs.save}
-      </button>
     </div>
   );
 }
@@ -383,8 +313,8 @@ function SessionEditorContent({
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = session.exercises.findIndex((ex) => ex.exerciseId === active.id);
-    const newIndex = session.exercises.findIndex((ex) => ex.exerciseId === over.id);
+    const oldIndex = session.exercises.findIndex((ex) => (ex.id ?? ex.exerciseId) === active.id);
+    const newIndex = session.exercises.findIndex((ex) => (ex.id ?? ex.exerciseId) === over.id);
 
     if (oldIndex !== -1 && newIndex !== -1) {
       onUpdate({ exercises: arrayMove(session.exercises, oldIndex, newIndex) });
@@ -452,13 +382,13 @@ function SessionEditorContent({
               </div>
             ) : (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={session.exercises.map((ex) => ex.exerciseId)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={session.exercises.map((ex) => ex.id ?? ex.exerciseId)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-2">
                     {session.exercises.map((ex, i) => (
                       <SortableExerciseRow
-                        key={ex.exerciseId}
-                        id={ex.exerciseId}
-                        exerciseName={getName(ex.exerciseId, t.programs.unknownExercise)}
+                        key={ex.id ?? ex.exerciseId}
+                        id={ex.id ?? ex.exerciseId}
+                        exerciseName={getName(ex.exerciseId, ex.exercise?.name ?? t.programs.unknownExercise)}
                         targetSets={ex.targetSets}
                         targetReps={ex.targetReps}
                         onUpdate={(data) => {

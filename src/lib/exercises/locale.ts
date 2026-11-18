@@ -18,5 +18,5 @@ export function pickLocalizedList(
   locale: Locale
 ): string[] {
   if (!value) return [];
-  return value[locale]?.length ? value[locale] : value.en || value.ru || [];
+  return value[locale]?.length ? value[locale] : value[locale === "en" ? "ru" : "en"] ?? [];
 }

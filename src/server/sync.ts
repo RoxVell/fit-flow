@@ -8,7 +8,7 @@ import type { ServerChange, SyncChange, SyncResponse } from "@/lib/sync/types";
 type SyncTable = typeof programs | typeof workoutLogs | typeof bodyMeasurements | typeof cardioSessions;
 
 /** The revision check belongs in the write itself, under PostgreSQL's row lock. */
-export function buildUpsert<T extends SyncTable>(table: T, values: T["$inferInsert"], revision: number) {
+export function buildUpsert<T extends SyncTable>(table: T, values: T["$inferInsert"] & { revision: number }) {
   const set = Object.fromEntries(Object.entries(values).filter(
     ([key, value]) => key !== "id" && key !== "createdAt" && value !== undefined &&
       (!values.deletedAt || ["revision", "updatedAt", "deletedAt"].includes(key))
@@ -16,7 +16,7 @@ export function buildUpsert<T extends SyncTable>(table: T, values: T["$inferInse
   // All tables share these sync columns. The actual table remains unchanged.
   const t = table as typeof programs;
   return getDb().insert(t).values(values as typeof programs.$inferInsert)
-    .onConflictDoUpdate({ target: t.id, set, setWhere: lt(t.revision, revision) })
+    .onConflictDoUpdate({ target: t.id, set, setWhere: lt(t.revision, values.revision) })
     .returning({ id: t.id });
 }
 
@@ -35,7 +35,7 @@ async function applyChange(change: SyncChange): Promise<boolean> {
           isActive: p.isActive, createdAt: p.createdAt, sessions: p.sessions,
           restDurationSeconds: p.restDurationSeconds,
         }), ...common,
-      }, change.revision);
+      });
       break;
     }
     case "workoutLog": {
@@ -47,7 +47,7 @@ async function applyChange(change: SyncChange): Promise<boolean> {
           programName: p.programName ?? null, sessionName: p.sessionName ?? null,
           notes: p.notes ?? null, exercises: p.exercises,
         }), ...common,
-      }, change.revision);
+      });
       break;
     }
     case "bodyMeasurement": {
@@ -60,7 +60,7 @@ async function applyChange(change: SyncChange): Promise<boolean> {
           leftThigh: p.leftThigh ?? null, rightThigh: p.rightThigh ?? null,
           leftCalf: p.leftCalf ?? null, rightCalf: p.rightCalf ?? null,
         }), ...common,
-      }, change.revision);
+      });
       break;
     }
     case "cardioSession": {
@@ -70,7 +70,7 @@ async function applyChange(change: SyncChange): Promise<boolean> {
           type: p.type, date: p.date, distance: p.distance, duration: p.duration,
           avgHeartRate: p.avgHeartRate ?? null, workoutLogId: p.workoutLogId ?? null,
         }), ...common,
-      }, change.revision);
+      });
       break;
     }
     default: throw new Error("Unsupported entity type");
@@ -78,14 +78,15 @@ async function applyChange(change: SyncChange): Promise<boolean> {
   return result.length > 0;
 }
 
+const timestampFields = new Set(["createdAt", "startedAt", "endedAt", "date", "updatedAt", "deletedAt"]);
+
 /** SQL nulls represent the optional fields that the client stores as undefined. */
 export function toServerChanges(entityType: EntityType, rows: { revision: number }[]): ServerChange[] {
-  const timestamps = new Set(["createdAt", "startedAt", "endedAt", "date", "updatedAt", "deletedAt"]);
   return rows.map((row) => ({
     entityType, revision: row.revision,
     entity: Object.fromEntries(Object.entries(row)
       .filter(([, value]) => value !== null)
-      .map(([key, value]) => [key, timestamps.has(key) ? new Date(String(value)).toISOString() : value])),
+      .map(([key, value]) => [key, timestampFields.has(key) ? new Date(String(value)).toISOString() : value])),
   }));
 }
 

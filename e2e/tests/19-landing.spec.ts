@@ -5,11 +5,8 @@ import { test, expect } from "../fixtures/base";
  * there is no seed wait; the assertions target semantics (headings, links,
  * ARIA state) rather than the animated visuals.
  */
-test.beforeEach(async ({ page }) => {
-  await page.goto("/landing");
-});
-
 test("renders the hero and routes the primary CTA into the app", async ({ page }) => {
+  await page.goto("/landing");
   await expect(page).toHaveTitle(/FitFlow/);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Every rep counted");
 
@@ -22,6 +19,7 @@ test("renders the hero and routes the primary CTA into the app", async ({ page }
 });
 
 test("exposes every section behind the in-page navigation", async ({ page }) => {
+  await page.goto("/landing");
   for (const id of ["features", "how", "faq"]) {
     await expect(page.locator(`#${id}`)).toBeAttached();
   }
@@ -29,15 +27,17 @@ test("exposes every section behind the in-page navigation", async ({ page }) => 
 });
 
 test("live logger checkboxes are interactive", async ({ page }) => {
-  const firstSet = page.getByRole("button", { name: /(complete|uncheck) set 1/i });
-  await expect(firstSet).toBeVisible();
-  await firstSet.click();
-  // The click flips the label; whichever way the simulation was mid-step,
-  // the control must still be reachable and labelled afterwards.
-  await expect(page.getByRole("button", { name: /(complete|uncheck) set 1/i })).toBeVisible();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/landing");
+  await page.getByRole("button", { name: "Complete set 4", exact: true }).click();
+  await page.getByRole("button", { name: "Uncheck set 1", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Complete set 1", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Complete set 1", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Uncheck set 1", exact: true })).toBeVisible();
 });
 
 test("FAQ items expand and collapse", async ({ page }) => {
+  await page.goto("/landing");
   const question = page.getByRole("button", { name: /where does my data live/i });
   await question.scrollIntoViewIfNeeded();
   await expect(question).toHaveAttribute("aria-expanded", "false");
@@ -49,6 +49,7 @@ test("FAQ items expand and collapse", async ({ page }) => {
 });
 
 test("theme toggle switches the document theme", async ({ page }) => {
+  await page.goto("/landing");
   const toggle = page.getByRole("button", { name: /switch to (light|dark) theme/i });
   await expect(toggle).toBeVisible();
   const before = await page.evaluate(() => document.documentElement.classList.contains("dark"));

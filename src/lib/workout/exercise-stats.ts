@@ -1,11 +1,5 @@
-import type { LoggedExercise, WorkoutLog } from "@/lib/db/types";
+import type { WorkoutLog } from "@/lib/db/types";
 import { bestE1RM, bestWeight, volume, type SetMetrics } from "@/lib/training-metrics";
-
-export function isExcludedFromStats(
-  exercise: Pick<LoggedExercise, "excludeFromStats">
-): boolean {
-  return Boolean(exercise.excludeFromStats);
-}
 
 /** Completed, counted sets across every occurrence of an exercise in a workout. */
 export function aggregateExerciseStats<S extends SetMetrics & { completed: boolean }>(
@@ -73,7 +67,7 @@ export function toExerciseDetailedHistorySession(
     .filter((set) => set.completed)
     .sort((a, b) => a.setOrder - b.setOrder)
     .map((set) => ({ ...set, excludeFromStats: Boolean(exercise.excludeFromStats) })));
-  const excluded = exercises.every(isExcludedFromStats);
+  const excluded = exercises.every((exercise) => exercise.excludeFromStats);
   const stats = aggregateExerciseStats(exercises);
   const notes = exercises.map((exercise) => exercise.notes?.trim()).filter(Boolean).join("\n");
   return {

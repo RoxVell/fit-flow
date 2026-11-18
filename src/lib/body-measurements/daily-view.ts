@@ -1,52 +1,24 @@
-import { BODY_METRIC_FIELDS, calendarDayKey, hasBodyMetricValue } from "@/lib/body-measurements/metrics";
+import { compareByDate } from "@/lib/utils/date";
+import { BODY_METRIC_FIELDS, calendarDayKey, hasBodyMetricValue, type BodyMetricValues } from "@/lib/body-measurements/metrics";
 import type { BodyMeasurementEntity } from "@/lib/db/types";
 
-export interface DailyBodyView {
-  date: string;
-  weight?: number;
-  chest?: number;
-  waist?: number;
-  leftArm?: number;
-  rightArm?: number;
-  leftThigh?: number;
-  rightThigh?: number;
-  leftCalf?: number;
-  rightCalf?: number;
-}
+export type DailyBodyView = BodyMetricValues & { date: string };
 
 export function buildDailyBodyViews(
   snapshots: BodyMeasurementEntity[]
 ): DailyBodyView[] {
-  const byDay = new Map<string, BodyMeasurementEntity[]>();
-
-  for (const snapshot of snapshots) {
-    const day = calendarDayKey(snapshot.date);
-    const daySnapshots = byDay.get(day) ?? [];
-    daySnapshots.push(snapshot);
-    byDay.set(day, daySnapshots);
-  }
-
-  const views: DailyBodyView[] = [];
-
-  for (const [day, daySnapshots] of byDay) {
-    const sorted = [...daySnapshots].sort(
-      (a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
-    );
-
-    const view: DailyBodyView = { date: day };
-    for (const snapshot of sorted) {
-      for (const field of BODY_METRIC_FIELDS) {
-        const value = snapshot[field];
-        if (hasBodyMetricValue(value)) {
-          view[field] = value;
-        }
-      }
+  const byDay = new Map<string, DailyBodyView>();
+  const sorted = [...snapshots].sort((a, b) => compareByDate(a.updatedAt, b.updatedAt));
+  for (const snapshot of sorted) {
+    const date = calendarDayKey(snapshot.date);
+    const view = byDay.get(date) ?? { date };
+    for (const field of BODY_METRIC_FIELDS) {
+      const value = snapshot[field];
+      if (hasBodyMetricValue(value)) view[field] = value;
     }
-
-    views.push(view);
+    byDay.set(date, view);
   }
-
-  return views.sort((a, b) => a.date.localeCompare(b.date));
+  return [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export function getWeightTrendFromDailyViews(

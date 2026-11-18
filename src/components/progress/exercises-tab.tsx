@@ -20,10 +20,10 @@ import { PeriodChangeIndicator } from "@/components/charts/period-change-indicat
 import { ExercisePickerDialog } from "@/components/exercises/exercise-picker-dialog";
 import { ExerciseThumbnail } from "@/components/exercises/exercise-thumbnail";
 import {
-  useExerciseHistory,
-  useExerciseDetailedHistory,
+  useExerciseProgressHistory,
   useExercise,
 } from "@/lib/hooks/use-data";
+import type { ExerciseHistoryPoint } from "@/lib/workout/exercise-stats";
 import { useExerciseUsageCounts } from "@/lib/hooks/use-exercise-usage";
 import { HistoryAccordion } from "@/components/progress/history-accordion";
 import { useT } from "@/lib/i18n/use-t";
@@ -52,11 +52,9 @@ export function ExercisesTab() {
     ? requestedId
     : usedExerciseIds?.[0] ?? null;
 
-  const history = useExerciseHistory(selectedId ?? "");
-  const detailedHistory = useExerciseDetailedHistory(selectedId ?? "");
+  const progress = useExerciseProgressHistory(selectedId ?? "");
   const selectedExercise = useExercise(selectedId ?? "");
 
-  const sessions = detailedHistory || [];
   const hasUsedExercises = usedExerciseIds && usedExerciseIds.length > 0;
 
   return (
@@ -86,25 +84,24 @@ export function ExercisesTab() {
         </div>
       )}
 
-      {pickerOpen ? (
-        <ExercisePickerDialog
-          open={pickerOpen}
-          onOpenChange={setPickerOpen}
-          title={t.progress.exerciseProgress}
-          onlyUsed
-          onSelect={setRequestedId}
-          emptyMessage={t.progress.noData}
-        />
-      ) : null}
+      <ExercisePickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        title={t.progress.exerciseProgress}
+        onlyUsed
+        onSelect={setRequestedId}
+        emptyMessage={t.progress.noData}
+      />
 
-      {selectedId ? (
-        <ExerciseProgressChart
-          history={history} chartType={chartType} period={period}
-          onChartTypeChange={setChartType} onPeriodChange={setPeriod}
-        />
-      ) : null}
-
-      {selectedId ? <HistoryAccordion sessions={sessions} /> : null}
+      {selectedId && (
+        <>
+          <ExerciseProgressChart
+            history={progress?.history} chartType={chartType} period={period}
+            onChartTypeChange={setChartType} onPeriodChange={setPeriod}
+          />
+          <HistoryAccordion key={selectedId} sessions={progress?.detailedHistory ?? []} />
+        </>
+      )}
     </div>
   );
 }
@@ -116,7 +113,7 @@ function ExerciseProgressChart({
   onChartTypeChange,
   onPeriodChange,
 }: {
-  history: ReturnType<typeof useExerciseHistory>;
+  history: ExerciseHistoryPoint[] | undefined;
   chartType: "1rm" | "volume";
   period: ChartPeriod;
   onChartTypeChange: (chartType: "1rm" | "volume") => void;
@@ -143,15 +140,9 @@ function ExerciseProgressChart({
 
   const dataKey = chartType === "1rm" ? "estimated1RM" : "volume";
 
-  const yDomain = useMemo(() => {
-    if (!chartData?.length) return undefined;
-    return computeFocusDomain(chartData.map((d) => d[dataKey]));
-  }, [chartData, dataKey]);
-
-  const periodChange = useMemo(() => {
-    if (!chartData?.length) return null;
-    return computePeriodChange(chartData.map((d) => d[dataKey]));
-  }, [chartData, dataKey]);
+  const values = chartData?.map((point) => point[dataKey]) ?? [];
+  const yDomain = values.length ? computeFocusDomain(values) : undefined;
+  const periodChange = computePeriodChange(values);
 
   return (
     <Card>

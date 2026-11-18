@@ -1,4 +1,4 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
+import { test, expect } from "../fixtures/base";
 import { programCard } from "../fixtures/programs";
 
 /**
@@ -16,11 +16,6 @@ import { programCard } from "../fixtures/programs";
  */
 
 const PROGRAM_NAME = "E2E Strength Block";
-
-test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
-});
 
 /**
  * Pick an exercise in the ExercisePickerDialog. The picker is the only

@@ -57,20 +57,25 @@ export function BodyTab() {
   const chartData = useMemo(() => {
     if (!dailyViews) return undefined;
     return filterByPeriod(dailyViews, period).map((view) => ({
+      ...view,
       date: formatShortDate(view.date),
-      weight: view.weight,
-      chest: view.chest,
-      waist: view.waist,
-      leftArm: view.leftArm,
-      rightArm: view.rightArm,
-      leftThigh: view.leftThigh,
-      rightThigh: view.rightThigh,
-      leftCalf: view.leftCalf,
-      rightCalf: view.rightCalf,
     }));
   }, [dailyViews, period, formatShortDate]);
 
-  const hasChartData = chartData && chartData.length > 0;
+  const charts = [
+    {
+      key: "weight",
+      title: t.progress.bodyWeight,
+      hasData: chartData?.some((day) => day.weight != null),
+      series: [{ key: "weight", label: t.progress.bodyMeasurements.weight, color: COLORS[0] }],
+    },
+    {
+      key: "measurements",
+      title: t.progress.bodyMeasurementsTitle,
+      hasData: chartData?.some((day) => CIRCUMFERENCE_CHART_FIELDS.some((field) => day[field] != null)),
+      series: measurementConfig,
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -82,17 +87,14 @@ export function BodyTab() {
         </Button>
       </div>
 
-      {[
-        { key: "weight", title: t.progress.bodyWeight, series: [{ key: "weight", label: t.progress.bodyMeasurements.weight, color: COLORS[0] }] },
-        { key: "measurements", title: t.progress.bodyMeasurementsTitle, series: measurementConfig },
-      ].map(({ key, title, series }) => (
+      {charts.map(({ key, hasData, title, series }) => (
         <Card key={key}>
           <CardHeader>
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className={key === "weight" ? "h-48 outline-none" : "h-64 outline-none"}>
-              {hasChartData ? (
+              {hasData ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData} margin={{ top: 5, right: 0, left: -15, bottom: 5 }}>
                     <CartesianGrid {...chartGridProps} />
@@ -118,7 +120,7 @@ export function BodyTab() {
                 </div>
               )}
             </div>
-            {hasChartData && key === "measurements" && (
+            {hasData && key === "measurements" && (
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
                 {series.map((cfg) => (
                   <div key={cfg.key} className="flex items-center gap-1.5">

@@ -16,25 +16,13 @@ const STORAGE_KEY = "fitflow.install-prompt.dismissed";
 const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 function isIOS(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent;
-  if (/iPad|iPhone|iPod/.test(ua)) return true;
-  if (
-    /Mac/.test(ua) &&
-    typeof navigator.maxTouchPoints === "number" &&
-    navigator.maxTouchPoints > 1
-  ) {
-    return true;
-  }
-  return false;
+  const { userAgent, maxTouchPoints } = navigator;
+  return /iPad|iPhone|iPod/.test(userAgent) || (/Mac/.test(userAgent) && maxTouchPoints > 1);
 }
 
 function isStandalone(): boolean {
-  if (typeof window === "undefined") return false;
-  if (window.matchMedia?.("(display-mode: standalone)").matches) return true;
-  // @ts-expect-error - non-standard iOS Safari
-  if (window.navigator.standalone === true) return true;
-  return false;
+  const iosNavigator = navigator as Navigator & { standalone?: boolean };
+  return window.matchMedia?.("(display-mode: standalone)").matches || iosNavigator.standalone === true;
 }
 
 export function InstallPrompt() {
@@ -49,23 +37,21 @@ function wasDismissed(): boolean {
 
 function InstallPromptClient() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
-  const [visible, setVisible] = useState(() => isIOS() && !isStandalone() && !wasDismissed());
+  const [dismissed, setDismissed] = useState(wasDismissed);
   const [installed, setInstalled] = useState(isStandalone);
   const ios = isIOS();
   const t = useT();
 
   useEffect(() => {
-    if (installed || ios || wasDismissed()) return;
+    if (installed || ios || dismissed) return;
 
     const onBeforeInstall = (e: Event) => {
       e.preventDefault();
       setDeferred(e as BeforeInstallPromptEvent);
-      setVisible(true);
     };
 
     const onInstalled = () => {
       setInstalled(true);
-      setVisible(false);
       setDeferred(null);
       window.localStorage.removeItem(STORAGE_KEY);
     };
@@ -77,55 +63,25 @@ function InstallPromptClient() {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
       window.removeEventListener("appinstalled", onInstalled);
     };
-  }, [installed, ios]);
+  }, [installed, ios, dismissed]);
 
-  if (installed || !visible) return null;
+  if (installed || dismissed || (!ios && !deferred)) return null;
 
   const dismiss = () => {
-    setVisible(false);
+    setDismissed(true);
+    setDeferred(null);
     window.localStorage.setItem(STORAGE_KEY, String(Date.now()));
   };
 
-  if (ios) {
-    return (
-      <div
-        role="dialog"
-        aria-label={t.pwa.installIosAria}
-        className={cn(
-          "fixed bottom-20 left-1/2 z-40 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm",
-          "rounded-xl border bg-background/95 backdrop-blur shadow-lg p-3 flex items-start gap-3"
-        )}
-      >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Share className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold">{t.pwa.installTitle}</p>
-          <p className="text-xs text-muted-foreground leading-snug">
-            {t.pwa.shareHintPrefix} <Share className="inline h-3 w-3 -mt-0.5" />{" "}
-            {t.pwa.shareHintSuffix}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label={t.pwa.dismiss}
-          className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-foreground"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-    );
-  }
+  const Icon = ios ? Share : Download;
 
   const handleInstall = async () => {
     if (!deferred) return;
+    setDeferred(null);
     try {
       await deferred.prompt();
       const choice = await deferred.userChoice;
       if (choice.outcome === "accepted") {
-        setVisible(false);
-        setDeferred(null);
         window.localStorage.removeItem(STORAGE_KEY);
       }
     } catch (err) {
@@ -136,22 +92,29 @@ function InstallPromptClient() {
   return (
     <div
       role="dialog"
-      aria-label={t.pwa.installAria}
+      aria-label={ios ? t.pwa.installIosAria : t.pwa.installAria}
       className={cn(
         "fixed bottom-20 left-1/2 z-40 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm",
-        "rounded-xl border bg-background/95 backdrop-blur shadow-lg p-3 flex items-center gap-3"
+        "rounded-xl border bg-background/95 backdrop-blur shadow-lg p-3 flex gap-3",
+        ios ? "items-start" : "items-center"
       )}
     >
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-        <Download className="h-5 w-5" />
+        <Icon className="h-5 w-5" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold">{t.pwa.installTitle}</p>
-        <p className="text-xs text-muted-foreground">{t.pwa.installSubtitle}</p>
+        <p className={cn("text-xs text-muted-foreground", ios && "leading-snug")}>
+          {ios ? (
+            <>{t.pwa.shareHintPrefix} <Share className="inline h-3 w-3 -mt-0.5" /> {t.pwa.shareHintSuffix}</>
+          ) : t.pwa.installSubtitle}
+        </p>
       </div>
-      <Button size="sm" onClick={handleInstall} className="shrink-0">
-        {t.pwa.installCta}
-      </Button>
+      {!ios && (
+        <Button size="sm" onClick={handleInstall} className="shrink-0">
+          {t.pwa.installCta}
+        </Button>
+      )}
       <button
         type="button"
         onClick={dismiss}

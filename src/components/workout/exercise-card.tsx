@@ -47,7 +47,7 @@ interface ExerciseCardProps {
   onUpdateSet: (
     index: number,
     data: Partial<LoggedSet>,
-    options?: { propagateWeight?: boolean; baselineWeight?: number }
+    options?: { propagateWeight?: boolean }
   ) => void;
   onCompleteSet: (index: number) => void;
   onRemove: () => void;

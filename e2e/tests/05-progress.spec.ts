@@ -1,22 +1,16 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
+import { test, expect } from "../fixtures/base";
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
   await page.goto("/progress");
 });
 
-test("progress page shows the three tab controls", async ({ page }) => {
+test("progress page opens the general tab and shows the muscle load heatmap", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /^Progress$/i })).toBeVisible();
 
   await expect(page.getByRole("tab", { name: /^General$/i })).toBeVisible();
   await expect(page.getByRole("tab", { name: /^Exercises$/i })).toBeVisible();
   await expect(page.getByRole("tab", { name: /^Body$/i })).toBeVisible();
-});
-
-test("general tab shows the muscle load heatmap", async ({ page }) => {
-  // Default tab is general. The Muscle Load heatmap card is always visible
-  // (it falls back to a neutral body silhouette when no data is logged).
+  await expect(page.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText(/Muscle Load/i)).toBeVisible();
 });
 

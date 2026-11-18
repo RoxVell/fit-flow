@@ -19,7 +19,7 @@ describe("WebMCP input validation", () => {
     { from: "2026-03-01", to: "2026-02-01" },
     { from: "2026-01-01T00:00:00Z", to: "2026-02-01" },
     { from: "2020-01-01", to: "2026-01-01" },
-    { limit: 101 }, { limit: "50" }, { offset: -1 }, { offset: 1.5 }, { query: "sql" },
+    { limit: null }, { offset: null }, { limit: 101 }, { limit: "50" }, { offset: -1 }, { offset: 1.5 }, { query: "sql" },
   ])("rejects invalid arguments %j", (input) => {
     expect(() => parseToolInput(input, true)).toThrow();
   });

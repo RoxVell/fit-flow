@@ -5,33 +5,28 @@ import { m } from "framer-motion";
 import { SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui/circular-progress";
+import { useWorkoutStore } from "@/lib/store/workout-store";
 import { useT } from "@/lib/i18n/use-t";
 import { formatRestDuration } from "@/lib/workout/rest-duration";
 
-interface RestTimerProps {
-  endTime: number | null;
-  duration: number;
-  isRunning: boolean;
-  onStop: () => void;
-}
-
-export function RestTimer({ endTime, duration, isRunning, onStop }: RestTimerProps) {
+export function RestTimer() {
+  const { restTimer: { endTime, duration }, stopRestTimer, tickRestTimer } = useWorkoutStore();
   const t = useT();
   const subscribe = useCallback((notify: () => void) => {
-    if (!isRunning || endTime === null) return () => {};
+    if (endTime === null) return () => {};
     const interval = setInterval(() => {
       notify();
-      if (endTime - Date.now() < 1000) clearInterval(interval);
+      if (Date.now() >= endTime) tickRestTimer();
     }, 100);
     return () => clearInterval(interval);
-  }, [endTime, isRunning]);
+  }, [endTime, tickRestTimer]);
   const remaining = useSyncExternalStore(
     subscribe,
-    () => isRunning && endTime !== null ? Math.max(0, Math.floor((endTime - Date.now()) / 1000)) : 0,
+    () => endTime !== null ? Math.max(0, Math.ceil((endTime - Date.now()) / 1000)) : 0,
     () => 0
   );
 
-  if (!isRunning || remaining <= 0) return null;
+  if (remaining <= 0) return null;
 
   const progress = duration > 0 ? remaining / duration : 0;
 
@@ -53,7 +48,7 @@ export function RestTimer({ endTime, duration, isRunning, onStop }: RestTimerPro
           {t.workout.restTimer}
         </span>
         <div className="flex-1" />
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onStop}>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={stopRestTimer} aria-label={t.workout.stopRestTimer}>
           <SkipForward className="h-4 w-4" />
         </Button>
       </div>

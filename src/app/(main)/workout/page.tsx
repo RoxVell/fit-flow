@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useMemo, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Play, Dumbbell, ChevronDown, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,10 @@ import {
 
 type Tab = "plan" | "history";
 
+function activeWorkoutUrl(sessionId: string | null) {
+  return sessionId ? `/workout/active?session=${encodeURIComponent(sessionId)}` : "/workout/active";
+}
+
 function WorkoutPlanSkeleton() {
   return (
     <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
@@ -44,9 +48,7 @@ function WorkoutPlanPageInner() {
 
   useEffect(() => {
     if (draft === undefined) return;
-    if (draft?.activeWorkoutId && draft.sessionId) {
-      router.replace(`/workout/active?session=${draft.sessionId}`);
-    }
+    if (draft?.activeWorkoutId) router.replace(activeWorkoutUrl(draft.sessionId));
   }, [draft, router]);
 
   const tabs = [
@@ -89,20 +91,9 @@ function WorkoutPlanTab() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
 
-  const recommendedId = useMemo(() => {
-    if (!program) return null;
-    return (
-      program.sessions.find((s) => s.dayOfWeek === today)?.id ||
-      program.sessions[0]?.id
-    );
-  }, [program, today]);
-
-  const effectiveId = selectedId ?? recommendedId;
-
-  const selectedSession = useMemo(() => {
-    if (!program || !effectiveId) return null;
-    return program.sessions.find((s) => s.id === effectiveId) || null;
-  }, [program, effectiveId]);
+  const todaySession = program?.sessions.find((s) => s.dayOfWeek === today);
+  const selectedSession = program?.sessions.find((s) => s.id === selectedId)
+    ?? todaySession ?? program?.sessions[0];
 
   if (program === undefined) {
     return (
@@ -150,7 +141,7 @@ function WorkoutPlanTab() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {selectedSession.id === recommendedId && (
+            {selectedSession.id === todaySession?.id && (
               <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
                 {t.workout.today}
               </span>
@@ -194,8 +185,8 @@ function WorkoutPlanTab() {
           if (!selectedSession || starting) return;
           setStarting(true);
           void startWorkoutDraft(selectedSession)
-            .then(() => {
-              router.push(`/workout/active?session=${selectedSession.id}`);
+            .then((draft) => {
+              router.push(activeWorkoutUrl(draft.sessionId));
             })
             .catch((err) => {
               console.warn("[startWorkout] failed", err);
@@ -216,7 +207,7 @@ function WorkoutPlanTab() {
           </DialogHeader>
           <div className="space-y-1">
             {program.sessions.map((s) => {
-              const isSelected = s.id === effectiveId;
+              const isSelected = s.id === selectedSession?.id;
               return (
                 <button
                   key={s.id}
@@ -247,7 +238,7 @@ function WorkoutPlanTab() {
                       {t.workout.exerciseCount(s.exercises.length)}
                     </p>
                   </div>
-                  {s.id === recommendedId && (
+                  {s.id === todaySession?.id && (
                     <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
                       {t.workout.today}
                     </span>

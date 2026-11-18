@@ -32,6 +32,9 @@ import {
 import { SectionHeading } from "./section-heading";
 import { CountUp } from "./count-up";
 import { Reveal } from "./reveal";
+import { useDemoInterval } from "./use-demo-interval";
+import { formatRestDuration } from "@/lib/workout/rest-duration";
+import { CircularProgress } from "@/components/ui/circular-progress";
 import { cn } from "@/lib/utils";
 
 /**
@@ -157,11 +160,7 @@ function OfflineTile() {
   const [touched, setTouched] = useState(false);
 
   // Auto-toggle until the visitor takes the wheel.
-  useEffect(() => {
-    if (!inView || touched || reduced) return;
-    const id = window.setInterval(() => setOnline((v) => !v), 3800);
-    return () => window.clearInterval(id);
-  }, [inView, touched, reduced]);
+  useDemoInterval(inView && !touched && !reduced, 3800, () => setOnline((v) => !v));
 
   return (
     <div ref={ref} className="relative flex h-full flex-col">
@@ -508,40 +507,21 @@ function RestTile() {
   const reduced = useReducedMotion();
   const [left, setLeft] = useState(REST_TOTAL);
 
-  useEffect(() => {
-    if (!inView || reduced) return;
-    const id = window.setInterval(() => setLeft((s) => (s <= 1 ? REST_TOTAL : s - 1)), 110);
-    return () => window.clearInterval(id);
-  }, [inView, reduced]);
+  useDemoInterval(inView && !reduced, 110, () => setLeft((s) => (s <= 1 ? REST_TOTAL : s - 1)));
 
-  const size = 112;
-  const stroke = 8;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const m = Math.floor(left / 60);
-  const s = left % 60;
 
   return (
     <div ref={ref} className="flex h-full flex-col items-center sm:flex-row sm:items-center sm:gap-6">
       <div className="relative shrink-0">
-        <svg width={size} height={size} className="-rotate-90" aria-hidden>
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-muted)" strokeWidth={stroke} />
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            fill="none"
-            stroke="var(--color-primary)"
-            strokeWidth={stroke}
-            strokeLinecap="round"
-            strokeDasharray={c}
-            strokeDashoffset={c * (1 - left / REST_TOTAL)}
-            className="transition-[stroke-dashoffset] duration-100 ease-linear"
-          />
-        </svg>
+        <CircularProgress
+          size={112}
+          strokeWidth={8}
+          progress={left / REST_TOTAL}
+          arcClassName="transition-[stroke-dashoffset] duration-100 ease-linear"
+        />
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="font-mono text-2xl font-bold tabular-nums text-foreground">
-            {m}:{String(s).padStart(2, "0")}
+            {formatRestDuration(left)}
           </span>
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground">rest</span>
         </div>
@@ -623,11 +603,7 @@ function ProgramTile() {
   const reduced = useReducedMotion();
 
   // Walk the week until the visitor picks a day themselves.
-  useEffect(() => {
-    if (!inView || touched || reduced) return;
-    const id = window.setInterval(() => setDay((d) => (d + 1) % WEEK.length), 2400);
-    return () => window.clearInterval(id);
-  }, [inView, touched, reduced]);
+  useDemoInterval(inView && !touched && !reduced, 2400, () => setDay((d) => (d + 1) % WEEK.length));
 
   const current = WEEK[day];
   const items = plans[day];
@@ -926,11 +902,7 @@ function CsvTile() {
   // 0..2 highlight rows, 3 = exported, then loop.
   const [phase, setPhase] = useState(reduced ? 3 : 0);
 
-  useEffect(() => {
-    if (!inView || reduced) return;
-    const id = window.setInterval(() => setPhase((p) => (p + 1) % 5), 900);
-    return () => window.clearInterval(id);
-  }, [inView, reduced]);
+  useDemoInterval(inView && !reduced, 900, () => setPhase((p) => (p + 1) % 5));
 
   const done = phase >= 3;
 

@@ -1,4 +1,4 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
+import { test, expect } from "../fixtures/base";
 
 /**
  * The exercise catalog: 800+ static JSON entries rendered through a
@@ -9,26 +9,9 @@ import { test, expect, waitForSeed } from "../fixtures/base";
  */
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
   await page.goto("/programs/library");
   await page.getByRole("tab", { name: /^Exercises$/i }).click();
   await expect(page.getByPlaceholder(/search exercises/i)).toBeVisible();
-});
-
-test("the catalog loads and reports how many exercises it holds", async ({ page }) => {
-  const count = page.getByText(/^\d+ exercises$/);
-  await expect(count).toBeVisible({ timeout: 10_000 });
-
-  const label = (await count.textContent()) ?? "";
-  expect(Number.parseInt(label, 10)).toBeGreaterThan(100);
-});
-
-test("search narrows the list to matching exercises", async ({ page }) => {
-  await page.getByPlaceholder(/search exercises/i).fill("Anderson Squat");
-
-  await expect(page.getByText(/^1 exercises$/)).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByRole("button", { name: "Anderson Squat" })).toBeVisible();
 });
 
 test("a search with no matches shows the empty state", async ({ page }) => {
@@ -40,6 +23,7 @@ test("a search with no matches shows the empty state", async ({ page }) => {
 test("body-part chips filter the catalog and can be cleared", async ({ page }) => {
   const count = page.getByText(/^\d+ exercises$/);
   await expect(count).toBeVisible({ timeout: 10_000 });
+  await expect(count).toHaveText(/^[1-9]\d{2,} exercises$/);
   const total = Number.parseInt((await count.textContent()) ?? "", 10);
 
   await page.getByText("Biceps", { exact: true }).click();
@@ -56,8 +40,9 @@ test("body-part chips filter the catalog and can be cleared", async ({ page }) =
     .toBe(total);
 });
 
-test("tapping an exercise opens its detail sheet", async ({ page }) => {
+test("search narrows the list and opens the matching exercise detail", async ({ page }) => {
   await page.getByPlaceholder(/search exercises/i).fill("Anderson Squat");
+  await expect(page.getByText(/^1 exercises$/)).toBeVisible();
   await page.getByRole("button", { name: "Anderson Squat" }).click();
 
   const dialog = page.getByRole("dialog");

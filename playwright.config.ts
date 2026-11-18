@@ -1,4 +1,5 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig } from "@playwright/test";
+import { sharedConfig } from "./e2e/playwright.shared";
 
 /**
  * Playwright configuration for FitFlow e2e tests.
@@ -32,34 +33,14 @@ const PORT = Number(process.env.PORT ?? 3100);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const CHANNEL = process.env.PW_CHANNEL || undefined;
 
-export default defineConfig({
+export default defineConfig(sharedConfig, {
   testDir: "./e2e/tests",
   fullyParallel: true,
-  forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: process.env.CI ? "github" : "list",
 
-  use: {
-    baseURL: BASE_URL,
-    // Pin light mode so next-themes "system" default is deterministic.
-    colorScheme: "light",
-    trace: "retain-on-failure",
-    video: "retain-on-failure",
-    screenshot: "only-on-failure",
-    actionTimeout: 10_000,
-    navigationTimeout: 30_000,
-  },
-
-  projects: [
-    {
-      name: CHANNEL ?? "chromium",
-      use: {
-        ...devices["Pixel 5"],
-        channel: CHANNEL,
-      },
-    },
-  ],
+  use: { baseURL: BASE_URL },
+  projects: [{ name: CHANNEL ?? "chromium" }],
 
   webServer: {
     command: `next dev --port ${PORT} --hostname 127.0.0.1`,

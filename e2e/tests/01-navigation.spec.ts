@@ -1,21 +1,14 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
-
-test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
-});
+import { test, expect } from "../fixtures/base";
 
 test("root URL redirects to dashboard", async ({ page }) => {
-  // This test overrides the beforeEach nav: it has to hit `/` to actually
-  // exercise the redirect, otherwise it would always pass against the
-  // already-loaded `/dashboard` route.
   await page.goto("/");
   await expect(page).toHaveURL(/\/dashboard$/);
-  // The dashboard greeting renders the user's name ("Anton") on first paint.
   await expect(page.getByText(/Anton/).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /start workout/i })).toHaveCount(0);
 });
 
 test("bottom nav links route to every primary screen", async ({ page }) => {
+  await page.goto("/dashboard");
   const nav = page.getByRole("navigation");
   await expect(nav).toBeVisible();
 
@@ -39,6 +32,26 @@ test("bottom nav links route to every primary screen", async ({ page }) => {
   await expect(page).toHaveURL(/\/dashboard$/);
 });
 
-test("dashboard no longer shows the start workout button", async ({ page }) => {
-  await expect(page.getByRole("link", { name: /start workout/i })).toHaveCount(0);
+test("dismissing the system install prompt hides its consumed offer", async ({ page }) => {
+  await page.goto("/dashboard");
+  const dialog = page.getByRole("dialog", { name: "Install FitFlow" });
+  const install = dialog.getByRole("button", { name: "Install", exact: true });
+  const offer = () => page.evaluate(() => {
+    const event = Object.assign(new Event("beforeinstallprompt", { cancelable: true }), {
+      prompt: async () => { window.dispatchEvent(new Event("install-prompt-opened")); },
+      userChoice: Promise.resolve({ outcome: "dismissed", platform: "web" }),
+    });
+    return !window.dispatchEvent(event);
+  });
+  // The listener is installed after hydration.
+  await expect.poll(offer).toBe(true);
+  await Promise.all([
+    page.evaluate(() => new Promise<void>((resolve) => {
+      window.addEventListener("install-prompt-opened", () => resolve(), { once: true });
+    })),
+    install.click(),
+  ]);
+  await expect(install).toBeHidden();
+  expect(await offer()).toBe(true);
+  await expect(install).toBeVisible();
 });

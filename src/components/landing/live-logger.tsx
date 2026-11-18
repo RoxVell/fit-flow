@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { AnimatePresence, motion, useInView, useReducedMotion } from "framer-motion";
 import { Check, Pause, Trophy } from "lucide-react";
+import { useDemoInterval } from "./use-demo-interval";
+import { CircularProgress } from "@/components/ui/circular-progress";
 import { cn } from "@/lib/utils";
 
 /**
@@ -53,21 +55,13 @@ export function LiveLogger({ className }: { className?: string }) {
   );
   const [elapsed, setElapsed] = useState(BASE_ELAPSED);
 
-  useEffect(() => {
-    if (!inView || reduced) return;
-    const id = window.setInterval(() => setSim(tick), 100);
-    return () => window.clearInterval(id);
-  }, [inView, reduced]);
+  useDemoInterval(inView && !reduced, 100, () => setSim(tick));
 
-  useEffect(() => {
-    if (!inView || reduced) return;
-    const id = window.setInterval(() => setElapsed((e) => e + 1), 1000);
-    return () => window.clearInterval(id);
-  }, [inView, reduced]);
+  useDemoInterval(inView && !reduced, 1000, () => setElapsed((e) => e + 1));
 
   const toggle = (index: number) => {
     setSim((s) => {
-      const done = s.done === index + 1 ? index : index + 1;
+      const done = s.done >= index + 1 ? index : index + 1;
       return { done, rest: done > s.done ? REST_SECONDS : 0, pr: false, hold: 28 };
     });
   };
@@ -200,7 +194,7 @@ export function LiveLogger({ className }: { className?: string }) {
               transition={{ type: "spring", stiffness: 380, damping: 30 }}
               className="flex items-center gap-3 rounded-2xl bg-card px-3 py-2 shadow-lg shadow-foreground/10 ring-1 ring-foreground/10"
             >
-              <Ring progress={sim.rest / REST_SECONDS} />
+              <CircularProgress size={30} progress={sim.rest / REST_SECONDS} arcClassName="transition-[stroke-dashoffset] duration-150" />
               <div className="flex-1">
                 <p className="text-[10px] text-muted-foreground">Rest</p>
                 <p className="font-mono text-sm font-bold tabular-nums text-foreground">{fmt(sim.rest)}</p>
@@ -261,28 +255,5 @@ function Pop({ text }: { text: string }) {
     >
       {text}
     </motion.p>
-  );
-}
-
-function Ring({ progress, size = 30 }: { progress: number; size?: number }) {
-  const stroke = 3;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  return (
-    <svg width={size} height={size} className="-rotate-90" aria-hidden>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-muted)" strokeWidth={stroke} />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        fill="none"
-        stroke="var(--color-primary)"
-        strokeWidth={stroke}
-        strokeDasharray={c}
-        strokeDashoffset={c * (1 - progress)}
-        strokeLinecap="round"
-        className="transition-[stroke-dashoffset] duration-150"
-      />
-    </svg>
   );
 }

@@ -16,7 +16,7 @@ export default function CardioPage() {
   return (
     <div className="space-y-4 px-4 pb-24 pt-[calc(env(safe-area-inset-top)+1rem)]">
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+        <Button variant="ghost" size="icon" aria-label={t.programs.back} onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <h1 className="text-2xl font-bold">{t.cardio.title}</h1>
@@ -36,7 +36,7 @@ export default function CardioPage() {
                 {s.distance} {t.cardio.kmUnit} · {formatDuration(s.duration / 60)}
               </p>
             </div>
-            {s.avgHeartRate && (
+            {s.avgHeartRate != null && (
               <span className="text-sm text-muted-foreground">
                 {s.avgHeartRate} {t.cardio.bpmUnit}
               </span>

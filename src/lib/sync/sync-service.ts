@@ -17,7 +17,6 @@ type SyncState = {
 const initialState: SyncState = { syncing: false, config: null, error: null };
 let state = initialState;
 let initPromise: Promise<void> | null = null;
-let configPromise: Promise<SyncConfig> | null = null;
 const listeners = new Set<() => void>();
 const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
 
@@ -28,16 +27,12 @@ function updateState(patch: Partial<SyncState>) {
 
 async function loadConfig(): Promise<SyncConfig> {
   if (state.config) return state.config;
-  if (!configPromise) {
-    configPromise = fetch("/api/sync", { cache: "no-store" }).then(async (response) => {
-      if (!response.ok) throw new Error("Sync configuration unavailable");
-      const config = await response.json() as SyncConfig;
-      if (typeof config.enabled !== "boolean") throw new Error("Invalid sync configuration");
-      updateState({ config });
-      return config;
-    }).finally(() => { configPromise = null; });
-  }
-  return configPromise;
+  const response = await fetch("/api/sync", { cache: "no-store" });
+  if (!response.ok) throw new Error("Sync configuration unavailable");
+  const config = await response.json() as SyncConfig;
+  if (typeof config?.enabled !== "boolean") throw new Error("Invalid sync configuration");
+  updateState({ config });
+  return config;
 }
 
 export async function sync(): Promise<SyncResponse | null> {
@@ -48,13 +43,24 @@ export async function sync(): Promise<SyncResponse | null> {
     if (!config.enabled) return null;
     await initLocalDb();
     const headers = { "Content-Type": "application/json" };
+    let batchSize = 100;
     let latest: SyncResponse | null = null;
     for (;;) {
-      const pending = (await getPending()).slice(0, 100);
+      const pending = await getPending(batchSize);
       if (latest && pending.length === 0) return latest;
       const body: SyncRequest = { lastPullAt: null, changes: pending.map(({ id, entityType, entityId, operation, payload, revision }) =>
         ({ id, entityType, entityId, operation, payload, revision })) };
       const response = await fetch("/api/sync", { method: "POST", headers, body: JSON.stringify(body) });
+      if (response.status === 413 && pending.length > 0) {
+        if (pending.length === 1) {
+          await markFailed([pending[0].id]);
+          updateState({ error: "rejected" });
+        } else {
+          batchSize = Math.ceil(pending.length / 2);
+        }
+        if (!navigator.onLine) return latest;
+        continue;
+      }
       if (!response.ok) throw new Error(`Sync failed: ${response.status}`);
       const data = await response.json() as SyncResponse;
       const acknowledged = [...data.accepted, ...(data.superseded ?? [])];
@@ -66,7 +72,7 @@ export async function sync(): Promise<SyncResponse | null> {
       });
       latest = data;
       if (data.rejected.length) { updateState({ error: "rejected" }); return latest; }
-      if (pending.length < 100 || !navigator.onLine || !pending.some((change) => acknowledged.includes(change.id))) return latest;
+      if (pending.length < batchSize || !navigator.onLine || !pending.some((change) => acknowledged.includes(change.id))) return latest;
     }
   } catch (error) {
     console.warn("[sync]", error);

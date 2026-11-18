@@ -1,4 +1,4 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
+import { test, expect } from "../fixtures/base";
 
 /**
  * Settings + locale persistence:
@@ -8,60 +8,16 @@ import { test, expect, waitForSeed } from "../fixtures/base";
  */
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
   await page.goto("/settings");
 });
 
-/**
- * Returns the row that contains the given visible label text. The settings
- * page renders cards with `divide-y`; each row is `flex justify-between`
- * with a label span on the left and a toggle on the right.
- */
-function settingsRow(page: import("@playwright/test").Page, label: RegExp) {
-  return page.locator("div.divide-y > div").filter({ hasText: label });
-}
-
-/**
- * The theme toggle renders three icon-only buttons in a fixed order
- * (system / dark / light) — see src/components/settings/theme-toggle.tsx.
- */
-const THEME_BUTTON_INDEX = { system: 0, dark: 1, light: 2 } as const;
-
-test("clicking the dark theme button applies the dark class to <html>", async ({
-  page,
-}) => {
-  // Default is "system" — no `dark` class is forced on <html>.
+test("switching from the light system theme to dark persists across reload", async ({ page }) => {
   const html = page.locator("html");
-  const systemClass = await html.getAttribute("class");
-  expect(systemClass ?? "").not.toContain("dark");
-
-  // Click the dark button (2nd in the theme toggle).
-  await settingsRow(page, /^Theme$/i)
-    .locator("button")
-    .nth(THEME_BUTTON_INDEX.dark)
-    .click();
-
-  // next-themes applies attribute="class" — explicit "dark" choice adds the
-  // class regardless of system preference (pinned to light in playwright.config).
-  const htmlClass = (await html.getAttribute("class")) ?? "";
-  expect(htmlClass.split(/\s+/)).toContain("dark");
-});
-
-test("theme choice persists across reload", async ({ page }) => {
-  // Click dark.
-  await settingsRow(page, /^Theme$/i)
-    .locator("button")
-    .nth(THEME_BUTTON_INDEX.dark)
-    .click();
-
-  // next-themes persists to localStorage; the class should still be on
-  // <html> after a hard reload.
+  await expect(html).not.toHaveClass(/\bdark\b/);
+  await page.getByRole("button", { name: "Dark", exact: true }).click();
+  await expect(html).toHaveClass(/\bdark\b/);
   await page.reload();
-  const htmlClass = (await page.locator("html").getAttribute("class")) ?? "";
-  // Even on a system that's "light", next-themes adds the `dark` class
-  // when the user explicitly picked "dark".
-  expect(htmlClass.split(/\s+/)).toContain("dark");
+  await expect(html).toHaveClass(/\bdark\b/);
 });
 
 test("locale persists across SPA navigation, not just reload", async ({ page }) => {

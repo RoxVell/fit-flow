@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProgramForm } from "@/components/programs/program-form";
 import { useProgram } from "@/lib/hooks/use-data";
@@ -9,10 +10,13 @@ import { useT } from "@/lib/i18n/use-t";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function CreateProgramInner() {
+  const editId = useSearchParams().get("edit");
+  return <ProgramEditor key={editId ?? "create"} editId={editId} />;
+}
+
+function ProgramEditor({ editId }: { editId: string | null }) {
   const router = useRouter();
   const t = useT();
-  const searchParams = useSearchParams();
-  const editId = searchParams.get("edit");
   const existingProgram = useProgram(editId || "");
   if (editId && existingProgram === undefined) {
     return (
@@ -22,31 +26,23 @@ function CreateProgramInner() {
     );
   }
 
+  if (editId && existingProgram === null) {
+    return (
+      <div className="space-y-3 p-4 text-sm">
+        <p>{t.programs.programUnavailable}</p>
+        <Link className="text-primary" href="/programs/library">{t.programs.yourPrograms}</Link>
+      </div>
+    );
+  }
+
   return (
     <ProgramForm
-      key={editId || "create"}
-      initialData={
-        existingProgram
-          ? {
-              name: existingProgram.name,
-              description: existingProgram.description,
-              restDurationSeconds: existingProgram.restDurationSeconds,
-              sessions: existingProgram.sessions.map((s) => ({
-                name: s.name,
-                dayOfWeek: s.dayOfWeek,
-                exercises: s.exercises.map((e) => ({
-                  exerciseId: e.exerciseId,
-                  targetSets: e.targetSets,
-                  targetReps: e.targetReps,
-                })),
-              })),
-            }
-          : undefined
-      }
+      initialData={existingProgram ?? undefined}
       onBack={() => router.push("/programs/library")}
       onSave={async (data) => {
         if (editId) {
-          await updateProgram(editId, data);
+          const updated = await updateProgram(editId, data);
+          if (!updated) throw new Error("Program no longer available");
         } else {
           await createProgram(data);
         }

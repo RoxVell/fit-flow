@@ -11,58 +11,19 @@ function snapshot(
   return {
     revision: 1,
     updatedAt: partial.updatedAt ?? partial.date,
-    weight: partial.weight,
-    chest: partial.chest,
-    waist: partial.waist,
-    leftArm: partial.leftArm,
-    rightArm: partial.rightArm,
-    leftThigh: partial.leftThigh,
-    rightThigh: partial.rightThigh,
-    leftCalf: partial.leftCalf,
-    rightCalf: partial.rightCalf,
     ...partial,
   };
 }
 
 describe("buildDailyBodyViews", () => {
-  it("merges same-day snapshots with last non-null per field", () => {
-    const views = buildDailyBodyViews([
-      snapshot({
-        id: "1",
-        date: "2025-06-01T08:00:00.000Z",
-        updatedAt: "2025-06-01T08:00:00.000Z",
-        weight: 80,
-      }),
-      snapshot({
-        id: "2",
-        date: "2025-06-01T20:00:00.000Z",
-        updatedAt: "2025-06-01T20:00:00.000Z",
-        waist: 85,
-      }),
+  it("uses the latest filled value for each metric and preserves the local calendar day", () => {
+    const date = "2025-06-01";
+    const newer = snapshot({ id: "2", date, updatedAt: date + "T20:00:00Z", weight: 81, rightArm: 33 });
+    const older = snapshot({ id: "1", date, updatedAt: date + "T08:00:00Z", weight: 80, leftArm: 32, waist: 85 });
+
+    expect(buildDailyBodyViews([newer, older])).toEqual([
+      { date, weight: 81, waist: 85, leftArm: 32, rightArm: 33 },
     ]);
-
-    expect(views).toHaveLength(1);
-    expect(views[0]).toMatchObject({ weight: 80, waist: 85 });
-  });
-
-  it("merges left and right limb fields independently", () => {
-    const views = buildDailyBodyViews([
-      snapshot({
-        id: "1",
-        date: "2025-06-01T08:00:00.000Z",
-        updatedAt: "2025-06-01T08:00:00.000Z",
-        leftArm: 32,
-      }),
-      snapshot({
-        id: "2",
-        date: "2025-06-01T20:00:00.000Z",
-        updatedAt: "2025-06-01T20:00:00.000Z",
-        rightArm: 33,
-      }),
-    ]);
-
-    expect(views).toHaveLength(1);
-    expect(views[0]).toMatchObject({ leftArm: 32, rightArm: 33 });
   });
 });
 

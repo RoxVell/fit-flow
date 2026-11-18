@@ -16,7 +16,6 @@ import { decideSetPrefill, shouldClearOnFocus } from "@/lib/workout/set-prefill"
 
 interface SetUpdateOptions {
   propagateWeight?: boolean;
-  baselineWeight?: number;
 }
 
 interface SetRowProps {
@@ -35,7 +34,6 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
   const hasPrefilled = useRef(false);
   const [weightDraft, setWeightDraft] = useState<string | null>(null);
   const weightText = weightDraft ?? formatDecimalForInput(set.weight);
-  const weightBeforeFocus = useRef(set.weight);
 
   useEffect(() => {
     const decision = decideSetPrefill({
@@ -87,7 +85,6 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
             aria-label={t.workout.setWeightLabel(exerciseName, setNumber)}
             value={weightText}
             onFocus={() => {
-              weightBeforeFocus.current = set.weight;
               if (set.completed) {
                 setWeightDraft(formatDecimalForInput(set.weight));
                 return;
@@ -106,7 +103,7 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
               const parsed = parseLocalizedDecimal(weightText);
               onUpdate(
                 { weight: parsed },
-                { propagateWeight: true, baselineWeight: weightBeforeFocus.current }
+                { propagateWeight: true }
               );
               setWeightDraft(null);
             }}
@@ -128,6 +125,7 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
           <Input
             type="number"
             inputMode="numeric"
+            min="0"
             aria-label={t.workout.setRepsLabel(exerciseName, setNumber)}
             value={set.reps || ""}
             onFocus={() => {
@@ -137,7 +135,7 @@ export function SetRow({ set, setNumber, exerciseName, previousSet, onUpdate, on
             }}
             onChange={(e) => {
               hasPrefilled.current = true;
-              onUpdate({ reps: parseInt(e.target.value) || 0 });
+              onUpdate({ reps: Math.max(0, parseInt(e.target.value, 10) || 0) });
             }}
             className="h-8 w-10 shrink-0 text-center text-sm tabular-nums px-1"
             placeholder="0"

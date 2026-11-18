@@ -13,7 +13,7 @@ The **Progress** screen (`/progress`) has three tabs: **General**, **Exercises**
 | `components/charts/chart-period-selector.tsx` | Period toggle UI |
 | `components/charts/period-change-indicator.tsx` | Trend + change label |
 
-Default period: **3m**.
+The default chart period is **1m**.
 
 ## Data pipeline (General + body-part charts)
 

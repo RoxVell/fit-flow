@@ -53,10 +53,14 @@ describe("buildPreviousSetsMap", () => {
       "2026-06-14T12:00:00.000Z"
     );
 
+    const recent = makeLogged("bench", [{ weight: 75, reps: 6 }, { weight: 85, reps: 4 }]);
+    recent.sets[0].completed = false;
+    // Even a counted entry after an excluded occurrence of the exercise contributes.
+    deload.exercises.push(recent);
     const map = buildPreviousSetsMap([current], [deload, working]);
     expect(map.get("current")).toEqual([
       { weight: 100, reps: 5 },
-      { weight: 95, reps: 5 },
+      { weight: 85, reps: 4 },
     ]);
   });
 });

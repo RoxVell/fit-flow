@@ -1,30 +1,15 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState } from "react";
 import { ChevronDown, TrendingUp, TrendingDown, Minus, Maximize2, Minimize2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n/use-t";
 import { useFormat } from "@/lib/i18n/use-format";
-
-interface HistorySet {
-  weight: number;
-  reps: number;
-  type: string;
-  setOrder: number;
-  excludeFromStats?: boolean;
-}
-
-interface HistorySession {
-  date: string;
-  bestE1RM: number;
-  excludeFromStats?: boolean;
-  notes?: string;
-  sets: HistorySet[];
-}
+import type { ExerciseDetailedHistorySession } from "@/lib/workout/exercise-stats";
 
 interface HistoryAccordionProps {
-  sessions: HistorySession[];
+  sessions: ExerciseDetailedHistorySession[];
 }
 
 export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
@@ -32,33 +17,22 @@ export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
   const { formatHistoryDate } = useFormat();
   const [openSet, setOpenSet] = useState<Set<number>>(new Set());
 
-  const setTypeLabel = useMemo(
-    () => ({
-      working: "",
-      warmup: t.progress.warmupSet,
-      dropset: t.progress.dropsetSet,
-    }),
-    [t]
-  );
+  const setTypeLabel: Record<string, string> = {
+    warmup: t.progress.warmupSet,
+    dropset: t.progress.dropsetSet,
+  };
 
-  const toggle = useCallback((i: number) => {
+  const toggle = (i: number) => {
     setOpenSet((prev) => {
       const next = new Set(prev);
       if (next.has(i)) next.delete(i);
       else next.add(i);
       return next;
     });
-  }, []);
+  };
 
-  const allOpen = sessions.length > 0 && openSet.size === sessions.length;
-
-  const toggleAll = useCallback(() => {
-    if (allOpen) {
-      setOpenSet(new Set());
-    } else {
-      setOpenSet(new Set(sessions.map((_, i) => i)));
-    }
-  }, [allOpen, sessions]);
+  const allOpen = sessions.length > 0 && sessions.every((_, i) => openSet.has(i));
+  const toggleAll = () => setOpenSet(allOpen ? new Set() : new Set(sessions.map((_, i) => i)));
 
   if (sessions.length === 0) {
     return (
@@ -122,6 +96,7 @@ export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
                 <button
                   type="button"
                   onClick={() => toggle(i)}
+                  aria-expanded={isOpen}
                   className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left hover:bg-muted/20 transition-colors"
                 >
                   <div className="flex min-w-0 items-center gap-2">
@@ -188,7 +163,6 @@ export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
                         </p>
                       ) : null}
                       {session.sets
-                        .sort((a, b) => a.setOrder - b.setOrder)
                         .map((s, j) => (
                           <div
                             key={j}
@@ -207,9 +181,9 @@ export function HistoryAccordion({ sessions }: HistoryAccordionProps) {
                             <span className="tabular-nums">
                               {s.weight} {t.dashboard.kg} × {s.reps}
                             </span>
-                            {(s.excludeFromStats || setTypeLabel[s.type as keyof typeof setTypeLabel]) && (
+                            {(s.excludeFromStats || setTypeLabel[s.type]) && (
                               <span className="text-[10px] text-muted-foreground/40 italic">
-                                {s.excludeFromStats ? t.workout.excludedFromStats : setTypeLabel[s.type as keyof typeof setTypeLabel]}
+                                {s.excludeFromStats ? t.workout.excludedFromStats : setTypeLabel[s.type]}
                               </span>
                             )}
                           </div>

@@ -1,11 +1,6 @@
-import { test, expect, waitForSeed } from "../fixtures/base";
+import { test, expect } from "../fixtures/base";
 import { readFile } from "node:fs/promises";
 import { finishQuickWorkout, openWorkoutHistory, expandFirstHistoryRow } from "../fixtures/workout";
-
-test.beforeEach(async ({ page }) => {
-  await page.goto("/dashboard");
-  await waitForSeed(page);
-});
 
 test("workout page shows plan and history tabs", async ({ page }) => {
   await page.goto("/workout");
@@ -27,6 +22,7 @@ test("dashboard shows recent workouts after completing a session", async ({
   await page.goto("/dashboard");
 
   await expect(page.getByText(/^Recent Workouts$/i)).toBeVisible();
+  await expect(page.getByText(/480/).first()).toBeVisible();
   await page
     .getByRole("link", { name: /view all workouts/i })
     .click();
@@ -34,21 +30,12 @@ test("dashboard shows recent workouts after completing a session", async ({
   await expect(page.getByText(/^Workout History$/i)).toBeVisible();
 });
 
-test("history tab lists a completed workout after finishing a session", async ({
-  page,
-}) => {
-  await finishQuickWorkout(page);
-  await openWorkoutHistory(page);
-
-  await expandFirstHistoryRow(page);
-  await expect(page.getByText(/60\s*kg\s*×\s*8/i).first()).toBeVisible();
-});
-
 test("user can edit set values from workout history", async ({ page }) => {
   await finishQuickWorkout(page);
   await openWorkoutHistory(page);
 
   await expandFirstHistoryRow(page);
+  await expect(page.getByText(/60\s*kg\s*×\s*8/i).first()).toBeVisible();
 
   await page.getByRole("button", { name: /^Edit$/i }).click();
 

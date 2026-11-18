@@ -1,20 +1,6 @@
 import { db } from "@/lib/db/dexie";
 import type { LoggedExercise, WorkoutDraft } from "@/lib/db/types";
 
-const DRAFT_ID = "active" as const;
-
-const EMPTY_DRAFT: WorkoutDraft = {
-  id: DRAFT_ID,
-  activeWorkoutId: null,
-  sessionId: null,
-  exercises: [],
-  startedAt: null,
-  updatedAt: new Date().toISOString(),
-};
-
-type DraftPatch = Partial<Omit<WorkoutDraft, "id" | "updatedAt">>;
-type DraftPatcher = DraftPatch | ((current: WorkoutDraft) => DraftPatch);
-
 let draftWriteChain: Promise<unknown> = Promise.resolve();
 
 export function enqueueDraftWrite<T>(fn: () => Promise<T>): Promise<T> {
@@ -23,43 +9,57 @@ export function enqueueDraftWrite<T>(fn: () => Promise<T>): Promise<T> {
   return result;
 }
 
-export async function getDraft(): Promise<WorkoutDraft> {
-  const draft = await db.workoutDrafts.get(DRAFT_ID);
-  return draft ?? EMPTY_DRAFT;
-}
-
-export function saveDraft(patch: DraftPatcher): Promise<WorkoutDraft> {
-  return enqueueDraftWrite(async () => {
-    const current = await getDraft();
-    const resolved = typeof patch === "function" ? patch(current) : patch;
-    const draft: WorkoutDraft = {
-      ...current,
-      ...resolved,
-      id: DRAFT_ID,
-      updatedAt: new Date().toISOString(),
-    };
-    await db.workoutDrafts.put(draft);
-    return draft;
-  });
+function matchingDraft(activeWorkoutId: string | null) {
+  return db.workoutDrafts.where("id").equals("active")
+    .and((draft) => !!activeWorkoutId && draft.activeWorkoutId === activeWorkoutId);
 }
 
 export function updateDraftExercises(
+  activeWorkoutId: string | null,
   updater: (exercises: LoggedExercise[]) => LoggedExercise[]
-): Promise<WorkoutDraft> {
-  return saveDraft((current) => ({ exercises: updater(current.exercises) }));
+) {
+  return enqueueDraftWrite(() => matchingDraft(activeWorkoutId).modify((draft) => {
+    draft.exercises = updater(draft.exercises);
+    draft.updatedAt = new Date().toISOString();
+  }));
 }
 
-export async function clearDraft(): Promise<void> {
-  await enqueueDraftWrite(async () => {
-    await db.workoutDrafts.delete(DRAFT_ID);
-  });
+export function toggleDraftPause(activeWorkoutId: string | null, now: number) {
+  return enqueueDraftWrite(() => matchingDraft(activeWorkoutId).modify((draft) => {
+    if (draft.pausedAt === undefined) {
+      draft.pausedAt = now;
+    } else {
+      draft.pausedSeconds = (draft.pausedSeconds ?? 0) + Math.max(0, now - draft.pausedAt);
+      delete draft.pausedAt;
+    }
+    draft.updatedAt = new Date().toISOString();
+  }));
 }
 
-export async function initDraft(
+export function elapsedWorkoutSeconds(draft: WorkoutDraft | null | undefined, now: number): number {
+  if (!draft?.startedAt) return 0;
+  const started = Math.floor(new Date(draft.startedAt).getTime() / 1000);
+  return Math.max(0, (draft.pausedAt ?? now) - started - (draft.pausedSeconds ?? 0));
+}
+
+export function clearDraft(activeWorkoutId: string | null) {
+  return enqueueDraftWrite(() => matchingDraft(activeWorkoutId).delete());
+}
+
+export function initDraft(
   sessionId: string,
   activeWorkoutId: string,
   exercises: LoggedExercise[],
   startedAt: string
 ): Promise<WorkoutDraft> {
-  return saveDraft({ sessionId, activeWorkoutId, exercises, startedAt });
+  return enqueueDraftWrite(() => db.transaction("rw", db.workoutDrafts, async () => {
+    const existing = await db.workoutDrafts.get("active");
+    if (existing?.activeWorkoutId) return existing;
+    const draft: WorkoutDraft = {
+      id: "active", sessionId, activeWorkoutId, exercises, startedAt,
+      updatedAt: new Date().toISOString(),
+    };
+    await db.workoutDrafts.put(draft);
+    return draft;
+  }));
 }

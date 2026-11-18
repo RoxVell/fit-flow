@@ -1,3 +1,4 @@
+import { parseLocalDate } from "@/lib/utils/date";
 import type { Locale } from "@/lib/exercises/types";
 import type { MuscleGroup } from "@/lib/db/types";
 
@@ -24,14 +25,14 @@ export function getDayOptions(locale: Locale) {
 }
 
 export function formatShortDate(iso: string, locale: Locale): string {
-  return new Date(iso).toLocaleDateString(LOCALE_TAG[locale], {
+  return parseLocalDate(iso).toLocaleDateString(LOCALE_TAG[locale], {
     month: "short",
     day: "numeric",
   });
 }
 
 export function formatHistoryDate(iso: string, locale: Locale): string {
-  return new Date(iso).toLocaleDateString(LOCALE_TAG[locale], {
+  return parseLocalDate(iso).toLocaleDateString(LOCALE_TAG[locale], {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -39,7 +40,7 @@ export function formatHistoryDate(iso: string, locale: Locale): string {
 }
 
 export function formatDateTime(iso: string, locale: Locale): string {
-  return new Date(iso).toLocaleDateString(LOCALE_TAG[locale], {
+  return parseLocalDate(iso).toLocaleDateString(LOCALE_TAG[locale], {
     year: "numeric",
     month: "short",
     day: "numeric",

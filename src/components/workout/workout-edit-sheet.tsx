@@ -18,6 +18,7 @@ import { saveWorkoutEdits } from "@/lib/repositories/workouts";
 import { useT } from "@/lib/i18n/use-t";
 import {
   formatDecimalForInput,
+  isPartialDecimalInput,
   parseLocalizedDecimal,
 } from "@/lib/utils/decimal-input";
 
@@ -25,14 +26,12 @@ interface WorkoutEditSheetProps {
   log: WorkoutLogEntity | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSaved: () => void;
 }
 
 export function WorkoutEditSheet({
   log,
   open,
   onOpenChange,
-  onSaved,
 }: WorkoutEditSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -42,7 +41,6 @@ export function WorkoutEditSheet({
             key={`${log.id}:${log.revision}:${open}`}
             log={log}
             onOpenChange={onOpenChange}
-            onSaved={onSaved}
           />
         )}
       </SheetContent>
@@ -53,12 +51,12 @@ export function WorkoutEditSheet({
 function WorkoutEditForm({
   log,
   onOpenChange,
-  onSaved,
 }: Omit<WorkoutEditSheetProps, "log" | "open"> & { log: WorkoutLogEntity }) {
   const t = useT();
   const { getName } = useExerciseLookup();
   const [exercises, setExercises] = useState<LoggedExercise[]>(log.exercises);
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [weightTexts, setWeightTexts] = useState<Record<string, string>>({});
 
   const updateExercise = (
@@ -92,6 +90,7 @@ function WorkoutEditForm({
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
+    setSaveFailed(false);
     try {
       const normalized = exercises.map((exercise) => {
         const notes = exercise.notes?.trim();
@@ -100,10 +99,10 @@ function WorkoutEditForm({
           notes: notes ? notes : undefined,
         };
       });
-      await saveWorkoutEdits(log.id, normalized);
-      onSaved();
-      onOpenChange(false);
+      if (await saveWorkoutEdits(log.id, normalized)) onOpenChange(false);
+      else setSaveFailed(true);
     } catch (err) {
+      setSaveFailed(true);
       console.warn("[workout-edit] save failed", err);
     } finally {
       setSaving(false);
@@ -175,14 +174,12 @@ function WorkoutEditForm({
                           value={weightTexts[set.id] ?? formatDecimalForInput(set.weight)}
                           onChange={(e) => {
                             const text = e.target.value;
+                            if (!isPartialDecimalInput(text)) return;
                             setWeightTexts((prev) => ({
                               ...prev,
                               [set.id]: text,
                             }));
-                            const parsed = parseLocalizedDecimal(text);
-                            if (parsed !== null) {
-                              updateSet(exercise.id, set.id, { weight: parsed });
-                            }
+                            updateSet(exercise.id, set.id, { weight: parseLocalizedDecimal(text) });
                           }}
                           onBlur={() => {
                             setWeightTexts((prev) => ({
@@ -195,6 +192,7 @@ function WorkoutEditForm({
                         <Input
                           type="number"
                           inputMode="numeric"
+                          min="0"
                           aria-label={t.workout.setRepsLabel(
                             getName(exercise.exerciseId),
                             index + 1
@@ -203,7 +201,7 @@ function WorkoutEditForm({
                           onChange={(e) => {
                             const reps = parseInt(e.target.value, 10);
                             updateSet(exercise.id, set.id, {
-                              reps: Number.isNaN(reps) ? 0 : reps,
+                              reps: Math.max(0, reps || 0),
                             });
                           }}
                           className="h-9"
@@ -216,6 +214,7 @@ function WorkoutEditForm({
             })}
         </div>
 
+        {saveFailed && <p role="alert" className="px-4 text-sm text-destructive">{t.common.saveFailed}</p>}
         <SheetFooter className="flex-row gap-2">
           <Button
             variant="outline"
